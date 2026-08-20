@@ -129,6 +129,42 @@ export async function setFollow(supabase: SupabaseClient, userId: string, profil
   return status;
 }
 
+export async function updatePost(
+  supabase: SupabaseClient,
+  userId: string,
+  postId: string,
+  post: Pick<TablesInsert<"posts">, "body" | "vehicle_id">,
+  photo: File | null,
+) {
+  const { data: current } = await supabase.from("posts").select("author_id,photo_path").eq("id", postId).maybeSingle();
+  if (!current || current.author_id !== userId) throw new Error("Post not found");
+  const newPhotoPath = await uploadImage(supabase, photo, "post-media", userId);
+  const { error } = await supabase.from("posts").update({ ...post, ...(newPhotoPath ? { photo_path: newPhotoPath } : {}) }).eq("id", postId).eq("author_id", userId);
+  if (error) {
+    await removeMedia(supabase, "post-media", newPhotoPath).catch(() => undefined);
+    throw error;
+  }
+  if (newPhotoPath && current.photo_path !== newPhotoPath) await removeMedia(supabase, "post-media", current.photo_path).catch(() => undefined);
+}
+
+export async function updateVehicle(
+  supabase: SupabaseClient,
+  userId: string,
+  vehicleId: string,
+  vehicle: Pick<TablesInsert<"vehicles">, "nickname" | "make" | "model" | "year" | "trim" | "color" | "description">,
+  cover: File | null,
+) {
+  const { data: current } = await supabase.from("vehicles").select("owner_id,cover_path").eq("id", vehicleId).maybeSingle();
+  if (!current || current.owner_id !== userId) throw new Error("Vehicle not found");
+  const newCoverPath = await uploadImage(supabase, cover, "vehicle-media", userId);
+  const { error } = await supabase.from("vehicles").update({ ...vehicle, ...(newCoverPath ? { cover_path: newCoverPath } : {}) }).eq("id", vehicleId).eq("owner_id", userId);
+  if (error) {
+    await removeMedia(supabase, "vehicle-media", newCoverPath).catch(() => undefined);
+    throw error;
+  }
+  if (newCoverPath && current.cover_path !== newCoverPath) await removeMedia(supabase, "vehicle-media", current.cover_path).catch(() => undefined);
+}
+
 export async function respondToFollowRequest(supabase: SupabaseClient, userId: string, followerId: string, accept: boolean) {
   const { error } = accept
     ? await supabase.from("follows").update({ status: "accepted" }).eq("follower_id", followerId).eq("following_id", userId).eq("status", "pending")

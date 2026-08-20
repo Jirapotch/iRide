@@ -9,7 +9,7 @@ test("defaults to Thai and keeps language controls out of the public header", as
   await page.goto("/");
 
   await expect(page.locator("html")).toHaveAttribute("lang", "th");
-  await expect(page.getByRole("heading", { name: "ทุกการเดินทาง มีเรื่องราว" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Community" })).toBeVisible();
   await expect.poll(() => page.evaluate(() => localStorage.getItem("iride-locale"))).toBe("th");
 
   await expect(page.getByRole("button", { name: "Switch to English (EN)" })).toHaveCount(0);
@@ -18,7 +18,7 @@ test("defaults to Thai and keeps language controls out of the public header", as
 test("migrates a localized nested URL and preserves its query string", async ({ page }) => {
   await page.goto("/en/feed?tab=garage");
 
-  await expect(page).toHaveURL(/\/feed\?tab=garage$/);
+  await expect(page).toHaveURL(/\/\?tab=garage$/);
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect.poll(() => page.evaluate(() => localStorage.getItem("iride-locale"))).toBe("en");
 });

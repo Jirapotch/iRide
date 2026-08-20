@@ -3,8 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { insertComment, insertPost, insertVehicle, requireUser, respondToFollowRequest, saveProfile, setFollow, setLike } from "@/lib/data-access";
+import {
+  deletePost, deleteVehicle, insertComment, insertPost, insertVehicle, requireUser,
+  respondToFollowRequest, saveProfile, setFollow, setLike, updatePost, updateVehicle,
+} from "@/lib/data-access";
 import { isLocale, localeStorageKey } from "@/lib/i18n";
+import { safeNextPath } from "@/lib/auth-redirect";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import { commentSchema, postSchema, profileSchema, vehicleSchema } from "@/lib/validators";
@@ -24,14 +28,10 @@ export async function updateProfileAction(_: ActionState, formData: FormData): P
   try {
     const { supabase, user } = await requireUser();
     await saveProfile(supabase, user.id, {
-      username: parsed.data.username,
-      display_name: parsed.data.displayName,
-      bio: parsed.data.bio || null,
-      location: parsed.data.location || null,
-      onboarding_completed: true,
+      username: parsed.data.username, display_name: parsed.data.displayName,
+      bio: parsed.data.bio || null, location: parsed.data.location || null, onboarding_completed: true,
     }, formData.get("avatar") as File | null, formData.get("cover") as File | null);
     revalidatePath("/", "layout");
-    revalidatePath("/feed");
     revalidatePath("/settings/profile");
     revalidatePath(`/profile/${parsed.data.username}`);
   } catch (error) {
@@ -47,29 +47,76 @@ export async function createVehicleAction(formData: FormData) {
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid vehicle");
   const { supabase, user } = await requireUser();
   await insertVehicle(supabase, {
-    owner_id: user.id,
-    nickname: parsed.data.name,
-    make: parsed.data.brand || null,
-    model: parsed.data.model || null,
-    year: null,
-    trim: null,
-    color: parsed.data.color || null,
-    description: parsed.data.description || null,
+    owner_id: user.id, nickname: parsed.data.name, make: parsed.data.brand || null,
+    model: parsed.data.model || null, year: parsed.data.year || null, trim: parsed.data.trim || null,
+    color: parsed.data.color || null, description: parsed.data.description || null,
   }, formData.get("cover") as File | null);
-  redirect("/profile/me");
+  redirect("/profile/me#garage");
 }
 
 export async function createPostAction(formData: FormData) {
   const parsed = postSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid post");
   const { supabase, user } = await requireUser();
-  await insertPost(supabase, {
-    author_id: user.id,
-    body: parsed.data.body,
-    vehicle_id: parsed.data.vehicleId || null,
-  }, formData.get("photo") as File | null);
-  revalidatePath("/feed");
-  redirect("/feed");
+  await insertPost(supabase, { author_id: user.id, body: parsed.data.body, vehicle_id: parsed.data.vehicleId || null }, formData.get("photo") as File | null);
+  revalidatePath("/");
+  redirect("/");
+}
+
+export async function updatePostAction(postId: string, returnTo: string, _: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = postSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors };
+  try {
+    const { supabase, user } = await requireUser();
+    await updatePost(supabase, user.id, postId, { body: parsed.data.body, vehicle_id: parsed.data.vehicleId || null }, formData.get("photo") as File | null);
+    revalidatePath("/");
+    revalidatePath(`/post/${postId}`);
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to update post" };
+  }
+  redirect(returnTo ? safeNextPath(returnTo) : `/post/${postId}`);
+}
+
+export async function deletePostAction(postId: string): Promise<ActionState> {
+  try {
+    const { supabase, user } = await requireUser();
+    await deletePost(supabase, user.id, postId);
+    revalidatePath("/");
+    revalidatePath("/profile/[username]", "page");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to delete post" };
+  }
+}
+
+export async function updateVehicleAction(vehicleId: string, returnTo: string, _: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = vehicleSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors };
+  try {
+    const { supabase, user } = await requireUser();
+    await updateVehicle(supabase, user.id, vehicleId, {
+      nickname: parsed.data.name, make: parsed.data.brand || null, model: parsed.data.model || null,
+      year: parsed.data.year || null, trim: parsed.data.trim || null, color: parsed.data.color || null,
+      description: parsed.data.description || null,
+    }, formData.get("cover") as File | null);
+    revalidatePath("/");
+    revalidatePath("/profile/[username]", "page");
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to update vehicle" };
+  }
+  redirect(returnTo ? safeNextPath(returnTo) : "/profile/me#garage");
+}
+
+export async function deleteVehicleAction(vehicleId: string): Promise<ActionState> {
+  try {
+    const { supabase, user } = await requireUser();
+    await deleteVehicle(supabase, user.id, vehicleId);
+    revalidatePath("/");
+    revalidatePath("/profile/[username]", "page");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to delete vehicle" };
+  }
 }
 
 export async function createCommentAction(postId: string, body: string): Promise<ActionState> {
@@ -78,7 +125,8 @@ export async function createCommentAction(postId: string, body: string): Promise
   try {
     const { supabase, user } = await requireUser();
     await insertComment(supabase, { post_id: postId, author_id: user.id, body: parsed.data.body });
-    revalidatePath("/feed");
+    revalidatePath("/");
+    revalidatePath(`/post/${postId}`);
     return { ok: true };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "Unable to comment" };
@@ -89,7 +137,7 @@ export async function toggleLikeAction(postId: string, liked: boolean): Promise<
   try {
     const { supabase, user } = await requireUser();
     await setLike(supabase, user.id, postId, liked);
-    revalidatePath("/feed");
+    revalidatePath("/");
     return { ok: true };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "Unable to update like" };
@@ -102,7 +150,7 @@ export async function toggleFollowAction(profileId: string, currentStatus: "none
     if (user.id === profileId) return { ok: false, message: "You cannot follow yourself" };
     const followStatus = await setFollow(supabase, user.id, profileId, currentStatus !== "none");
     revalidatePath("/profile/[username]", "page");
-    revalidatePath("/feed");
+    revalidatePath("/");
     return { ok: true, followStatus };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "Unable to update follow" };
@@ -115,7 +163,6 @@ export async function updatePrivacyAction(formData: FormData) {
   if (error) throw error;
   revalidatePath("/", "layout");
   revalidatePath("/settings");
-  revalidatePath("/feed");
 }
 
 export async function updateLocaleAction(_: ActionState, formData: FormData): Promise<ActionState> {

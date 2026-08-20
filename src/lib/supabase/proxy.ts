@@ -24,7 +24,7 @@ export async function updateSession(request: NextRequest) {
   const isProtected = /^\/(profile|settings|post|garage)(\/|$)/.test(request.nextUrl.pathname);
   if (isProtected && !claimsData?.claims?.sub) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/auth";
+    loginUrl.pathname = "/login";
     loginUrl.search = "";
     loginUrl.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
     const redirect = NextResponse.redirect(loginUrl);

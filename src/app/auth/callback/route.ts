@@ -17,5 +17,5 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL(destination, url.origin));
     }
   }
-  return NextResponse.redirect(new URL("/auth?error=callback", url.origin));
+  return NextResponse.redirect(new URL("/login?error=callback", url.origin));
 }
