@@ -1,13 +1,16 @@
 "use client";
 
-import { startTransition, useOptimistic, useState } from "react";
-import { UserCheck, UserPlus } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Clock3, UserCheck, UserPlus } from "lucide-react";
 import { toggleFollowAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
-import type { Locale } from "@/lib/types";
+import type { FollowStatus, Locale } from "@/lib/types";
 
-export function FollowButton({ locale, profileId, initialFollowing }: { locale: Locale; profileId: string; initialFollowing: boolean }) {
-  const [following, setFollowing] = useOptimistic(initialFollowing, (state) => !state);
+export function FollowButton({ locale, profileId, initialStatus }: { locale: Locale; profileId: string; initialStatus: FollowStatus }) {
+  const [status, setStatus] = useState(initialStatus);
+  const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  return <div><Button variant={following ? "outline" : "default"} className="gap-2 rounded-full" onClick={() => startTransition(async () => { setFollowing(undefined); const result = await toggleFollowAction(profileId, following); if (!result.ok) setError(result.message ?? "Unable to follow"); })}>{following ? <UserCheck className="size-4" /> : <UserPlus className="size-4" />}{following ? (locale === "th" ? "กำลังติดตาม" : "Following") : (locale === "th" ? "ติดตาม" : "Follow")}</Button>{error && <p className="mt-2 text-xs text-destructive">{error}</p>}</div>;
+  const label = status === "accepted" ? (locale === "th" ? "กำลังติดตาม" : "Following") : status === "pending" ? (locale === "th" ? "ส่งคำขอแล้ว" : "Requested") : (locale === "th" ? "ติดตาม" : "Follow");
+  const Icon = status === "accepted" ? UserCheck : status === "pending" ? Clock3 : UserPlus;
+  return <div><Button disabled={pending} variant={status === "none" ? "default" : "outline"} className="gap-2 rounded-full" onClick={() => startTransition(async () => { setError(null); const result = await toggleFollowAction(profileId, status); if (result.ok && result.followStatus) setStatus(result.followStatus); else setError(result.message ?? "Unable to follow"); })}><Icon className="size-4" />{label}</Button>{error && <p className="mt-2 text-xs text-destructive">{error}</p>}</div>;
 }

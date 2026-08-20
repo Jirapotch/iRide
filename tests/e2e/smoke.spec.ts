@@ -1,10 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("landing page and language switch work", async ({ page }) => {
+test("landing page loads without a public language switch", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "ทุกการเดินทาง มีเรื่องราว" })).toBeVisible();
-  await page.getByRole("button", { name: /EN/ }).click();
-  await expect(page.getByRole("heading", { name: "Every ride has a story" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /EN/ })).toHaveCount(0);
 });
 
 test("anonymous users can read the feed without member controls", async ({ page }) => {

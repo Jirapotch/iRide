@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(25);
+select plan(33);
 
 select has_table('public', 'profiles', 'profiles exists');
 select has_table('public', 'vehicles', 'vehicles exists');
@@ -11,13 +11,18 @@ select has_table('public', 'posts', 'posts exists');
 select has_table('public', 'comments', 'comments exists');
 select has_table('public', 'likes', 'likes exists');
 select has_table('public', 'follows', 'follows exists');
+select has_column('public', 'profiles', 'cover_path', 'profiles support cover images');
+select has_column('public', 'profiles', 'is_private', 'profiles support private accounts');
+select has_column('public', 'follows', 'status', 'follows track request status');
 
 insert into auth.users (id, email) values
   ('10000000-0000-0000-0000-000000000001', 'owner@iride.test'),
-  ('20000000-0000-0000-0000-000000000002', 'other@iride.test');
+  ('20000000-0000-0000-0000-000000000002', 'other@iride.test'),
+  ('50000000-0000-0000-0000-000000000005', 'requester@iride.test');
 
 update public.profiles set username = 'owner', display_name = 'Owner' where id = '10000000-0000-0000-0000-000000000001';
 update public.profiles set username = 'other', display_name = 'Other' where id = '20000000-0000-0000-0000-000000000002';
+update public.profiles set username = 'requester', display_name = 'Requester' where id = '50000000-0000-0000-0000-000000000005';
 
 insert into public.vehicles (id, owner_id, nickname, make, model, year)
 values ('30000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', 'Daily', 'Honda', 'Civic', 2025);
@@ -107,6 +112,32 @@ select results_eq(
   $$select liked_by_viewer from public.feed_posts()$$,
   array[true], 'liking viewer has true like state'
 );
+reset role;
+
+update public.profiles set is_private = true where id = '10000000-0000-0000-0000-000000000001';
+set local role anon;
+select is((select count(*)::integer from public.feed_posts()), 0, 'private posts are hidden from the anonymous feed');
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '50000000-0000-0000-0000-000000000005', true);
+select is((select count(*)::integer from public.posts), 0, 'private posts are hidden from non-followers');
+insert into public.follows (follower_id, following_id, status)
+values ('50000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000001', 'pending');
+select results_eq(
+  $$select status from public.follows where follower_id = '50000000-0000-0000-0000-000000000005'$$,
+  array['pending'::text], 'private follows begin as pending requests'
+);
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
+update public.follows set status = 'accepted'
+where follower_id = '50000000-0000-0000-0000-000000000005'
+  and following_id = '10000000-0000-0000-0000-000000000001';
+select results_eq(
+  $$select status from public.follows where follower_id = '50000000-0000-0000-0000-000000000005'$$,
+  array['accepted'::text], 'profile owners can accept requests'
+);
+select set_config('request.jwt.claim.sub', '50000000-0000-0000-0000-000000000005', true);
+select is((select count(*)::integer from public.posts), 1, 'accepted followers can read private posts');
 reset role;
 
 delete from public.vehicles where id = '30000000-0000-0000-0000-000000000003';

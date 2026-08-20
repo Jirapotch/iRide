@@ -14,10 +14,10 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 const localeChangeEvent = "iride-locale-change";
 
 function getClientLocale(): Locale {
-  const storedLocale = localStorage.getItem(localeStorageKey);
-  if (storedLocale && isLocale(storedLocale)) return storedLocale;
   const documentLocale = document.documentElement.lang;
-  return isLocale(documentLocale) ? documentLocale : defaultLocale;
+  if (isLocale(documentLocale)) return documentLocale;
+  const storedLocale = localStorage.getItem(localeStorageKey);
+  return storedLocale && isLocale(storedLocale) ? storedLocale : defaultLocale;
 }
 
 function subscribe(onStoreChange: () => void) {

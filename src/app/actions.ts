@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { insertComment, insertPost, insertVehicle, requireUser, saveProfile, setFollow, setLike } from "@/lib/data-access";
+import { insertComment, insertPost, insertVehicle, requireUser, respondToFollowRequest, saveProfile, setFollow, setLike } from "@/lib/data-access";
+import { isLocale, localeStorageKey } from "@/lib/i18n";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import { commentSchema, postSchema, profileSchema, vehicleSchema } from "@/lib/validators";
@@ -27,7 +29,7 @@ export async function updateProfileAction(_: ActionState, formData: FormData): P
       bio: parsed.data.bio || null,
       location: parsed.data.location || null,
       onboarding_completed: true,
-    }, formData.get("avatar") as File | null);
+    }, formData.get("avatar") as File | null, formData.get("cover") as File | null);
     revalidatePath("/", "layout");
     revalidatePath("/feed");
     revalidatePath("/settings/profile");
@@ -46,11 +48,11 @@ export async function createVehicleAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   await insertVehicle(supabase, {
     owner_id: user.id,
-    nickname: parsed.data.nickname,
-    make: parsed.data.make,
-    model: parsed.data.model,
-    year: parsed.data.year,
-    trim: parsed.data.trim || null,
+    nickname: parsed.data.name,
+    make: parsed.data.brand || null,
+    model: parsed.data.model || null,
+    year: null,
+    trim: null,
     color: parsed.data.color || null,
     description: parsed.data.description || null,
   }, formData.get("cover") as File | null);
@@ -94,14 +96,46 @@ export async function toggleLikeAction(postId: string, liked: boolean): Promise<
   }
 }
 
-export async function toggleFollowAction(profileId: string, following: boolean): Promise<ActionState> {
+export async function toggleFollowAction(profileId: string, currentStatus: "none" | "pending" | "accepted"): Promise<ActionState> {
   try {
     const { supabase, user } = await requireUser();
     if (user.id === profileId) return { ok: false, message: "You cannot follow yourself" };
-    await setFollow(supabase, user.id, profileId, following);
-    revalidatePath("/profile");
-    return { ok: true };
+    const followStatus = await setFollow(supabase, user.id, profileId, currentStatus !== "none");
+    revalidatePath("/profile/[username]", "page");
+    revalidatePath("/feed");
+    return { ok: true, followStatus };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "Unable to update follow" };
   }
+}
+
+export async function updatePrivacyAction(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase.from("profiles").update({ is_private: formData.get("isPrivate") === "on" }).eq("id", user.id);
+  if (error) throw error;
+  revalidatePath("/", "layout");
+  revalidatePath("/settings");
+  revalidatePath("/feed");
+}
+
+export async function updateLocaleAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const locale = formData.get("locale");
+  if (typeof locale !== "string" || !isLocale(locale)) return { ok: false, message: "Unsupported language" };
+  try {
+    const { supabase, user } = await requireUser();
+    const { error } = await supabase.from("profiles").update({ locale }).eq("id", user.id);
+    if (error) throw error;
+    (await cookies()).set(localeStorageKey, locale, { path: "/", maxAge: 31536000, sameSite: "lax" });
+    revalidatePath("/", "layout");
+    return { ok: true, locale };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to change language" };
+  }
+}
+
+export async function respondToFollowRequestAction(followerId: string, decision: "accept" | "reject") {
+  const { supabase, user } = await requireUser();
+  await respondToFollowRequest(supabase, user.id, followerId, decision === "accept");
+  revalidatePath("/settings");
+  revalidatePath("/profile/[username]", "page");
 }
