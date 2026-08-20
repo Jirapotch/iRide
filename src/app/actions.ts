@@ -42,24 +42,34 @@ export async function updateProfileAction(_: ActionState, formData: FormData): P
   redirect(`/profile/${parsed.data.username}`);
 }
 
-export async function createVehicleAction(formData: FormData) {
+export async function createVehicleAction(_: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = vehicleSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid vehicle");
-  const { supabase, user } = await requireUser();
-  await insertVehicle(supabase, {
-    owner_id: user.id, nickname: parsed.data.name, make: parsed.data.brand || null,
-    model: parsed.data.model || null, year: parsed.data.year || null, trim: parsed.data.trim || null,
-    color: parsed.data.color || null, description: parsed.data.description || null,
-  }, formData.get("cover") as File | null);
+  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors };
+  try {
+    const { supabase, user } = await requireUser();
+    await insertVehicle(supabase, {
+      owner_id: user.id, nickname: parsed.data.name, make: parsed.data.brand || null,
+      model: parsed.data.model || null, year: parsed.data.year || null, trim: parsed.data.trim || null,
+      color: parsed.data.color || null, description: parsed.data.description || null,
+    }, formData.get("cover") as File | null);
+    revalidatePath("/");
+    revalidatePath("/profile/[username]", "page");
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to add vehicle" };
+  }
   redirect("/profile/me#garage");
 }
 
-export async function createPostAction(formData: FormData) {
+export async function createPostAction(_: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = postSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid post");
-  const { supabase, user } = await requireUser();
-  await insertPost(supabase, { author_id: user.id, body: parsed.data.body, vehicle_id: parsed.data.vehicleId || null }, formData.get("photo") as File | null);
-  revalidatePath("/");
+  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors };
+  try {
+    const { supabase, user } = await requireUser();
+    await insertPost(supabase, { author_id: user.id, body: parsed.data.body, vehicle_id: parsed.data.vehicleId || null }, formData.get("photo") as File | null);
+    revalidatePath("/");
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to publish post" };
+  }
   redirect("/");
 }
 
@@ -157,12 +167,17 @@ export async function toggleFollowAction(profileId: string, currentStatus: "none
   }
 }
 
-export async function updatePrivacyAction(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase.from("profiles").update({ is_private: formData.get("isPrivate") === "on" }).eq("id", user.id);
-  if (error) throw error;
-  revalidatePath("/", "layout");
-  revalidatePath("/settings");
+export async function updatePrivacyAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const { supabase, user } = await requireUser();
+    const { error } = await supabase.from("profiles").update({ is_private: formData.get("isPrivate") === "on" }).eq("id", user.id);
+    if (error) throw error;
+    revalidatePath("/", "layout");
+    revalidatePath("/settings");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to update privacy" };
+  }
 }
 
 export async function updateLocaleAction(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -180,9 +195,14 @@ export async function updateLocaleAction(_: ActionState, formData: FormData): Pr
   }
 }
 
-export async function respondToFollowRequestAction(followerId: string, decision: "accept" | "reject") {
-  const { supabase, user } = await requireUser();
-  await respondToFollowRequest(supabase, user.id, followerId, decision === "accept");
-  revalidatePath("/settings");
-  revalidatePath("/profile/[username]", "page");
+export async function respondToFollowRequestAction(followerId: string, decision: "accept" | "reject"): Promise<ActionState> {
+  try {
+    const { supabase, user } = await requireUser();
+    await respondToFollowRequest(supabase, user.id, followerId, decision === "accept");
+    revalidatePath("/settings");
+    revalidatePath("/profile/[username]", "page");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to respond to follow request" };
+  }
 }

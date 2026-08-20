@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(37);
+select plan(40);
 
 select has_table('public', 'profiles', 'profiles exists');
 select has_table('public', 'vehicles', 'vehicles exists');
@@ -14,6 +14,9 @@ select has_table('public', 'follows', 'follows exists');
 select has_column('public', 'profiles', 'cover_path', 'profiles support cover images');
 select has_column('public', 'profiles', 'is_private', 'profiles support private accounts');
 select has_column('public', 'follows', 'status', 'follows track request status');
+select is((select file_size_limit from storage.buckets where id = 'avatars'), 3000000::bigint, 'avatar uploads are limited to 3 MB');
+select is((select file_size_limit from storage.buckets where id = 'vehicle-media'), 3000000::bigint, 'vehicle uploads are limited to 3 MB');
+select is((select file_size_limit from storage.buckets where id = 'post-media'), 3000000::bigint, 'post uploads are limited to 3 MB');
 
 insert into auth.users (id, email) values
   ('10000000-0000-0000-0000-000000000001', 'owner@iride.test'),

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { processUploadedImage } from "@/lib/image-processing";
 import type { TablesInsert } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -8,7 +9,6 @@ type Bucket = "avatars" | "vehicle-media" | "post-media";
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 const DEMO_MESSAGE = "Supabase environment variables are required to save changes.";
-const allowedImages = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function requireUser() {
   if (!isSupabaseConfigured()) throw new Error(DEMO_MESSAGE);
@@ -20,16 +20,9 @@ export async function requireUser() {
 
 export async function uploadImage(supabase: SupabaseClient, file: File | null, bucket: Bucket, userId: string) {
   if (!file || file.size === 0) return null;
-  if (!allowedImages.has(file.type)) throw new Error("Only JPEG, PNG, or WebP images are supported.");
-  if (file.size > 8 * 1024 * 1024) throw new Error("Image must be smaller than 8 MB.");
-
-  const extensionByMime: Record<string, string> = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-  };
-  const path = `${userId}/${crypto.randomUUID()}.${extensionByMime[file.type]}`;
-  const { error } = await supabase.storage.from(bucket).upload(path, file, { contentType: file.type, upsert: false });
+  const processed = await processUploadedImage(file);
+  const path = `${userId}/${crypto.randomUUID()}.${processed.extension}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, processed.data, { contentType: processed.contentType, upsert: false });
   if (error) throw error;
   return path;
 }
