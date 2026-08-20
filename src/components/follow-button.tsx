@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Clock3, UserCheck, UserPlus } from "lucide-react";
+import { Clock3, LoaderCircle, UserCheck, UserPlus } from "lucide-react";
 import { toggleFollowAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import type { FollowStatus, Locale } from "@/lib/types";
@@ -12,5 +12,5 @@ export function FollowButton({ locale, profileId, initialStatus }: { locale: Loc
   const [error, setError] = useState<string | null>(null);
   const label = status === "accepted" ? (locale === "th" ? "กำลังติดตาม" : "Following") : status === "pending" ? (locale === "th" ? "ส่งคำขอแล้ว" : "Requested") : (locale === "th" ? "ติดตาม" : "Follow");
   const Icon = status === "accepted" ? UserCheck : status === "pending" ? Clock3 : UserPlus;
-  return <div><Button disabled={pending} variant={status === "none" ? "default" : "outline"} className="gap-2 rounded-full" onClick={() => startTransition(async () => { setError(null); const result = await toggleFollowAction(profileId, status); if (result.ok && result.followStatus) setStatus(result.followStatus); else setError(result.message ?? "Unable to follow"); })}><Icon className="size-4" />{label}</Button>{error && <p className="mt-2 text-xs text-destructive">{error}</p>}</div>;
+  return <div><Button disabled={pending} aria-busy={pending} variant={status === "none" ? "default" : "outline"} className="min-h-11 gap-2 rounded-full" onClick={() => startTransition(async () => { setError(null); const result = await toggleFollowAction(profileId, status); if (result.ok && result.followStatus) setStatus(result.followStatus); else setError(result.message ?? "Unable to follow"); })}>{pending ? <LoaderCircle className="size-4 animate-spin" /> : <Icon className="size-4" />}{pending ? (locale === "th" ? "กำลังอัปเดต…" : "Updating…") : label}</Button>{error && <p role="alert" className="mt-2 text-xs text-destructive">{error}</p>}</div>;
 }

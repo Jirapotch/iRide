@@ -9,8 +9,8 @@ describe("safeNextPath", () => {
   });
 
   it("rejects external and malformed destinations", () => {
-    expect(safeNextPath("https://evil.example")).toBe("/feed");
-    expect(safeNextPath("//evil.example")).toBe("/feed");
-    expect(safeNextPath("/feed\\u0000evil")).toBe("/feed");
+    expect(safeNextPath("https://evil.example")).toBe("/");
+    expect(safeNextPath("//evil.example")).toBe("/");
+    expect(safeNextPath("/feed\\u0000evil")).toBe("/");
   });
 });

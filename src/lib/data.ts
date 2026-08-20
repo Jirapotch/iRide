@@ -38,7 +38,7 @@ export async function getFeed(): Promise<Post[]> {
   if (paths.length) {
     const admin = createAdminClient();
     const { data: signed } = admin
-      ? await admin.storage.from("post-media").createSignedUrls(paths, 3600)
+      ? await admin.storage.from("post-media").createSignedUrls(paths, 600)
       : { data: null };
     signed?.forEach((item, index) => { if (item.signedUrl) signedByPath.set(paths[index], item.signedUrl); });
   }
@@ -51,15 +51,28 @@ export async function getFeed(): Promise<Post[]> {
 }
 
 export async function getPost(id: string): Promise<Post | null> {
-  const post = (await getFeed()).find((item) => item.id === id);
-  if (!post || !isSupabaseConfigured()) return post ?? null;
+  if (!isSupabaseConfigured()) return demoPosts.find((item) => item.id === id) ?? null;
   const supabase = await createClient();
-  const { data } = await supabase.from("comments").select("id,body,created_at,profiles!comments_author_id_fkey(username,display_name,avatar_path,provider_avatar_url)").eq("post_id", id).order("created_at", { ascending: true });
-  const comments: Comment[] = (data ?? []).map((row) => {
-    const author = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    return { id: row.id, body: row.body, createdAt: row.created_at, author: { username: author?.username ?? "driver", displayName: author?.display_name ?? "iRide driver", avatarUrl: resolveAvatarUrl(publicMediaUrl(supabase, "avatars", author?.avatar_path), author?.provider_avatar_url) } };
+  const viewer = await getViewer();
+  const [{ data: row }, { data: commentRows }, { data: viewerLike }] = await Promise.all([
+    supabase.from("posts").select("id,body,photo_path,created_at,profiles!posts_author_id_fkey(username,display_name,avatar_path,provider_avatar_url),vehicles!posts_vehicle_id_fkey(id,nickname,make,model,year),likes(count),comments(count)").eq("id", id).maybeSingle(),
+    supabase.from("comments").select("id,body,created_at,profiles!comments_author_id_fkey(username,display_name,avatar_path,provider_avatar_url)").eq("post_id", id).order("created_at", { ascending: true }),
+    viewer ? supabase.from("likes").select("post_id").eq("post_id", id).eq("user_id", viewer.id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  if (!row) return null;
+  const author = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+  const vehicle = Array.isArray(row.vehicles) ? row.vehicles[0] : row.vehicles;
+  const signed = row.photo_path ? await signedPostUrls([row.photo_path]) : new Map<string, string>();
+  const comments: Comment[] = (commentRows ?? []).map((comment) => {
+    const author = Array.isArray(comment.profiles) ? comment.profiles[0] : comment.profiles;
+    return { id: comment.id, body: comment.body, createdAt: comment.created_at, author: { username: author?.username ?? "driver", displayName: author?.display_name ?? "iRide driver", avatarUrl: resolveAvatarUrl(publicMediaUrl(supabase, "avatars", author?.avatar_path), author?.provider_avatar_url) } };
   });
-  return { ...post, comments };
+  return {
+    id: row.id, body: row.body, photoUrl: row.photo_path ? signed.get(row.photo_path) ?? null : null, createdAt: row.created_at,
+    author: { username: author?.username ?? "driver", displayName: author?.display_name ?? "iRide driver", avatarUrl: resolveAvatarUrl(publicMediaUrl(supabase, "avatars", author?.avatar_path), author?.provider_avatar_url) },
+    vehicle: vehicle ? { id: vehicle.id, name: vehicle.nickname, brand: vehicle.make, model: vehicle.model, year: vehicle.year } : null,
+    likesCount: Number(row.likes[0]?.count ?? 0), commentsCount: Number(row.comments[0]?.count ?? 0), likedByViewer: Boolean(viewerLike), comments,
+  };
 }
 
 export async function getMemberProfile(username: string, viewerId: string): Promise<MemberProfile | null> {
@@ -127,6 +140,36 @@ export async function getMyVehicles(): Promise<Vehicle[]> {
   return (data ?? []).map(mapVehicle.bind(null, supabase));
 }
 
+export async function getOwnedPost(id: string): Promise<Post | null> {
+  const viewer = await getViewer();
+  if (!viewer || !isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data: row } = await supabase.from("posts").select("id,body,photo_path,created_at,profiles!posts_author_id_fkey(username,display_name,avatar_path,provider_avatar_url),vehicles!posts_vehicle_id_fkey(id,nickname,make,model,year),likes(count),comments(count)").eq("id", id).eq("author_id", viewer.id).maybeSingle();
+  if (!row) return null;
+  const author = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+  const vehicle = Array.isArray(row.vehicles) ? row.vehicles[0] : row.vehicles;
+  const signed = row.photo_path ? await signedPostUrls([row.photo_path]) : new Map<string, string>();
+  return {
+    id: row.id,
+    body: row.body,
+    photoUrl: row.photo_path ? signed.get(row.photo_path) ?? null : null,
+    createdAt: row.created_at,
+    author: { username: author?.username ?? "driver", displayName: author?.display_name ?? "iRide driver", avatarUrl: resolveAvatarUrl(publicMediaUrl(supabase, "avatars", author?.avatar_path), author?.provider_avatar_url) },
+    vehicle: vehicle ? { id: vehicle.id, name: vehicle.nickname, brand: vehicle.make, model: vehicle.model, year: vehicle.year } : null,
+    likesCount: Number(row.likes[0]?.count ?? 0),
+    commentsCount: Number(row.comments[0]?.count ?? 0),
+    likedByViewer: false,
+  };
+}
+
+export async function getOwnedVehicle(id: string): Promise<Vehicle | null> {
+  const viewer = await getViewer();
+  if (!viewer || !isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.from("vehicles").select("*").eq("id", id).eq("owner_id", viewer.id).maybeSingle();
+  return data ? mapVehicle(supabase, data) : null;
+}
+
 export async function getPendingFollowRequests(): Promise<FollowRequest[]> {
   const viewer = await getViewer();
   if (!viewer || !isSupabaseConfigured()) return [];
@@ -157,7 +200,7 @@ async function signedPostUrls(paths: string[]) {
   if (!paths.length) return signedByPath;
   const admin = createAdminClient();
   const { data: signed } = admin
-    ? await admin.storage.from("post-media").createSignedUrls(paths, 3600)
+      ? await admin.storage.from("post-media").createSignedUrls(paths, 600)
     : { data: null };
   signed?.forEach((item, index) => { if (item.signedUrl) signedByPath.set(paths[index], item.signedUrl); });
   return signedByPath;

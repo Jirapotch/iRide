@@ -9,5 +9,7 @@ describe("iRide validation", () => {
     expect(vehicleSchema.safeParse({ name: "", brand: "Mazda" }).success).toBe(false);
   });
   it("requires post content", () => expect(postSchema.safeParse({ body: "", vehicleId: "" }).success).toBe(false));
+  it("allows clearing a post vehicle", () => expect(postSchema.parse({ body: "Updated", vehicleId: "none" }).vehicleId).toBe(""));
+  it("rejects impossible vehicle years", () => expect(vehicleSchema.safeParse({ name: "Mochi", year: "1800" }).success).toBe(false));
   it("limits comment length", () => expect(commentSchema.safeParse({ postId: crypto.randomUUID(), body: "x".repeat(501) }).success).toBe(false));
 });

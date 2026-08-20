@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(33);
+select plan(37);
 
 select has_table('public', 'profiles', 'profiles exists');
 select has_table('public', 'vehicles', 'vehicles exists');
@@ -107,7 +107,16 @@ select is(
   (select body from public.posts where id = '40000000-0000-0000-0000-000000000004'),
   'First drive', 'non-owner cannot update another post'
 );
+delete from public.posts where id = '40000000-0000-0000-0000-000000000004';
+select is((select count(*)::integer from public.posts where id = '40000000-0000-0000-0000-000000000004'), 1, 'non-owner cannot delete another post');
 select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
+update public.posts set body = 'Owner update' where id = '40000000-0000-0000-0000-000000000004';
+select is((select body from public.posts where id = '40000000-0000-0000-0000-000000000004'), 'Owner update', 'owner can update a post');
+update public.vehicles set nickname = 'Weekend' where id = '30000000-0000-0000-0000-000000000003';
+select is((select nickname from public.vehicles where id = '30000000-0000-0000-0000-000000000003'), 'Weekend', 'owner can update a vehicle');
+insert into public.vehicles (id, owner_id, nickname) values ('60000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000001', 'Temporary');
+delete from public.vehicles where id = '60000000-0000-0000-0000-000000000006';
+select is((select count(*)::integer from public.vehicles where id = '60000000-0000-0000-0000-000000000006'), 0, 'owner can delete a vehicle');
 select results_eq(
   $$select liked_by_viewer from public.feed_posts()$$,
   array[true], 'liking viewer has true like state'
