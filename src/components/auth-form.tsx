@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { emailSchema } from "@/lib/validators";
 import type { Locale } from "@/lib/types";
 
-export function AuthForm({ locale, configured }: { locale: Locale; configured: boolean }) {
+export function AuthForm({ locale, configured, nextPath }: { locale: Locale; configured: boolean; nextPath: string }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -22,7 +22,9 @@ export function AuthForm({ locale, configured }: { locale: Locale; configured: b
     if (!configured) return setStatus(thai ? "เพิ่ม Supabase keys เพื่อเปิดใช้งานระบบบัญชี" : "Add Supabase keys to enable authentication");
     setPending(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback?next=/${locale}/feed` } });
+    const callback = new URL("/auth/callback", window.location.origin);
+    callback.searchParams.set("next", nextPath);
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: callback.toString() } });
     if (error) setStatus(error.message);
     setPending(false);
   }
@@ -34,7 +36,9 @@ export function AuthForm({ locale, configured }: { locale: Locale; configured: b
     if (!configured) return setStatus(thai ? "เพิ่ม Supabase keys เพื่อเปิดใช้งานระบบบัญชี" : "Add Supabase keys to enable authentication");
     setPending(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({ email: parsed.data, options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/${locale}/feed` } });
+    const callback = new URL("/auth/callback", window.location.origin);
+    callback.searchParams.set("next", nextPath);
+    const { error } = await supabase.auth.signInWithOtp({ email: parsed.data, options: { emailRedirectTo: callback.toString() } });
     setStatus(error ? error.message : thai ? "ส่งลิงก์เข้าสู่ระบบไปที่อีเมลแล้ว" : "Check your inbox for your sign-in link");
     setPending(false);
   }

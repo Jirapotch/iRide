@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.15"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       comments: {
@@ -201,6 +176,8 @@ export type Database = {
           id: string
           locale: string
           location: string | null
+          onboarding_completed: boolean
+          provider_avatar_url: string | null
           updated_at: string
           username: string
         }
@@ -212,6 +189,8 @@ export type Database = {
           id: string
           locale?: string
           location?: string | null
+          onboarding_completed?: boolean
+          provider_avatar_url?: string | null
           updated_at?: string
           username: string
         }
@@ -223,6 +202,8 @@ export type Database = {
           id?: string
           locale?: string
           location?: string | null
+          onboarding_completed?: boolean
+          provider_avatar_url?: string | null
           updated_at?: string
           username?: string
         }
@@ -286,6 +267,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      feed_posts: {
+        Args: { feed_limit?: number }
+        Returns: {
+          author_avatar_path: string
+          author_display_name: string
+          author_provider_avatar_url: string
+          author_username: string
+          body: string
+          comments_count: number
+          created_at: string
+          id: string
+          liked_by_viewer: boolean
+          likes_count: number
+          photo_path: string
+          vehicle_id: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_nickname: string
+          vehicle_year: number
+        }[]
+      }
       profile_stats: {
         Args: { target: string }
         Returns: {
@@ -421,9 +423,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

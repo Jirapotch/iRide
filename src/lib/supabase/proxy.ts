@@ -5,31 +5,35 @@ import type { Database } from "@/lib/supabase/database.types";
 export async function updateSession(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return NextResponse.next({ request });
-
   let response = NextResponse.next({ request });
+  if (!url || !key) return response;
+
   const supabase = createServerClient<Database>(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        Object.entries(headers).forEach(([name, value]) => response.headers.set(name, value));
       },
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
-  const localeMatch = request.nextUrl.pathname.match(/^\/(th|en)/);
-  const locale = localeMatch?.[1] ?? "th";
-  const isProtected = /^\/(th|en)\/(feed|post|garage)(\/|$)/.test(request.nextUrl.pathname);
-
-  if (isProtected && !user) {
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const isProtected = /^\/(profile|settings|post|garage)(\/|$)/.test(request.nextUrl.pathname);
+  if (isProtected && !claimsData?.claims?.sub) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = `/${locale}/auth`;
-    loginUrl.searchParams.set("next", request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+    loginUrl.pathname = "/auth";
+    loginUrl.search = "";
+    loginUrl.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
+    const redirect = NextResponse.redirect(loginUrl);
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    for (const name of ["cache-control", "expires", "pragma"]) {
+      const value = response.headers.get(name);
+      if (value) redirect.headers.set(name, value);
+    }
+    return redirect;
   }
-
   return response;
 }

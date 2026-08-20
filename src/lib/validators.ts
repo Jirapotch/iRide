@@ -7,7 +7,6 @@ export const profileSchema = z.object({
   displayName: z.string().trim().min(2).max(60),
   bio: z.string().trim().max(180).optional().or(z.literal("")),
   location: z.string().trim().max(80).optional().or(z.literal("")),
-  locale: z.enum(["th", "en"]),
 });
 export const vehicleSchema = z.object({
   nickname: z.string().trim().min(1).max(40),

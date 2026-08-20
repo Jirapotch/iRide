@@ -2,9 +2,11 @@ import "server-only";
 
 import { cache } from "react";
 import { demoPosts, demoProfile, demoVehicles } from "@/lib/demo-data";
+import { resolveAvatarUrl } from "@/lib/profile-utils";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import type { Comment, Post, Profile, Vehicle } from "@/lib/types";
+import type { Comment, MemberProfile, Post, Profile, Vehicle, ViewerContext } from "@/lib/types";
 
 export const getViewer = cache(async () => {
   if (!isSupabaseConfigured()) return null;
@@ -13,33 +15,38 @@ export const getViewer = cache(async () => {
   return user;
 });
 
+export const getViewerContext = cache(async (): Promise<ViewerContext | null> => {
+  const user = await getViewer();
+  if (!user) return null;
+  const supabase = await createClient();
+  const { data: row } = await supabase.from("profiles").select("id,username,display_name,avatar_path,provider_avatar_url,onboarding_completed").eq("id", user.id).maybeSingle();
+  if (!row) return { id: user.id, username: null, displayName: user.user_metadata.full_name ?? "New driver", avatarUrl: null, onboardingCompleted: false, followersCount: 0, vehicleCount: 0 };
+  const [{ data: stats }, { count: vehicleCount }] = await Promise.all([
+    supabase.rpc("profile_stats", { target: user.id }).maybeSingle(),
+    supabase.from("vehicles").select("id", { count: "exact", head: true }).eq("owner_id", user.id),
+  ]);
+  return { id: row.id, username: row.username, displayName: row.display_name, avatarUrl: resolveAvatarUrl(publicMediaUrl(supabase, "avatars", row.avatar_path), row.provider_avatar_url), onboardingCompleted: row.onboarding_completed, followersCount: stats?.followers_count ?? 0, vehicleCount: vehicleCount ?? 0 };
+});
+
 export async function getFeed(): Promise<Post[]> {
   if (!isSupabaseConfigured()) return demoPosts;
   const supabase = await createClient();
-  const viewer = await getViewer();
-  const { data, error } = await supabase
-    .from("posts")
-    .select("id,body,photo_path,created_at,profiles!posts_author_id_fkey(username,display_name,avatar_path),vehicles(id,nickname,make,model,year),likes(count),comments(count)")
-    .order("created_at", { ascending: false })
-    .limit(20);
+  const { data, error } = await supabase.rpc("feed_posts", { feed_limit: 20 });
   if (error || !data) return [];
-  const postIds = data.map((row) => row.id);
-  const { data: viewerLikes } = viewer && postIds.length
-    ? await supabase.from("likes").select("post_id").eq("user_id", viewer.id).in("post_id", postIds)
-    : { data: [] };
-  const likedPostIds = new Set((viewerLikes ?? []).map((like) => like.post_id));
-  return Promise.all(data.map(async (row: Record<string, unknown>) => {
-    const path = row.photo_path ? String(row.photo_path) : null;
-    const { data: signed } = path
-      ? await supabase.storage.from("post-media").createSignedUrl(path, 60 * 60)
+  const paths = data.map((row) => row.photo_path).filter((path): path is string => Boolean(path));
+  const signedByPath = new Map<string, string>();
+  if (paths.length) {
+    const admin = createAdminClient();
+    const { data: signed } = admin
+      ? await admin.storage.from("post-media").createSignedUrls(paths, 3600)
       : { data: null };
-    const author = (Array.isArray(row.profiles) ? row.profiles[0] : row.profiles) as Record<string, string | null> | null;
-    return mapPost(
-      row,
-      signed?.signedUrl ?? null,
-      publicMediaUrl(supabase, "avatars", author?.avatar_path),
-      likedPostIds.has(String(row.id)),
-    );
+    signed?.forEach((item, index) => { if (item.signedUrl) signedByPath.set(paths[index], item.signedUrl); });
+  }
+  return data.map((row) => ({
+    id: row.id, body: row.body, photoUrl: row.photo_path ? signedByPath.get(row.photo_path) ?? null : null, createdAt: row.created_at,
+    author: { username: row.author_username, displayName: row.author_display_name, avatarUrl: resolveAvatarUrl(publicMediaUrl(supabase, "avatars", row.author_avatar_path), row.author_provider_avatar_url) },
+    vehicle: row.vehicle_id ? { id: row.vehicle_id, nickname: row.vehicle_nickname ?? "Car", make: row.vehicle_make ?? "", model: row.vehicle_model ?? "", year: row.vehicle_year ?? 0 } : null,
+    likesCount: Number(row.likes_count), commentsCount: Number(row.comments_count), likedByViewer: row.liked_by_viewer,
   }));
 }
 
@@ -47,35 +54,32 @@ export async function getPost(id: string): Promise<Post | null> {
   const post = (await getFeed()).find((item) => item.id === id);
   if (!post || !isSupabaseConfigured()) return post ?? null;
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("comments")
-    .select("id,body,created_at,profiles!comments_author_id_fkey(username,display_name,avatar_path)")
-    .eq("post_id", id)
-    .order("created_at", { ascending: true });
+  const { data } = await supabase.from("comments").select("id,body,created_at,profiles!comments_author_id_fkey(username,display_name,avatar_path,provider_avatar_url)").eq("post_id", id).order("created_at", { ascending: true });
   const comments: Comment[] = (data ?? []).map((row) => {
-    const author = (Array.isArray(row.profiles) ? row.profiles[0] : row.profiles) as Record<string, string | null> | null;
-    return { id: row.id, body: row.body, createdAt: row.created_at, author: { username: author?.username ?? "driver", displayName: author?.display_name ?? "iRide driver", avatarUrl: publicMediaUrl(supabase, "avatars", author?.avatar_path) } };
+    const author = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return { id: row.id, body: row.body, createdAt: row.created_at, author: { username: author?.username ?? "driver", displayName: author?.display_name ?? "iRide driver", avatarUrl: resolveAvatarUrl(publicMediaUrl(supabase, "avatars", author?.avatar_path), author?.provider_avatar_url) } };
   });
   return { ...post, comments };
 }
 
-export async function getPublicProfile(username: string): Promise<{ profile: Profile; vehicles: Vehicle[] } | null> {
-  if (!isSupabaseConfigured()) {
-    return username === demoProfile.username ? { profile: demoProfile, vehicles: demoVehicles } : null;
-  }
+export async function getMemberProfile(username: string, viewerId: string): Promise<MemberProfile | null> {
+  if (!isSupabaseConfigured()) return username === demoProfile.username ? { profile: demoProfile, vehicles: demoVehicles, isOwner: false, isFollowing: false } : null;
   const supabase = await createClient();
-  const { data: profileRow } = await supabase.from("profiles").select("*").eq("username", username).maybeSingle();
-  if (!profileRow) return null;
-  const { data: vehicleRows } = await supabase.from("vehicles").select("*").eq("owner_id", profileRow.id).order("created_at");
-  const { data: stats } = await supabase.rpc("profile_stats", { target: profileRow.id }).maybeSingle();
-  const profileStats = stats as { followers_count?: number; following_count?: number } | null;
-  const profile: Profile = {
-    id: profileRow.id, username: profileRow.username, displayName: profileRow.display_name, bio: profileRow.bio, location: profileRow.location, avatarUrl: publicMediaUrl(supabase, "avatars", profileRow.avatar_path), locale: profileRow.locale as Profile["locale"], followersCount: profileStats?.followers_count ?? 0, followingCount: profileStats?.following_count ?? 0,
-  };
-  const vehicles: Vehicle[] = (vehicleRows ?? []).map((v) => ({
-    id: v.id, ownerId: v.owner_id, nickname: v.nickname, make: v.make, model: v.model, year: v.year, trim: v.trim, color: v.color, description: v.description, coverUrl: publicMediaUrl(supabase, "vehicle-media", v.cover_path),
-  }));
-  return { profile, vehicles };
+  const { data: row } = await supabase.from("profiles").select("*").eq("username", username).maybeSingle();
+  if (!row) return null;
+  const [{ data: vehicleRows }, { data: stats }, { data: follow }] = await Promise.all([
+    supabase.from("vehicles").select("*").eq("owner_id", row.id).order("created_at"),
+    supabase.rpc("profile_stats", { target: row.id }).maybeSingle(),
+    viewerId === row.id ? Promise.resolve({ data: null }) : supabase.from("follows").select("following_id").eq("follower_id", viewerId).eq("following_id", row.id).maybeSingle(),
+  ]);
+  const profile: Profile = { id: row.id, username: row.username, displayName: row.display_name, bio: row.bio, location: row.location, avatarUrl: resolveAvatarUrl(publicMediaUrl(supabase, "avatars", row.avatar_path), row.provider_avatar_url), locale: row.locale as Profile["locale"], followersCount: stats?.followers_count ?? 0, followingCount: stats?.following_count ?? 0 };
+  return { profile, vehicles: (vehicleRows ?? []).map(mapVehicle.bind(null, supabase)), isOwner: viewerId === row.id, isFollowing: Boolean(follow) };
+}
+
+export async function getMyProfile(): Promise<Profile | null> {
+  const viewer = await getViewerContext();
+  if (!viewer?.username) return null;
+  return (await getMemberProfile(viewer.username, viewer.id))?.profile ?? null;
 }
 
 export async function getMyVehicles(): Promise<Vehicle[]> {
@@ -83,27 +87,13 @@ export async function getMyVehicles(): Promise<Vehicle[]> {
   if (!viewer) return isSupabaseConfigured() ? [] : demoVehicles;
   const supabase = await createClient();
   const { data } = await supabase.from("vehicles").select("*").eq("owner_id", viewer.id).order("created_at");
-  return (data ?? []).map((v) => ({ id: v.id, ownerId: v.owner_id, nickname: v.nickname, make: v.make, model: v.model, year: v.year, trim: v.trim, color: v.color, description: v.description, coverUrl: publicMediaUrl(supabase, "vehicle-media", v.cover_path) }));
+  return (data ?? []).map(mapVehicle.bind(null, supabase));
 }
 
 function publicMediaUrl(supabase: Awaited<ReturnType<typeof createClient>>, bucket: "avatars" | "vehicle-media", path: string | null | undefined) {
   return path ? supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl : null;
 }
 
-function mapPost(
-  row: Record<string, unknown>,
-  photoUrl = row.photo_path ? String(row.photo_path) : null,
-  avatarUrl: string | null = null,
-  likedByViewer = false,
-): Post {
-  const author = (Array.isArray(row.profiles) ? row.profiles[0] : row.profiles) as Record<string, string | null> | null;
-  const vehicle = (Array.isArray(row.vehicles) ? row.vehicles[0] : row.vehicles) as Record<string, string | number> | null;
-  const likes = row.likes as Array<{ count: number }> | undefined;
-  const comments = row.comments as Array<{ count: number }> | undefined;
-  return {
-    id: String(row.id), body: String(row.body), photoUrl, createdAt: String(row.created_at),
-    author: { username: author?.username ?? "driver", displayName: author?.display_name ?? "iRide driver", avatarUrl },
-    vehicle: vehicle ? { id: String(vehicle.id), nickname: String(vehicle.nickname), make: String(vehicle.make), model: String(vehicle.model), year: Number(vehicle.year) } : null,
-    likesCount: likes?.[0]?.count ?? 0, commentsCount: comments?.[0]?.count ?? 0, likedByViewer,
-  };
+function mapVehicle(supabase: Awaited<ReturnType<typeof createClient>>, row: { id: string; owner_id: string; nickname: string; make: string; model: string; year: number; trim: string | null; color: string | null; description: string | null; cover_path: string | null }): Vehicle {
+  return { id: row.id, ownerId: row.owner_id, nickname: row.nickname, make: row.make, model: row.model, year: row.year, trim: row.trim, color: row.color, description: row.description, coverUrl: publicMediaUrl(supabase, "vehicle-media", row.cover_path) };
 }

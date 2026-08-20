@@ -1,26 +1,22 @@
 "use client";
 
 import { Languages } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import type { Locale } from "@/lib/types";
+import { useLocale } from "@/components/locale-provider";
 
-export function LocaleSwitcher({ locale }: { locale: Locale }) {
-  const pathname = usePathname();
+export function LocaleSwitcher() {
+  const { locale, setLocale } = useLocale();
   const nextLocale = locale === "th" ? "en" : "th";
-  const nextPath = pathname.replace(/^\/(th|en)(?=\/|$)/, `/${nextLocale}`);
   return (
     <Button
-      asChild
       variant="ghost"
       size="sm"
       className="gap-2"
+      aria-label={locale === "th" ? "Switch to English (EN)" : "เปลี่ยนเป็นภาษาไทย (TH)"}
+      onClick={() => setLocale(nextLocale)}
     >
-      <Link href={nextPath} onClick={() => { document.cookie = `iride-locale=${nextLocale};path=/;max-age=31536000;samesite=lax`; }}>
-        <Languages className="size-4" />
-        {nextLocale.toUpperCase()}
-      </Link>
+      <Languages className="size-4" />
+      {nextLocale.toUpperCase()}
     </Button>
   );
 }

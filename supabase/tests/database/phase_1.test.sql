@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(18);
+select plan(25);
 
 select has_table('public', 'profiles', 'profiles exists');
 select has_table('public', 'vehicles', 'vehicles exists');
@@ -56,20 +56,56 @@ select results_eq(
   array[1::bigint], 'aggregate following count is correct'
 );
 
+select ok(
+  not (select onboarding_completed from public.profiles where id = '10000000-0000-0000-0000-000000000001'),
+  'new profiles require onboarding'
+);
+select throws_ok(
+  $$update public.profiles set provider_avatar_url = 'https://example.com/avatar.jpg' where id = '10000000-0000-0000-0000-000000000001'$$,
+  '23514', null, 'provider avatars are restricted to Google image hosting'
+);
+
 set local role anon;
-select is((select count(*)::integer from public.profiles), 2, 'anon can read profiles');
-select is((select count(*)::integer from public.vehicles), 1, 'anon can read vehicles');
-select is((select count(*)::integer from public.posts), 0, 'anon cannot read posts');
+select throws_ok(
+  $$select count(*) from public.profiles$$,
+  '42501', null, 'anon cannot read profiles directly'
+);
+select throws_ok(
+  $$select count(*) from public.vehicles$$,
+  '42501', null, 'anon cannot read vehicles directly'
+);
+select throws_ok(
+  $$select count(*) from public.posts$$,
+  '42501', null, 'anon cannot read posts directly'
+);
+select is((select count(*)::integer from public.feed_posts()), 1, 'anon can read the safe public feed');
+select results_eq(
+  $$select likes_count from public.feed_posts()$$,
+  array[1::bigint], 'public feed exposes aggregate like counts'
+);
+select results_eq(
+  $$select liked_by_viewer from public.feed_posts()$$,
+  array[false], 'anonymous public feed has no viewer like state'
+);
 reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '20000000-0000-0000-0000-000000000002', true);
 select is((select count(*)::integer from public.posts), 1, 'authenticated users can read posts');
+select results_eq(
+  $$select liked_by_viewer from public.feed_posts()$$,
+  array[false], 'non-liking viewer has false like state'
+);
 update public.posts set body = 'Hijacked'
 where id = '40000000-0000-0000-0000-000000000004';
 select is(
   (select body from public.posts where id = '40000000-0000-0000-0000-000000000004'),
   'First drive', 'non-owner cannot update another post'
+);
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
+select results_eq(
+  $$select liked_by_viewer from public.feed_posts()$$,
+  array[true], 'liking viewer has true like state'
 );
 reset role;
 

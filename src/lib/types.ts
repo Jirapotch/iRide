@@ -12,6 +12,23 @@ export type Profile = {
   followingCount: number;
 };
 
+export type ViewerContext = {
+  id: string;
+  username: string | null;
+  displayName: string;
+  avatarUrl: string | null;
+  onboardingCompleted: boolean;
+  followersCount: number;
+  vehicleCount: number;
+};
+
+export type MemberProfile = {
+  profile: Profile;
+  vehicles: Vehicle[];
+  isOwner: boolean;
+  isFollowing: boolean;
+};
+
 export type Vehicle = {
   id: string;
   ownerId: string;

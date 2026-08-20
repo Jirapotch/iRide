@@ -1,15 +1,11 @@
-import { notFound } from "next/navigation";
 import type { Locale } from "@/lib/types";
 
 export const locales = ["th", "en"] as const;
+export const defaultLocale: Locale = "th";
+export const localeStorageKey = "iride-locale";
 
 export function isLocale(value: string): value is Locale {
   return locales.includes(value as Locale);
-}
-
-export function assertLocale(value: string): Locale {
-  if (!isLocale(value)) notFound();
-  return value;
 }
 
 const dictionaries = {

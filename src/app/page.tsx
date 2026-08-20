@@ -1,5 +1,16 @@
-import { redirect } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, Camera, Heart, MapPin, Users } from "lucide-react";
+import { AppHeader } from "@/components/app-header";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getDictionary } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
 
-export default function Home() {
-  redirect("/th");
+export default async function LandingPage() {
+  const locale = await getLocale();
+  const dict = getDictionary(locale);
+  return <><AppHeader locale={locale} /><main className="overflow-hidden"><section className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-14 px-4 py-16 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:py-24"><div className="relative z-10"><Badge variant="secondary" className="mb-6 rounded-full px-3 py-1.5"><Heart className="mr-1.5 size-3.5 fill-primary text-primary" />{dict.landing.eyebrow}</Badge><h1 className="max-w-xl text-5xl font-bold tracking-[-0.045em] sm:text-6xl lg:text-7xl">{dict.landing.title}</h1><p className="mt-6 max-w-lg text-lg leading-8 text-muted-foreground">{dict.landing.description}</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><Button asChild size="lg" className="h-12 gap-2 rounded-full px-6"><Link href="/auth">{dict.landing.primary}<ArrowRight className="size-4" /></Link></Button><Button asChild size="lg" variant="outline" className="h-12 rounded-full px-6"><Link href="/feed">{dict.landing.secondary}</Link></Button></div><div className="mt-10 flex items-center gap-4 text-sm text-muted-foreground"><div className="flex -space-x-2">{["photo-1494790108377-be9c29b29330","photo-1535713875002-d1d0cf377fde","photo-1500648767791-00dcc994a43e"].map((id, index) => <Avatar key={id} className="size-9 border-2 border-background"><AvatarImage src={`https://images.unsplash.com/${id}?auto=format&fit=crop&w=100&q=80`} /><AvatarFallback>D{index}</AvatarFallback></Avatar>)}</div><span><strong className="text-foreground">2,400+</strong> stories shared</span></div></div><div className="relative mx-auto w-full max-w-xl"><div className="absolute -left-12 top-20 size-48 rounded-full bg-primary/15 blur-3xl" /><div className="absolute -right-16 bottom-10 size-56 rounded-full bg-sky-300/20 blur-3xl" /><Card className="surface-shadow relative rotate-1 overflow-hidden border-white/80 bg-card/90 py-0 backdrop-blur"><div className="relative aspect-[4/5] sm:aspect-[5/4]"><Image src="https://images.unsplash.com/photo-1504215680853-026ed2a45def?auto=format&fit=crop&w=1400&q=90" alt="Sports car on an open road" fill priority sizes="(max-width: 1024px) 100vw, 55vw" className="object-cover" /><div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-6 pt-24 text-white"><div className="mb-3 flex items-center gap-2 text-sm"><MapPin className="size-4" />Mae Hong Son Loop</div><p className="text-xl font-semibold">Chasing the first light.</p></div></div></Card><Card className="surface-shadow absolute -bottom-8 -left-4 w-52 border-white/80 bg-card/95 py-3 backdrop-blur sm:-left-10"><CardContent className="flex items-center gap-3 px-4"><div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary"><Camera className="size-5" /></div><div><p className="text-sm font-semibold">Share the moment</p><p className="text-xs text-muted-foreground">One photo. One story.</p></div></CardContent></Card><Card className="surface-shadow absolute -right-3 top-10 border-white/80 bg-card/95 py-3 backdrop-blur sm:-right-8"><CardContent className="flex items-center gap-2 px-4 text-sm font-medium"><Users className="size-4 text-primary" />A community that gets it</CardContent></Card></div></section></main></>;
 }
