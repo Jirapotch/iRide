@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { updateVehicleAction } from "@/app/actions";
+import { ImageUploadHint } from "@/components/image-upload-hint";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,8 +23,8 @@ export function VehicleEditForm({ vehicle, locale, returnTo }: { vehicle: Vehicl
       <Field label="Color" name="color" defaultValue={vehicle.color} error={state.fieldErrors?.color?.[0]} />
     </div>
     <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" name="description" defaultValue={vehicle.description ?? ""} rows={4} maxLength={300} /></div>
-    <div className="space-y-2"><Label htmlFor="cover">{locale === "th" ? "เปลี่ยนรูปหน้าปก (ไม่บังคับ)" : "Replace cover (optional)"}</Label><Input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" className="min-h-11" />{vehicle.coverUrl && <p className="text-xs text-muted-foreground">{locale === "th" ? "หากไม่เลือกรูปใหม่ ระบบจะเก็บรูปเดิมไว้" : "Leave empty to keep the current cover."}</p>}</div>
-    {state.message && <p role="alert" className="text-sm text-destructive">{state.message}</p>}
+    <div className="space-y-2"><Label htmlFor="cover">{locale === "th" ? "เปลี่ยนรูปหน้าปก (ไม่บังคับ)" : "Replace cover (optional)"}</Label><Input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" className="min-h-11" /><ImageUploadHint locale={locale} />{vehicle.coverUrl && <p className="text-xs text-muted-foreground">{locale === "th" ? "หากไม่เลือกรูปใหม่ ระบบจะเก็บรูปเดิมไว้" : "Leave empty to keep the current cover."}</p>}</div>
+    {state.message && <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{state.message}</p>}
     <SubmitButton className="min-h-11 w-full sm:w-auto" idleLabel={locale === "th" ? "บันทึก Vehicle" : "Save vehicle"} pendingLabel={locale === "th" ? "กำลังบันทึก…" : "Saving…"} />
   </form>;
 }
