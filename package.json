@@ -12,6 +12,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "db:types": "npx supabase@latest gen types typescript --project-id bgflnssilreepfzxoqpc --schema public > src/lib/supabase/database.types.ts",
+    "db:test": "npx supabase@latest test db",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

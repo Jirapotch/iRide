@@ -8,8 +8,9 @@ test("landing page and language switch work", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Every ride has a story" })).toBeVisible();
 });
 
-test("demo community feed renders", async ({ page }) => {
+test("anonymous users are redirected from the community feed to auth", async ({ page }) => {
   await page.goto("/th/feed");
-  await expect(page.getByRole("heading", { name: "Community" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Narin Chaiyasit" })).toBeVisible();
+  await expect(page).toHaveURL(/\/th\/auth\?next=%2Fth%2Ffeed$/);
+  await expect(page.getByRole("textbox", { name: "Email" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ส่งลิงก์เข้าสู่ระบบ" })).toBeVisible();
 });
