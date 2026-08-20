@@ -1,4 +1,5 @@
 export type Locale = "th" | "en";
+export type FollowStatus = "none" | "pending" | "accepted";
 
 export type Profile = {
   id: string;
@@ -7,7 +8,9 @@ export type Profile = {
   bio: string | null;
   location: string | null;
   avatarUrl: string | null;
+  coverUrl: string | null;
   locale: Locale;
+  isPrivate: boolean;
   followersCount: number;
   followingCount: number;
 };
@@ -25,21 +28,31 @@ export type ViewerContext = {
 export type MemberProfile = {
   profile: Profile;
   vehicles: Vehicle[];
+  posts: Post[];
   isOwner: boolean;
-  isFollowing: boolean;
+  canViewContent: boolean;
+  followStatus: FollowStatus;
 };
 
 export type Vehicle = {
   id: string;
   ownerId: string;
-  nickname: string;
-  make: string;
-  model: string;
-  year: number;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
   trim: string | null;
   color: string | null;
   description: string | null;
   coverUrl: string | null;
+};
+
+export type FollowRequest = {
+  followerId: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  createdAt: string;
 };
 
 export type Comment = {
@@ -55,7 +68,7 @@ export type Post = {
   photoUrl: string | null;
   createdAt: string;
   author: Pick<Profile, "username" | "displayName" | "avatarUrl">;
-  vehicle: Pick<Vehicle, "id" | "nickname" | "make" | "model" | "year"> | null;
+  vehicle: Pick<Vehicle, "id" | "name" | "brand" | "model" | "year"> | null;
   likesCount: number;
   commentsCount: number;
   likedByViewer: boolean;
@@ -66,4 +79,6 @@ export type ActionState = {
   ok: boolean;
   message?: string;
   fieldErrors?: Record<string, string[]>;
+  followStatus?: FollowStatus;
+  locale?: Locale;
 };

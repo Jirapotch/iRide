@@ -61,16 +61,19 @@ export type Database = {
           created_at: string
           follower_id: string
           following_id: string
+          status: string
         }
         Insert: {
           created_at?: string
           follower_id: string
           following_id: string
+          status?: string
         }
         Update: {
           created_at?: string
           follower_id?: string
           following_id?: string
+          status?: string
         }
         Relationships: [
           {
@@ -171,9 +174,11 @@ export type Database = {
         Row: {
           avatar_path: string | null
           bio: string | null
+          cover_path: string | null
           created_at: string
           display_name: string
           id: string
+          is_private: boolean
           locale: string
           location: string | null
           onboarding_completed: boolean
@@ -184,9 +189,11 @@ export type Database = {
         Insert: {
           avatar_path?: string | null
           bio?: string | null
+          cover_path?: string | null
           created_at?: string
           display_name: string
           id: string
+          is_private?: boolean
           locale?: string
           location?: string | null
           onboarding_completed?: boolean
@@ -197,9 +204,11 @@ export type Database = {
         Update: {
           avatar_path?: string | null
           bio?: string | null
+          cover_path?: string | null
           created_at?: string
           display_name?: string
           id?: string
+          is_private?: boolean
           locale?: string
           location?: string | null
           onboarding_completed?: boolean
@@ -216,13 +225,13 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
-          make: string
-          model: string
+          make: string | null
+          model: string | null
           nickname: string
           owner_id: string
           trim: string | null
           updated_at: string
-          year: number
+          year: number | null
         }
         Insert: {
           color?: string | null
@@ -230,13 +239,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          make: string
-          model: string
+          make?: string | null
+          model?: string | null
           nickname: string
           owner_id: string
           trim?: string | null
           updated_at?: string
-          year: number
+          year?: number | null
         }
         Update: {
           color?: string | null
@@ -244,13 +253,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          make?: string
-          model?: string
+          make?: string | null
+          model?: string | null
           nickname?: string
           owner_id?: string
           trim?: string | null
           updated_at?: string
-          year?: number
+          year?: number | null
         }
         Relationships: [
           {
@@ -282,10 +291,10 @@ export type Database = {
           likes_count: number
           photo_path: string
           vehicle_id: string
-          vehicle_make: string
-          vehicle_model: string
+          vehicle_make: string | null
+          vehicle_model: string | null
           vehicle_nickname: string
-          vehicle_year: number
+          vehicle_year: number | null
         }[]
       }
       profile_stats: {

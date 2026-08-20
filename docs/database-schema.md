@@ -1,6 +1,6 @@
 # iRide Phase 1 database
 
-The canonical baseline is [`supabase/migrations/202608200001_phase_1.sql`](../supabase/migrations/202608200001_phase_1.sql). The application stores Storage object paths, never permanent media URLs. Server-only data access maps database rows to camelCase UI DTOs.
+The canonical baseline is [`supabase/migrations/202608200001_phase_1.sql`](../supabase/migrations/202608200001_phase_1.sql), with authentication/feed hardening and profile privacy changes applied by later migrations. The application stores Storage object paths, never permanent media URLs. Server-only data access maps database rows to camelCase UI DTOs.
 
 ## Entity relationship diagram
 
@@ -25,14 +25,16 @@ erDiagram
     text location nullable
     text locale
     text avatar_path nullable
+    text cover_path nullable
+    boolean is_private
   }
   VEHICLES {
     uuid id PK
     uuid owner_id FK
     text nickname
-    text make
-    text model
-    int year
+    text make nullable
+    text model nullable
+    int year nullable
     text cover_path nullable
   }
   POSTS {
@@ -55,6 +57,7 @@ erDiagram
   FOLLOWS {
     uuid follower_id PK,FK
     uuid following_id PK,FK
+    text status
   }
 ```
 
@@ -62,12 +65,12 @@ erDiagram
 
 | Model | Required ownership | Nullable fields | Delete behavior | Read visibility |
 | --- | --- | --- | --- | --- |
-| `profiles` | `id = auth.users.id` | bio, location, avatar path | deleting auth user cascades through all owned data | anon + authenticated |
-| `vehicles` | `owner_id = auth.uid()` | trim, color, description, cover path | owner/profile delete cascades; linked posts retain and set vehicle to null | anon + authenticated |
-| `posts` | `author_id = auth.uid()`; selected vehicle must belong to author | vehicle, photo path | author/profile delete cascades to post, comments, likes | authenticated |
+| `profiles` | `id = auth.users.id` | bio, location, avatar path, cover path | deleting auth user cascades through all owned data | authenticated; basic profile details remain visible to members |
+| `vehicles` | `owner_id = auth.uid()` | brand/make, model, year, trim, color, description, cover path | owner/profile delete cascades; linked posts retain and set vehicle to null | owner, public-profile viewers, or accepted followers |
+| `posts` | `author_id = auth.uid()`; selected vehicle must belong to author | vehicle, photo path | author/profile delete cascades to post, comments, likes | public-profile viewers or accepted followers; anonymous feed excludes private authors |
 | `comments` | `author_id = auth.uid()` | none | post or author delete cascades | authenticated |
 | `likes` | `user_id = auth.uid()` | none | user or post delete cascades; pair is unique | authenticated |
-| `follows` | `follower_id = auth.uid()` and follower differs from following | none | either profile delete cascades; pair is unique | authenticated records; aggregate counts are public through `profile_stats` |
+| `follows` | `follower_id = auth.uid()` and follower differs from following | none | either profile delete cascades; pair is unique | participants only; private profiles create pending requests and counts include accepted relationships only |
 
 All editable content tables use `updated_at` triggers. `handle_new_user` creates the one-to-one profile. `ensure_post_vehicle_owner` enforces vehicle ownership in addition to RLS.
 
@@ -75,7 +78,7 @@ All editable content tables use `updated_at` triggers. `handle_new_user` creates
 
 | Bucket | Visibility | Limit | Database column |
 | --- | --- | --- | --- |
-| `avatars` | public read; owner-folder writes | 8 MiB, JPEG/PNG/WebP | `profiles.avatar_path` |
+| `avatars` | public read; owner-folder writes | 8 MiB, JPEG/PNG/WebP | `profiles.avatar_path`, `profiles.cover_path` |
 | `vehicle-media` | public read; owner-folder writes | 8 MiB, JPEG/PNG/WebP | `vehicles.cover_path` |
 | `post-media` | authenticated read; owner-folder writes | 8 MiB, JPEG/PNG/WebP | `posts.photo_path` |
 

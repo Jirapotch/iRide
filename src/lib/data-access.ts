@@ -43,20 +43,45 @@ export async function removeMedia(supabase: SupabaseClient, bucket: Bucket, path
 export async function saveProfile(
   supabase: SupabaseClient,
   userId: string,
-  profile: Omit<TablesInsert<"profiles">, "id" | "avatar_path">,
+  profile: Omit<TablesInsert<"profiles">, "id" | "avatar_path" | "cover_path">,
   avatar: File | null,
+  cover: File | null,
 ) {
-  const { data: current } = await supabase.from("profiles").select("avatar_path").eq("id", userId).maybeSingle();
-  const newPath = await uploadImage(supabase, avatar, "avatars", userId);
-  const payload: TablesInsert<"profiles"> = { id: userId, ...profile, ...(newPath ? { avatar_path: newPath } : {}) };
-  const { error } = await supabase.from("profiles").upsert(payload);
-  if (error) {
-    await removeMedia(supabase, "avatars", newPath).catch(() => undefined);
+  const { data: current } = await supabase.from("profiles").select("avatar_path,cover_path").eq("id", userId).maybeSingle();
+  let newAvatarPath: string | null = null;
+  let newCoverPath: string | null = null;
+  try {
+    newAvatarPath = await uploadImage(supabase, avatar, "avatars", userId);
+    newCoverPath = await uploadImage(supabase, cover, "avatars", userId);
+  } catch (error) {
+    await Promise.all([
+      removeMedia(supabase, "avatars", newAvatarPath).catch(() => undefined),
+      removeMedia(supabase, "avatars", newCoverPath).catch(() => undefined),
+    ]);
     throw error;
   }
-  if (newPath && current?.avatar_path && current.avatar_path !== newPath) {
-    await removeMedia(supabase, "avatars", current.avatar_path).catch(() => undefined);
+  const payload: TablesInsert<"profiles"> = {
+    id: userId,
+    ...profile,
+    ...(newAvatarPath ? { avatar_path: newAvatarPath } : {}),
+    ...(newCoverPath ? { cover_path: newCoverPath } : {}),
+  };
+  const { error } = await supabase.from("profiles").upsert(payload);
+  if (error) {
+    await Promise.all([
+      removeMedia(supabase, "avatars", newAvatarPath).catch(() => undefined),
+      removeMedia(supabase, "avatars", newCoverPath).catch(() => undefined),
+    ]);
+    throw error;
   }
+  await Promise.all([
+    newAvatarPath && current?.avatar_path && current.avatar_path !== newAvatarPath
+      ? removeMedia(supabase, "avatars", current.avatar_path).catch(() => undefined)
+      : Promise.resolve(),
+    newCoverPath && current?.cover_path && current.cover_path !== newCoverPath
+      ? removeMedia(supabase, "avatars", current.cover_path).catch(() => undefined)
+      : Promise.resolve(),
+  ]);
 }
 
 export async function insertVehicle(supabase: SupabaseClient, vehicle: Omit<TablesInsert<"vehicles">, "cover_path">, cover: File | null) {
@@ -90,11 +115,24 @@ export async function setLike(supabase: SupabaseClient, userId: string, postId: 
   if (error) throw error;
 }
 
-export async function setFollow(supabase: SupabaseClient, userId: string, profileId: string, following: boolean) {
-  const query = supabase.from("follows");
-  const { error } = following
-    ? await query.delete().eq("follower_id", userId).eq("following_id", profileId)
-    : await query.insert({ follower_id: userId, following_id: profileId });
+export async function setFollow(supabase: SupabaseClient, userId: string, profileId: string, remove: boolean) {
+  if (remove) {
+    const { error } = await supabase.from("follows").delete().eq("follower_id", userId).eq("following_id", profileId);
+    if (error) throw error;
+    return "none" as const;
+  }
+  const { data: profile, error: profileError } = await supabase.from("profiles").select("is_private").eq("id", profileId).single();
+  if (profileError) throw profileError;
+  const status = profile.is_private ? "pending" : "accepted";
+  const { error } = await supabase.from("follows").insert({ follower_id: userId, following_id: profileId, status });
+  if (error) throw error;
+  return status;
+}
+
+export async function respondToFollowRequest(supabase: SupabaseClient, userId: string, followerId: string, accept: boolean) {
+  const { error } = accept
+    ? await supabase.from("follows").update({ status: "accepted" }).eq("follower_id", followerId).eq("following_id", userId).eq("status", "pending")
+    : await supabase.from("follows").delete().eq("follower_id", followerId).eq("following_id", userId).eq("status", "pending");
   if (error) throw error;
 }
 

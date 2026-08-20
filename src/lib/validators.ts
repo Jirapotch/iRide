@@ -9,11 +9,9 @@ export const profileSchema = z.object({
   location: z.string().trim().max(80).optional().or(z.literal("")),
 });
 export const vehicleSchema = z.object({
-  nickname: z.string().trim().min(1).max(40),
-  make: z.string().trim().min(1).max(50),
-  model: z.string().trim().min(1).max(50),
-  year: z.coerce.number().int().min(1886).max(new Date().getFullYear() + 1),
-  trim: z.string().trim().max(60).optional().or(z.literal("")),
+  name: z.string().trim().min(1).max(40),
+  brand: z.string().trim().max(50).optional().or(z.literal("")),
+  model: z.string().trim().max(50).optional().or(z.literal("")),
   color: z.string().trim().max(60).optional().or(z.literal("")),
   description: z.string().trim().max(300).optional().or(z.literal("")),
 });
