@@ -14,9 +14,12 @@
     "test:e2e": "playwright test",
     "db:types": "npx supabase@latest gen types typescript --project-id bgflnssilreepfzxoqpc --schema public > src/lib/supabase/database.types.ts",
     "db:test": "npx supabase@latest test db",
+    "media:migrate": "tsx --env-file=.env.local scripts/migrate-media.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1118.0",
+    "@aws-sdk/s3-request-presigner": "3.1118.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "class-variance-authority": "^0.7.1",
@@ -26,6 +29,7 @@
     "radix-ui": "^1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "server-only": "0.0.1",
     "shadcn": "^4.18.0",
     "sharp": "0.35.3",
     "tailwind-merge": "^3.6.0",
@@ -45,6 +49,7 @@
     "eslint-config-next": "16.3.1",
     "jsdom": "^30.0.1",
     "tailwindcss": "^4",
+    "tsx": "4.23.12",
     "typescript": "^5",
     "vitest": "^4.1.11"
   }

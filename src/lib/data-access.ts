@@ -2,10 +2,10 @@ import "server-only";
 
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { processUploadedImage } from "@/lib/image-processing";
+import { getR2MediaStorage, parseMediaPath, toR2Path, type MediaBucket } from "@/lib/media-storage";
 import type { TablesInsert } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
-type Bucket = "avatars" | "vehicle-media" | "post-media";
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 const DEMO_MESSAGE = "Supabase environment variables are required to save changes.";
@@ -18,18 +18,22 @@ export async function requireUser() {
   return { supabase, user };
 }
 
-export async function uploadImage(supabase: SupabaseClient, file: File | null, bucket: Bucket, userId: string) {
+export async function uploadImage(_supabase: SupabaseClient, file: File | null, bucket: MediaBucket, userId: string) {
   if (!file || file.size === 0) return null;
   const processed = await processUploadedImage(file);
   const path = `${userId}/${crypto.randomUUID()}.${processed.extension}`;
-  const { error } = await supabase.storage.from(bucket).upload(path, processed.data, { contentType: processed.contentType, upsert: false });
-  if (error) throw error;
-  return path;
+  await getR2MediaStorage().upload(bucket, path, processed.data, processed.contentType);
+  return toR2Path(path);
 }
 
-export async function removeMedia(supabase: SupabaseClient, bucket: Bucket, path: string | null | undefined) {
+export async function removeMedia(supabase: SupabaseClient, bucket: MediaBucket, path: string | null | undefined) {
   if (!path) return;
-  const { error } = await supabase.storage.from(bucket).remove([path]);
+  const media = parseMediaPath(path);
+  if (media.provider === "r2") {
+    await getR2MediaStorage().remove(bucket, media.key);
+    return;
+  }
+  const { error } = await supabase.storage.from(bucket).remove([media.key]);
   if (error) throw error;
 }
 

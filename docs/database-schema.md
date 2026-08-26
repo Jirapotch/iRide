@@ -74,15 +74,17 @@ erDiagram
 
 All editable content tables use `updated_at` triggers. `handle_new_user` creates the one-to-one profile. `ensure_post_vehicle_owner` enforces vehicle ownership in addition to RLS.
 
-## Storage
+## Media storage (Release A transition)
 
-| Bucket | Visibility | Limit | Database column |
+| Logical bucket | R2 visibility | Stored limit | Database column |
 | --- | --- | --- | --- |
-| `avatars` | public read; owner-folder writes | 8 MiB, JPEG/PNG/WebP | `profiles.avatar_path`, `profiles.cover_path` |
-| `vehicle-media` | public read; owner-folder writes | 8 MiB, JPEG/PNG/WebP | `vehicles.cover_path` |
-| `post-media` | authenticated read; owner-folder writes | 8 MiB, JPEG/PNG/WebP | `posts.photo_path` |
+| `avatars` | private; seven-day signed GET | 3 MB WebP | `profiles.avatar_path`, `profiles.cover_path` |
+| `vehicle-media` | private; seven-day signed GET | 3 MB WebP | `vehicles.cover_path` |
+| `post-media` | private; ten-minute signed GET | 3 MB WebP | `posts.photo_path` |
 
-Avatar and vehicle URLs are derived with `getPublicUrl`. Post media uses one-hour signed URLs. Application delete services remove Storage objects after the owning row is deleted; failed row writes remove newly uploaded objects as compensation.
+New uploads use Cloudflare R2 and store `r2:<object-key>` in the existing path columns. During Release A, unprefixed paths continue to resolve through Supabase Storage so the resumable migration can copy and verify each object before updating its row. Uploads and signed reads use server-only credentials; failed row writes remove newly uploaded R2 objects as compensation.
+
+Run `npm run media:migrate -- --dry-run`, then `--apply`, and finally `--verify`. The migration never overwrites a mismatched R2 object and updates a database path only after `HeadObject` confirms size and content type.
 
 ## Type generation and database tests
 
