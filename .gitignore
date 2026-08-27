@@ -54,3 +54,6 @@ next-env.d.ts
 /backups/
 /supabase/.branches/
 /supabase/.temp/
+
+# local implementation plans
+/.plans/
