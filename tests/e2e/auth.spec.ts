@@ -23,11 +23,7 @@ for (const locale of ["th", "en"] as const) {
     await expect(page).toHaveURL(/\/account$/);
     await expect(page.getByText("@e2e_rider")).toBeVisible();
     await expect(page.locator('[data-ui="app-shell"]')).toBeVisible();
-    await expect(
-      page.getByRole("navigation").getByRole("link", {
-        name: /โปรไฟล์|Profile/,
-      }),
-    ).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("heading", { name: /จัดการตัวตนบน iRide|Manage your iRide identity/ })).toBeVisible();
 
     const authCookies = (await context.cookies()).filter((cookie) =>
       cookie.name.startsWith("iride-auth"),
@@ -36,6 +32,7 @@ for (const locale of ["th", "en"] as const) {
     expect(authCookies.every((cookie) => cookie.httpOnly)).toBe(true);
     expect(authCookies.every((cookie) => cookie.sameSite === "Lax")).toBe(true);
 
+    await page.getByRole("button", { name: /ตั้งค่า|Settings/ }).click();
     await page.getByRole("button", { name: /ออกจากระบบ|Sign out/ }).click();
     await expect(page).toHaveURL(/\/login\?signed_out=1/);
     expect(
@@ -83,6 +80,6 @@ test("returns to the protected profile after sign-in", async ({ page }) => {
   await page.getByRole("button", { name: /Google/ }).click();
   await expect(page).toHaveURL(/\/profile$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    /โปรไฟล์ของคุณ|Your profile/,
+    "RiderXplorer",
   );
 });

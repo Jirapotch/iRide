@@ -26,9 +26,11 @@ for (const locale of ["th", "en"] as const) {
     await page.getByRole("button", { name: /Google/ }).click();
     await expect(page).toHaveURL(/\/onboarding$/);
     await expect(page.locator('[data-ui="standalone-shell"]')).toBeVisible();
+    await page.getByRole("button", { name: /ตั้งค่า|Settings/ }).click();
     await expect(
       page.getByRole("button", { name: /ออกจากระบบ|Sign out/ }),
     ).toBeVisible();
+    await page.getByRole("button", { name: /ปิด|Close/ }).click();
 
     await page.getByLabel(/ชื่อผู้ใช้|Username/).fill(`rider_${locale}`);
     await page
@@ -57,6 +59,7 @@ for (const locale of ["th", "en"] as const) {
       .click();
     await expect(page).toHaveURL(/\/account$/);
 
+    await page.getByRole("button", { name: /ตั้งค่า|Settings/ }).click();
     await page.getByRole("button", { name: /ออกจากระบบ|Sign out/ }).click();
     await expect(page).toHaveURL(/\/login\?signed_out=1/);
     const apiPort = process.env.E2E_API_PORT ?? "3001";
@@ -140,7 +143,7 @@ test("signs out from onboarding and hides the action when anonymous", async ({
   await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
 });
 
-test("keeps global sign out visible at mobile and desktop widths", async ({
+test("keeps sign out available inside settings at mobile and desktop widths", async ({
   context,
   page,
   request,
@@ -161,6 +164,7 @@ test("keeps global sign out visible at mobile and desktop widths", async ({
 
   await page.goto("/profile");
   await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByRole("button", { name: "Settings" }).click();
   const signOut = page.getByRole("button", { name: "Sign out" });
   await expect(signOut).toBeVisible();
 
