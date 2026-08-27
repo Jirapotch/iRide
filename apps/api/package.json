@@ -1,0 +1,32 @@
+{
+  "name": "@iride/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0 --port 3001",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0 --port 3001",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@iride/auth": "workspace:*",
+    "@iride/config": "workspace:*",
+    "@iride/database": "workspace:*",
+    "@iride/domain": "workspace:*",
+    "@iride/storage": "workspace:*",
+    "@iride/types": "workspace:*",
+    "@iride/validation": "workspace:*",
+    "next": "16.3.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.11"
+  }
+}

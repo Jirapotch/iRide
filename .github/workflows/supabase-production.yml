@@ -1,0 +1,97 @@
+name: Supabase Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Production database operation
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - bootstrap-reset
+      confirm_project_ref:
+        description: Type the production project ref to authorize this operation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: bgflnssilreepfzxoqpc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: corepack prepare pnpm@11.19.0 --activate
+      - run: pnpm install --frozen-lockfile
+
+      - name: Confirm production target
+        env:
+          CONFIRMED_PROJECT_REF: ${{ inputs.confirm_project_ref }}
+        run: |
+          if [ "$CONFIRMED_PROJECT_REF" != "$SUPABASE_PROJECT_REF" ]; then
+            echo "Project ref confirmation does not match the configured production project."
+            exit 1
+          fi
+
+      - name: Link production project
+        run: >-
+          pnpm exec supabase link
+          --project-ref "$SUPABASE_PROJECT_REF"
+          --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Back up pre-launch production
+        if: inputs.operation == 'bootstrap-reset'
+        run: |
+          mkdir -p backups
+          pnpm exec supabase db dump --linked --schema public,auth --file backups/production-schema.sql
+          pnpm exec supabase db dump --linked --data-only --schema public,auth --file backups/production-data.sql
+
+      - name: Upload production backup before reset
+        if: inputs.operation == 'bootstrap-reset'
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-production-backup-${{ github.run_id }}
+          path: backups/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Clear pre-launch Auth identities
+        if: inputs.operation == 'bootstrap-reset'
+        run: pnpm exec supabase db query --linked "delete from auth.users;"
+
+      - name: Rebuild pre-launch production from migrations and seed
+        if: inputs.operation == 'bootstrap-reset'
+        run: >-
+          pnpm exec supabase db reset --linked
+          --project-ref "$SUPABASE_PROJECT_REF" --yes
+
+      - name: Preview forward-only production migration
+        if: inputs.operation == 'deploy'
+        run: pnpm exec supabase db push --linked --include-seed --dry-run
+
+      - name: Apply forward-only production migration and seed
+        if: inputs.operation == 'deploy'
+        run: pnpm exec supabase db push --linked --include-seed --yes
+
+      - name: Verify production migrations
+        run: pnpm exec supabase migration list --linked
+
+      - name: Verify production database contracts
+        run: pnpm exec supabase test db --linked
+
+      - name: Run production database advisors
+        run: >-
+          pnpm exec supabase db advisors --linked
+          --type all --fail-on error

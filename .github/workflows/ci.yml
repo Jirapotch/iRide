@@ -5,7 +5,42 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+env:
+  CI: true
+  SUPABASE_URL: https://ci.supabase.co
+  SUPABASE_PUBLISHABLE_KEY: ci-publishable-key
+  SUPABASE_SERVICE_ROLE_KEY: ci-service-role
+  CORS_ALLOWED_ORIGINS: http://localhost:3000
+  CLOUDFLARE_ACCOUNT_ID: ci-account
+  R2_ACCESS_KEY_ID: ci-access-key
+  R2_SECRET_ACCESS_KEY: ci-secret-key
+  R2_BUCKET: ci-iride
+  OPN_SECRET_KEY: skey_test_ci
+  OPN_WEBHOOK_SECRET: ci-webhook-secret
+
 jobs:
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: corepack prepare pnpm@11.19.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:start
+      - run: pnpm db:reset
+      - run: pnpm db:reset
+      - run: pnpm db:test
+      - run: pnpm db:types:check
+      - run: pnpm db:advisors
+      - if: always()
+        run: pnpm db:stop
+
   quality:
     runs-on: ubuntu-latest
     steps:
@@ -13,9 +48,40 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run test
-      - run: npm run build
+      - run: corepack enable
+      - run: corepack prepare pnpm@11.19.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+
+  worker-container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f apps/worker/Dockerfile -t iride-worker .
+      - run: >-
+          docker run -d --name iride-worker -p 3002:3002
+          -e SUPABASE_URL=https://ci.supabase.co
+          -e SUPABASE_PUBLISHABLE_KEY=ci-publishable-key
+          -e SUPABASE_SERVICE_ROLE_KEY=ci-service-role
+          -e CORS_ALLOWED_ORIGINS=http://localhost:3000
+          -e CLOUDFLARE_ACCOUNT_ID=ci-account
+          -e R2_ACCESS_KEY_ID=ci-access-key
+          -e R2_SECRET_ACCESS_KEY=ci-secret-key
+          -e R2_BUCKET=ci-iride
+          -e OPN_SECRET_KEY=skey_test_ci
+          -e OPN_WEBHOOK_SECRET=ci-webhook-secret
+          iride-worker
+      - name: Wait for worker health
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:3002/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs iride-worker
+          exit 1
+      - if: always()
+        run: docker rm --force iride-worker

@@ -1,0 +1,29 @@
+{
+  "name": "@iride/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@iride/config": "workspace:*",
+    "@iride/database": "workspace:*",
+    "@iride/domain": "workspace:*",
+    "@iride/storage": "workspace:*",
+    "@iride/types": "workspace:*",
+    "@iride/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "tsup": "^8.5.0",
+    "tsx": "4.23.12",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.11"
+  }
+}
