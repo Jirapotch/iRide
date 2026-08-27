@@ -159,6 +159,31 @@ describe("profile API handlers", () => {
     }
   });
 
+  it("does not report database failures as input validation errors", async () => {
+    const { dependencies, repository } = setup();
+    vi.mocked(repository.updateOwner).mockRejectedValue({
+      code: "42501",
+      message: "permission denied",
+    });
+
+    const response = await handlePatchOwnProfile(
+      new Request("http://localhost:3001/api/v1/profile/me", {
+        method: "PATCH",
+        headers: {
+          authorization: "Bearer signed.jwt",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ username: "next_name" }),
+      }),
+      dependencies,
+    );
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      error: { code: "PROFILE_UPDATE_FAILED" },
+    });
+  });
+
   it("serves public and followers profiles anonymously without coordinates", async () => {
     for (const visibility of ["public", "followers"] as const) {
       const { dependencies } = setup(profile({ visibility }));

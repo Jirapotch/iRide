@@ -6,10 +6,12 @@ import { BrandMark } from "./brand-mark";
 
 export function StandaloneShell({
   children,
+  headerAction,
   locale,
   wide = false,
 }: Readonly<{
   children: ReactNode;
+  headerAction?: ReactNode;
   locale: Locale;
   wide?: boolean;
 }>) {
@@ -33,14 +35,17 @@ export function StandaloneShell({
       />
 
       <header className="absolute inset-x-0 top-0 z-10">
-        <div className="mx-auto flex h-20 max-w-6xl items-center gap-3 px-5 sm:px-8">
-          <BrandMark />
-          <div>
-            <p className="text-lg font-black tracking-[-0.05em]">iRide</p>
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-primary">
-              Drive together
-            </p>
+        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-3 px-5 sm:px-8">
+          <div className="flex items-center gap-3">
+            <BrandMark />
+            <div>
+              <p className="text-lg font-black tracking-[-0.05em]">iRide</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-primary">
+                Drive together
+              </p>
+            </div>
           </div>
+          {headerAction}
         </div>
       </header>
 

@@ -58,14 +58,16 @@ test("returns 404 for locale-prefixed legacy routes", async ({ page }) => {
 });
 
 test("serves web and API health contracts", async ({ request }) => {
-  const webHealth = await request.get("http://127.0.0.1:3000/api/health");
+  const webPort = process.env.E2E_WEB_PORT ?? "3000";
+  const apiPort = process.env.E2E_API_PORT ?? "3001";
+  const webHealth = await request.get(`http://127.0.0.1:${webPort}/api/health`);
   await expect(webHealth).toBeOK();
   expect(await webHealth.json()).toMatchObject({
     status: "ok",
     service: "web",
   });
 
-  const apiHealth = await request.get("http://127.0.0.1:3001/api/health");
+  const apiHealth = await request.get(`http://127.0.0.1:${apiPort}/api/health`);
   await expect(apiHealth).toBeOK();
   expect(await apiHealth.json()).toMatchObject({
     status: "ok",

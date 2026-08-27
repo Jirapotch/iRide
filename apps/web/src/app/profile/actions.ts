@@ -1,12 +1,16 @@
 "use server";
 
 import type { UpdateProfileInput } from "@iride/types";
+import { updateProfileSchema } from "@iride/validation";
 import { redirect } from "next/navigation";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import { ProfileApiError, updateOwnProfile } from "@/lib/profile-api";
 
-import type { ProfileFormState } from "./profile-form-state";
+import type {
+  ProfileFieldErrorCode,
+  ProfileFormState,
+} from "./profile-form-state";
 
 export async function completeOnboarding(
   _previousState: ProfileFormState,
@@ -46,23 +50,67 @@ async function saveProfile(
     locationName: input.locationName ?? "",
     visibility: input.visibility ?? "public",
   } as const;
+  const validation = updateProfileSchema.safeParse(input);
+  if (!validation.success) {
+    return {
+      errorCode: "PROFILE_VALIDATION_FAILED",
+      fieldErrors: fieldErrors(validation.error.issues, values),
+      values,
+    };
+  }
+  const validatedInput = Object.fromEntries(
+    Object.entries(validation.data).filter(([, value]) => value !== undefined),
+  ) as UpdateProfileInput;
 
   let username: string;
   try {
-    const profile = await updateOwnProfile(session.accessToken, input);
+    const profile = await updateOwnProfile(session.accessToken, validatedInput);
     if (!profile.isComplete || !profile.username) {
-      return { errorCode: "PROFILE_INCOMPLETE", values };
+      return { errorCode: "PROFILE_INCOMPLETE", fieldErrors: {}, values };
     }
     username = profile.username;
   } catch (error) {
     return {
       errorCode:
         error instanceof ProfileApiError ? error.code : "AUTH_PROVIDER_ERROR",
+      fieldErrors: {},
       values,
     };
   }
 
   redirect(onboarding ? `/users/${username}` : "/account");
+}
+
+function fieldErrors(
+  issues: readonly Readonly<{
+    path: readonly PropertyKey[];
+    message: string;
+  }>[],
+  values: NonNullable<ProfileFormState["values"]>,
+): ProfileFormState["fieldErrors"] {
+  const errors: {
+    username?: ProfileFieldErrorCode;
+    displayName?: ProfileFieldErrorCode;
+  } = {};
+
+  for (const issue of issues) {
+    const field = issue.path[0];
+    if (field === "username" && !errors.username) {
+      errors.username =
+        issue.message === "username_reserved"
+          ? "USERNAME_RESERVED"
+          : values.username.trim()
+            ? "USERNAME_FORMAT"
+            : "USERNAME_REQUIRED";
+    }
+    if (field === "displayName" && !errors.displayName) {
+      errors.displayName = values.displayName.trim()
+        ? "DISPLAY_NAME_INVALID"
+        : "DISPLAY_NAME_REQUIRED";
+    }
+  }
+
+  return errors;
 }
 
 function field(formData: FormData, name: string): string {

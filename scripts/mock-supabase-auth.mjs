@@ -1,6 +1,7 @@
 import { createSign, generateKeyPairSync, randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { createServer } from "node:http";
+import process from "node:process";
 import { URL } from "node:url";
 
 export const MOCK_SUPABASE_PORT = 54321;
@@ -179,8 +180,9 @@ function encodeJson(value) {
 function isAllowedCallback(value) {
   try {
     const callback = new URL(value);
+    const webPort = process.env.E2E_WEB_PORT ?? "3000";
     return (
-      callback.origin === "http://127.0.0.1:3000" &&
+      callback.origin === `http://127.0.0.1:${webPort}` &&
       callback.pathname === "/auth/callback"
     );
   } catch {

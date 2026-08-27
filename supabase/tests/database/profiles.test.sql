@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(29);
+select plan(30);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_enum('public', 'profile_visibility', 'profile visibility enum exists');
@@ -105,6 +105,7 @@ select ok(not has_column_privilege('anon', 'public.profiles', 'latitude', 'selec
 select ok(not has_column_privilege('authenticated', 'public.profiles', 'longitude', 'select'), 'authenticated cannot select longitude');
 select ok(not has_table_privilege('authenticated', 'public.profiles', 'insert'), 'authenticated cannot insert profiles');
 select ok(not has_table_privilege('authenticated', 'public.profiles', 'delete'), 'authenticated cannot delete profiles');
+select ok(not has_schema_privilege('authenticated', 'private', 'usage'), 'authenticated cannot use private schema');
 
 set local role anon;
 select is((select count(username)::integer from public.profiles), 1, 'anon sees only complete public profiles');
@@ -114,9 +115,13 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', true);
 create temporary table profile_update_results (id uuid) on commit drop;
 select is((select count(username)::integer from public.profiles), 1, 'owner sees own public profile but not another private profile');
-select lives_ok(
-  $$update public.profiles set bio = 'Roads and stories' where id = '10000000-0000-4000-8000-000000000001'$$,
-  'owner can update own profile'
+update public.profiles
+set bio = 'Roads and stories'
+where id = '10000000-0000-4000-8000-000000000001';
+select is(
+  (select bio from public.profiles where id = '10000000-0000-4000-8000-000000000001'),
+  'Roads and stories',
+  'owner can update own profile without private schema access'
 );
 select is(
   (select count(*)::integer from public.profiles where id = '20000000-0000-4000-8000-000000000002'),

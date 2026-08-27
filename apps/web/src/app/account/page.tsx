@@ -8,7 +8,6 @@ import { getRequestLocale } from "@/lib/request-locale";
 
 import { AppShell } from "../(main)/_components/app-shell";
 import { PageIntro } from "../(main)/_components/page-intro";
-import { signOut } from "../auth/actions";
 
 const copy = {
   th: {
@@ -20,7 +19,6 @@ const copy = {
     publicProfile: "ดูโปรไฟล์สาธารณะ",
     edit: "แก้ไขโปรไฟล์",
     home: "กลับหน้าหลัก",
-    signOut: "ออกจากระบบ",
   },
   en: {
     eyebrow: "Your account",
@@ -31,7 +29,6 @@ const copy = {
     publicProfile: "View public profile",
     edit: "Edit profile",
     home: "Back home",
-    signOut: "Sign out",
   },
 } as const;
 
@@ -47,7 +44,7 @@ export default async function AccountPage() {
   const text = copy[locale];
 
   return (
-    <AppShell locale={locale}>
+    <AppShell authenticated locale={locale}>
       <div className="space-y-8">
         <PageIntro
           description={text.description}
@@ -91,14 +88,6 @@ export default async function AccountPage() {
             <Link className={buttonVariants({ variant: "outline" })} href="/">
               {text.home}
             </Link>
-            <form action={signOut}>
-              <button
-                className={`${buttonVariants({ variant: "outline" })} w-full`}
-                type="submit"
-              >
-                {text.signOut}
-              </button>
-            </form>
           </div>
         </section>
       </div>

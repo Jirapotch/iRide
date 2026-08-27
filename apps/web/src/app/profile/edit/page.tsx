@@ -34,7 +34,7 @@ export default async function EditProfilePage() {
   const text = copy[locale];
 
   return (
-    <AppShell locale={locale}>
+    <AppShell authenticated locale={locale}>
       <div className="space-y-8">
         <PageIntro
           description={text.description}
