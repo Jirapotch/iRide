@@ -45,6 +45,16 @@ jobs:
             exit 1
           fi
 
+      - name: Verify Supabase management API access
+        run: |
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF")"
+          if [ "$status" != "200" ]; then
+            echo "Supabase management API returned HTTP $status."
+            exit 1
+          fi
+
       - name: Link production project
         run: >-
           pnpm exec supabase link
