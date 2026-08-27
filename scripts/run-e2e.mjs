@@ -14,11 +14,17 @@ const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
+const webPort = Number.parseInt(process.env.E2E_WEB_PORT ?? "3000", 10);
+const apiPort = Number.parseInt(process.env.E2E_API_PORT ?? "3001", 10);
+const webOrigin = `http://127.0.0.1:${webPort}`;
+const apiOrigin = `http://127.0.0.1:${apiPort}`;
 const e2eEnvironment = {
   ...process.env,
-  CORS_ALLOWED_ORIGINS: "http://127.0.0.1:3000",
-  NEXT_PUBLIC_API_URL: "http://127.0.0.1:3001",
-  NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000",
+  CORS_ALLOWED_ORIGINS: webOrigin,
+  E2E_API_PORT: String(apiPort),
+  E2E_WEB_PORT: String(webPort),
+  NEXT_PUBLIC_API_URL: apiOrigin,
+  NEXT_PUBLIC_APP_URL: webOrigin,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: MOCK_PUBLISHABLE_KEY,
   NEXT_PUBLIC_SUPABASE_URL: MOCK_SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY: MOCK_PUBLISHABLE_KEY,
@@ -83,8 +89,8 @@ async function run() {
     ]);
 
     servers = [
-      { app: "web", port: 3000 },
-      { app: "api", port: 3001 },
+      { app: "web", port: webPort },
+      { app: "api", port: apiPort },
     ].map(({ app, port }) =>
       spawn(
         process.execPath,
@@ -105,8 +111,8 @@ async function run() {
     );
 
     await Promise.all([
-      waitForHealth("http://127.0.0.1:3000/api/health"),
-      waitForHealth("http://127.0.0.1:3001/api/health"),
+      waitForHealth(`${webOrigin}/api/health`),
+      waitForHealth(`${apiOrigin}/api/health`),
     ]);
 
     const playwright = spawn(

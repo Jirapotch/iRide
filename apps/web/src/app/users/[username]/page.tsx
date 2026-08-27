@@ -42,7 +42,7 @@ export default async function PublicProfilePage({
   const initials = profile.displayName.slice(0, 2).toUpperCase();
 
   return (
-    <AppShell locale={locale}>
+    <AppShell authenticated={Boolean(session)} locale={locale}>
       <article className="mx-auto max-w-3xl overflow-hidden rounded-[2rem] border border-border bg-surface shadow-2xl shadow-black/25">
         <div
           className="relative h-44 overflow-hidden bg-gradient-to-br from-primary/75 via-primary/20 to-background"

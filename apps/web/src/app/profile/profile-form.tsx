@@ -25,6 +25,11 @@ const copy = {
     usernameCooldown: "ยังเปลี่ยนชื่อผู้ใช้ไม่ได้ กรุณารอให้ครบ 30 วัน",
     invalid: "ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง",
     unavailable: "ระบบโปรไฟล์ยังไม่พร้อม กรุณาลองใหม่",
+    usernameRequired: "กรุณากรอกชื่อผู้ใช้",
+    usernameFormat:
+      "ชื่อต้องขึ้นต้นด้วยตัวอักษรหรือตัวเลข และใช้ได้เฉพาะ a-z, 0-9, _ จำนวน 3–30 ตัว",
+    displayNameRequired: "กรุณากรอกชื่อที่แสดง",
+    displayNameInvalid: "ชื่อที่แสดงต้องมีความยาวไม่เกิน 80 ตัวอักษร",
   },
   en: {
     username: "Username",
@@ -44,6 +49,11 @@ const copy = {
       "Your username cannot be changed until 30 days have passed.",
     invalid: "Please check the profile information and try again.",
     unavailable: "Profiles are currently unavailable. Please try again.",
+    usernameRequired: "Enter a username.",
+    usernameFormat:
+      "Start with a letter or number and use only a-z, 0-9, or _ (3–30 characters).",
+    displayNameRequired: "Enter a display name.",
+    displayNameInvalid: "Display name must be 80 characters or fewer.",
   },
 } as const;
 
@@ -61,10 +71,16 @@ export function ProfileForm({
 }) {
   const [state, formAction, pending] = useActionState(action, {
     errorCode: null,
+    fieldErrors: {},
     values: null,
   });
   const text = copy[locale];
   const error = errorMessage(state.errorCode, text);
+  const usernameError = fieldErrorMessage(state.fieldErrors.username, text);
+  const displayNameError = fieldErrorMessage(
+    state.fieldErrors.displayName,
+    text,
+  );
 
   return (
     <form action={formAction} className="space-y-5">
@@ -80,6 +96,8 @@ export function ProfileForm({
       <label className="block space-y-2 text-sm font-semibold">
         <span>{text.username}</span>
         <input
+          aria-describedby={`profile-username-help${usernameError ? " profile-username-error" : ""}`}
+          aria-invalid={usernameError ? true : undefined}
           autoCapitalize="none"
           autoComplete="username"
           className="h-12 w-full rounded-2xl border border-border bg-background/40 px-4 font-mono text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-surface"
@@ -87,17 +105,32 @@ export function ProfileForm({
           maxLength={30}
           minLength={3}
           name="username"
-          pattern="[a-zA-Z0-9_]{3,30}"
+          pattern="[a-zA-Z0-9][a-zA-Z0-9_]{2,29}"
           required
         />
-        <span className="block font-normal text-muted-foreground">
+        <span
+          className="block font-normal text-muted-foreground"
+          id="profile-username-help"
+        >
           {text.usernameHint}
         </span>
+        {usernameError ? (
+          <span
+            className="block font-normal text-danger"
+            id="profile-username-error"
+          >
+            {usernameError}
+          </span>
+        ) : null}
       </label>
 
       <label className="block space-y-2 text-sm font-semibold">
         <span>{text.displayName}</span>
         <input
+          aria-describedby={
+            displayNameError ? "profile-display-name-error" : undefined
+          }
+          aria-invalid={displayNameError ? true : undefined}
           className="h-12 w-full rounded-2xl border border-border bg-background/40 px-4 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-surface"
           defaultValue={
             state.values?.displayName ?? initialProfile.displayName ?? ""
@@ -106,6 +139,14 @@ export function ProfileForm({
           name="displayName"
           required
         />
+        {displayNameError ? (
+          <span
+            className="block font-normal text-danger"
+            id="profile-display-name-error"
+          >
+            {displayNameError}
+          </span>
+        ) : null}
       </label>
 
       <label className="block space-y-2 text-sm font-semibold">
@@ -170,7 +211,29 @@ function errorMessage(
     case "PROFILE_VALIDATION_FAILED":
     case "PROFILE_INCOMPLETE":
       return text.invalid;
+    case "PROFILE_UPDATE_FAILED":
+      return text.unavailable;
     default:
       return text.unavailable;
+  }
+}
+
+function fieldErrorMessage(
+  code: string | undefined,
+  text: (typeof copy)[Locale],
+): string | null {
+  switch (code) {
+    case "USERNAME_REQUIRED":
+      return text.usernameRequired;
+    case "USERNAME_FORMAT":
+      return text.usernameFormat;
+    case "USERNAME_RESERVED":
+      return text.usernameReserved;
+    case "DISPLAY_NAME_REQUIRED":
+      return text.displayNameRequired;
+    case "DISPLAY_NAME_INVALID":
+      return text.displayNameInvalid;
+    default:
+      return null;
   }
 }

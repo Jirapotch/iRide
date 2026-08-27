@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import type { Locale } from "@/lib/locale";
 
+import { SignOutButton } from "../../auth/sign-out-button";
 import { BrandMark } from "../../_components/brand-mark";
 import { AppNavigation } from "./app-navigation";
 
@@ -11,6 +12,7 @@ const copy = {
     languageLabel: "เปลี่ยนภาษา",
     navigationLabel: "เมนูหลัก",
     alternateLanguage: "English",
+    signOut: "ออกจากระบบ",
     items: [
       { href: "/", index: "01", label: "ฟีด" },
       { href: "/explore", index: "02", label: "สำรวจ" },
@@ -24,6 +26,7 @@ const copy = {
     languageLabel: "Change language",
     navigationLabel: "Primary navigation",
     alternateLanguage: "ภาษาไทย",
+    signOut: "Sign out",
     items: [
       { href: "/", index: "01", label: "Feed" },
       { href: "/explore", index: "02", label: "Explore" },
@@ -35,9 +38,14 @@ const copy = {
 } as const;
 
 export function AppShell({
+  authenticated,
   children,
   locale,
-}: Readonly<{ children: ReactNode; locale: Locale }>) {
+}: Readonly<{
+  authenticated: boolean;
+  children: ReactNode;
+  locale: Locale;
+}>) {
   const text = copy[locale];
 
   return (
@@ -62,14 +70,17 @@ export function AppShell({
           <p className="hidden text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground md:block">
             {text.brandLabel}
           </p>
-          <AppNavigation
-            alternateLanguage={text.alternateLanguage}
-            items={text.items}
-            languageLabel={text.languageLabel}
-            locale={locale}
-            mode="language"
-            navigationLabel={text.navigationLabel}
-          />
+          <div className="flex items-center gap-2">
+            <AppNavigation
+              alternateLanguage={text.alternateLanguage}
+              items={text.items}
+              languageLabel={text.languageLabel}
+              locale={locale}
+              mode="language"
+              navigationLabel={text.navigationLabel}
+            />
+            {authenticated ? <SignOutButton label={text.signOut} /> : null}
+          </div>
         </div>
       </header>
 

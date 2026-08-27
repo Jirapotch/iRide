@@ -6,6 +6,7 @@ import { getRequestLocale } from "@/lib/request-locale";
 
 import { StandaloneShell } from "../_components/standalone-shell";
 import { LanguageSwitcher } from "../language-switcher";
+import { SignOutButton } from "../auth/sign-out-button";
 import { completeOnboarding } from "../profile/actions";
 import { ProfileForm } from "../profile/profile-form";
 
@@ -14,12 +15,14 @@ const copy = {
     eyebrow: "เริ่มต้นใช้งาน",
     title: "สร้างโปรไฟล์ของคุณ",
     description: "เลือกชื่อที่คนอื่นจะใช้ค้นหาและรู้จักคุณบน iRide",
+    signOut: "ออกจากระบบ",
   },
   en: {
     eyebrow: "Get started",
     title: "Create your profile",
     description:
       "Choose how other riders will find and recognize you on iRide.",
+    signOut: "Sign out",
   },
 } as const;
 
@@ -35,7 +38,11 @@ export default async function OnboardingPage() {
   const text = copy[locale];
 
   return (
-    <StandaloneShell locale={locale} wide>
+    <StandaloneShell
+      headerAction={<SignOutButton label={text.signOut} />}
+      locale={locale}
+      wide
+    >
       <div className="space-y-7">
         <div className="space-y-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-primary">

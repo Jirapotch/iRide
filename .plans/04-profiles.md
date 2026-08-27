@@ -55,6 +55,9 @@ Follows, garage, full media upload และ recommendation
 
 ## Implementation Notes
 
-- Automated TypeScript, API/web unit tests, production builds และ mobile Playwright ผ่านแล้ว
-- ติดตั้ง Docker Desktop แบบ per-user พร้อม WSL2 แล้ว; local database reset, pgTAP 66 tests, type generation/drift check และ advisors ผ่านทั้งหมด
-- ก่อนเปลี่ยนสถานะเป็น `done` ต้องรัน database gates, deploy migration แบบ forward-only และทำ production smoke ตาม Definition of Done
+- เพิ่ม forward-only migration แก้ trigger ให้ตรวจ reserved username ภายใน `private.prepare_profile_write()` โดยไม่ grant schema `private` แก่ `authenticated`
+- API แยก database failure เป็น `PROFILE_UPDATE_FAILED` 503; web ใช้ validation schema เดียวกับ API และแสดง field errors
+- เพิ่ม logout ใน onboarding และ AppShell สำหรับ session ทั้ง mobile/desktop พร้อม Playwright coverage
+- Automated lint, TypeScript, unit tests 87 รายการ, production builds และ mobile Playwright 15 รายการผ่านแล้ว
+- เครื่องที่ใช้ตรวจไม่มี Docker/Podman จึงต้องให้ CI รัน database reset, pgTAP, type drift และ advisors ก่อน deploy
+- ก่อนเปลี่ยนสถานะเป็น `done` ต้องให้ database gates ผ่าน, deploy migration แบบ forward-only และทำ production smoke ทั้ง save/persistence/logout ตาม Definition of Done

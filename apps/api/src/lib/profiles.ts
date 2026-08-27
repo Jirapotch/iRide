@@ -332,7 +332,7 @@ function normalizeProfileWriteError(error: unknown): ProfileRequestError {
     return new ProfileRequestError("USERNAME_RESERVED", 409, { cause: error });
   if (candidate.message?.includes("username_cooldown"))
     return new ProfileRequestError("USERNAME_COOLDOWN", 409, { cause: error });
-  return new ProfileRequestError("PROFILE_VALIDATION_FAILED", 400, {
+  return new ProfileRequestError("PROFILE_UPDATE_FAILED", 503, {
     cause: error,
   });
 }
@@ -347,7 +347,7 @@ function profileErrorResponse(error: unknown, headers: Headers): Response {
   const profileError =
     error instanceof ProfileRequestError
       ? error
-      : new ProfileRequestError("PROFILE_VALIDATION_FAILED", 503, {
+      : new ProfileRequestError("PROFILE_UPDATE_FAILED", 503, {
           cause: error,
         });
   return Response.json(
@@ -373,6 +373,8 @@ function messageForProfileCode(code: ProfileErrorCode): string {
       return "Profile onboarding is incomplete.";
     case "PROFILE_VALIDATION_FAILED":
       return "Profile data is invalid.";
+    case "PROFILE_UPDATE_FAILED":
+      return "Profile could not be updated.";
     case "USERNAME_TAKEN":
       return "Username is already in use.";
     case "USERNAME_RESERVED":
