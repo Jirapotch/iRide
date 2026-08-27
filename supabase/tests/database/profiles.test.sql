@@ -8,8 +8,31 @@ select plan(29);
 select has_table('public', 'profiles', 'profiles table exists');
 select has_enum('public', 'profile_visibility', 'profile visibility enum exists');
 select ok((select relrowsecurity from pg_class where oid = 'public.profiles'::regclass), 'profiles has RLS');
-select is((select count(*)::integer from public.profiles), 2, 'seed identities have profiles');
-select is((select count(*)::integer from public.profiles where username is null), 2, 'new profiles are incomplete');
+select is(
+  (
+    select count(*)::integer
+    from public.profiles
+    where id in (
+      '10000000-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000002'
+    )
+  ),
+  2,
+  'seed identities have profiles'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.profiles
+    where id in (
+      '10000000-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000002'
+    )
+      and username is null
+  ),
+  2,
+  'new profiles are incomplete'
+);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values ('30000000-0000-4000-8000-000000000003', 'profile.trigger@iride.test', '{"name":"must not copy"}'::jsonb);
