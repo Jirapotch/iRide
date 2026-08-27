@@ -83,6 +83,12 @@ The web app stores the PKCE session in HttpOnly, SameSite=Lax cookies. Protected
 
 Production uses `https://iride-ecru.vercel.app` and the exact callback URL `https://iride-ecru.vercel.app/auth/callback`. Do not run `supabase config push` from the local configuration because local `site_url`, API schemas, and unrelated Auth settings differ from hosted production. Apply production Auth configuration as a reviewed, field-scoped change.
 
+### Profiles
+
+Authenticated users complete onboarding at `/onboarding`, manage their profile at `/profile/edit`, and view public identities at `/users/<username>`. Usernames are lowercase, unique, and limited to letters, numbers, and underscores; after the initial choice they can be changed every 30 days.
+
+The API exposes `GET/PATCH /api/v1/profile/me` and `GET /api/v1/users/<username>`. Owner endpoints require a verified Supabase Bearer token. Public DTOs omit coordinates and all Auth metadata. The `followers` visibility currently behaves like `public`; Step 09 will attach it to the follow graph and Step 10 will consume follows in the feed.
+
 There is currently no staging Supabase project. Production project `bgflnssilreepfzxoqpc` is protected by the manual `Supabase Production` GitHub workflow and its `production` environment approval. Its one-time `bootstrap-reset` operation requires typing the project ref, uploads a backup artifact before mutation, and is intentionally separate from the normal forward-only `deploy` operation. Never run a linked reset from a developer shell.
 
 ## Worker container

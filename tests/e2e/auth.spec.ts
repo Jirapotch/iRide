@@ -1,7 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-const userId = "11111111-1111-4111-8111-111111111111";
-
 for (const locale of ["th", "en"] as const) {
   test(`completes Google OAuth, API authentication, and logout in ${locale}`, async ({
     context,
@@ -23,10 +21,7 @@ for (const locale of ["th", "en"] as const) {
 
     await page.getByRole("button", { name: /Google/ }).click();
     await expect(page).toHaveURL(/\/account$/);
-    await expect(page.getByText(userId)).toBeVisible();
-    await expect(
-      page.getByText(/API (ยืนยันตัวตนสำเร็จ|authentication succeeded)/),
-    ).toBeVisible();
+    await expect(page.getByText("@e2e_rider")).toBeVisible();
 
     const authCookies = (await context.cookies()).filter((cookie) =>
       cookie.name.startsWith("iride-auth"),
@@ -43,9 +38,8 @@ for (const locale of ["th", "en"] as const) {
       ),
     ).toHaveLength(0);
     expect(
-      (await context.cookies()).find(
-        (cookie) => cookie.name === "iride-locale",
-      )?.value,
+      (await context.cookies()).find((cookie) => cookie.name === "iride-locale")
+        ?.value,
     ).toBe(locale);
   });
 }

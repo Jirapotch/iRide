@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_CI_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: bgflnssilreepfzxoqpc
     steps:
@@ -42,6 +42,16 @@ jobs:
         run: |
           if [ "$CONFIRMED_PROJECT_REF" != "$SUPABASE_PROJECT_REF" ]; then
             echo "Project ref confirmation does not match the configured production project."
+            exit 1
+          fi
+
+      - name: Verify Supabase management API access
+        run: |
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF")"
+          if [ "$status" != "200" ]; then
+            echo "Supabase management API returned HTTP $status."
             exit 1
           fi
 

@@ -7,14 +7,56 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.17";
-  };
   public: {
     Tables: {
-      [_ in never]: never;
+      profiles: {
+        Row: {
+          avatar_media_id: string | null;
+          bio: string | null;
+          cover_media_id: string | null;
+          created_at: string;
+          display_name: string | null;
+          id: string;
+          latitude: number | null;
+          location_name: string | null;
+          longitude: number | null;
+          updated_at: string;
+          username: string | null;
+          username_changed_at: string | null;
+          visibility: Database["public"]["Enums"]["profile_visibility"];
+        };
+        Insert: {
+          avatar_media_id?: string | null;
+          bio?: string | null;
+          cover_media_id?: string | null;
+          created_at?: string;
+          display_name?: string | null;
+          id: string;
+          latitude?: number | null;
+          location_name?: string | null;
+          longitude?: number | null;
+          updated_at?: string;
+          username?: string | null;
+          username_changed_at?: string | null;
+          visibility?: Database["public"]["Enums"]["profile_visibility"];
+        };
+        Update: {
+          avatar_media_id?: string | null;
+          bio?: string | null;
+          cover_media_id?: string | null;
+          created_at?: string;
+          display_name?: string | null;
+          id?: string;
+          latitude?: number | null;
+          location_name?: string | null;
+          longitude?: number | null;
+          updated_at?: string;
+          username?: string | null;
+          username_changed_at?: string | null;
+          visibility?: Database["public"]["Enums"]["profile_visibility"];
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -45,7 +87,7 @@ export type Database = {
       };
     };
     Enums: {
-      [_ in never]: never;
+      profile_visibility: "public" | "followers" | "private";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -172,6 +214,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      profile_visibility: ["public", "followers", "private"],
+    },
   },
 } as const;

@@ -1,0 +1,94 @@
+import { expect, test } from "@playwright/test";
+
+const mockUrl = "http://127.0.0.1:54321";
+
+for (const locale of ["th", "en"] as const) {
+  test(`onboards, edits, and protects a profile in ${locale}`, async ({
+    context,
+    page,
+    request,
+  }) => {
+    await request.post(`${mockUrl}/test/profiles/reset`, {
+      data: { complete: false },
+    });
+    await context.addCookies([
+      {
+        name: "iride-locale",
+        value: locale,
+        domain: "127.0.0.1",
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+
+    await page.goto("/account");
+    await page.getByRole("button", { name: /Google/ }).click();
+    await expect(page).toHaveURL(/\/onboarding$/);
+
+    await page.getByLabel(/ชื่อผู้ใช้|Username/).fill(`rider_${locale}`);
+    await page
+      .getByLabel(/ชื่อที่แสดง|Display name/)
+      .fill(locale === "th" ? "นักขับทดสอบ" : "Test Rider");
+    await page.getByLabel(/แนะนำตัว|Bio/).fill("Roads and stories");
+    await page.getByLabel(/พื้นที่หรือเมือง|Area or city/).fill("Bangkok");
+    await page
+      .getByRole("button", { name: /บันทึกโปรไฟล์|Save profile/ })
+      .click();
+
+    await expect(page).toHaveURL(new RegExp(`/users/rider_${locale}$`));
+    await expect(page.getByText(`@rider_${locale}`)).toBeVisible();
+    await expect(page.getByText("Roads and stories")).toBeVisible();
+
+    await page.getByRole("link", { name: /แก้ไขโปรไฟล์|Edit profile/ }).click();
+    await page
+      .getByLabel(/การมองเห็นโปรไฟล์|Profile visibility/)
+      .selectOption("private");
+    await page
+      .getByRole("button", { name: /บันทึกโปรไฟล์|Save profile/ })
+      .click();
+    await expect(page).toHaveURL(/\/account$/);
+
+    await page.getByRole("button", { name: /ออกจากระบบ|Sign out/ }).click();
+    await expect(page).toHaveURL(/\/login\?signed_out=1/);
+    const hiddenApi = await request.get(
+      `http://127.0.0.1:3001/api/v1/users/rider_${locale}`,
+    );
+    expect(hiddenApi.status()).toBe(404);
+    await page.goto(`/users/rider_${locale}`);
+    await expect(page.getByText(`@rider_${locale}`)).not.toBeVisible();
+  });
+}
+
+test("shows duplicate and cooldown username errors", async ({
+  context,
+  page,
+  request,
+}) => {
+  await request.post(`${mockUrl}/test/profiles/reset`, {
+    data: { complete: false },
+  });
+  await context.addCookies([
+    {
+      name: "iride-locale",
+      value: "en",
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
+  await page.goto("/account");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByLabel("Username").fill("taken_name");
+  await page.getByLabel("Display name").fill("Taken Rider");
+  await page.getByRole("button", { name: "Save profile" }).click();
+  await expect(page.locator('p[role="alert"]')).toContainText("already in use");
+
+  await page.getByLabel("Username").fill("first_name");
+  await page.getByRole("button", { name: "Save profile" }).click();
+  await page.getByRole("link", { name: "Edit profile" }).click();
+  await page.getByLabel("Username").fill("second_name");
+  await page.getByRole("button", { name: "Save profile" }).click();
+  await expect(page.locator('p[role="alert"]')).toContainText("30 days");
+});
