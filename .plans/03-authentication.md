@@ -1,6 +1,7 @@
 # Step 03 - Google OAuth Authentication
 
-Status: `in_progress`
+Status: `done`
+Completed: `2026-08-27`
 Dependencies: [Step 02](./02-supabase-foundation.md)
 
 ## Goal
@@ -37,6 +38,7 @@ API context มี `{ userId: string; accessTokenClaims: SupabaseAccessTokenClai
 ## Production Configuration
 
 - Web origin และ Site URL: `https://iride-ecru.vercel.app`
+- Production API: `https://iride-api-murex.vercel.app`
 - Supabase project: `bgflnssilreepfzxoqpc`
 - App callbacks: exact `/th/auth/callback` และ `/en/auth/callback` สำหรับ local/production
 - Google Console callback: `https://bgflnssilreepfzxoqpc.supabase.co/auth/v1/callback`
@@ -51,14 +53,14 @@ API context มี `{ userId: string; accessTokenClaims: SupabaseAccessTokenClai
 - [x] Playwright mobile: Google flow ผ่าน test-only Supabase mock, account/API, sanitized `next` และ logout ทั้ง `th/en`
 - [x] `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e`
 - [x] Supabase database advisors (`--fail-on error`)
-- [ ] production smoke: callback allow-list, Google consent/login, protected account/API และ logout
+- [x] production smoke: callback allow-list, Google consent/login, protected account/API และ logout
 
 ## Acceptance Criteria
 
 - [x] Google-authenticated user เข้า protected route/API ได้และ unauthenticated user ถูกปฏิเสธใน automated integration/E2E
 - [x] session refresh ทำงานข้าม web/API โดยไม่เผย service role, raw token, full claims หรือ user metadata
 - [x] auth flow ผ่าน mobile automation ทั้งสองภาษา
-- [ ] production smoke ผ่านบน `https://iride-ecru.vercel.app`
+- [x] production smoke ผ่านบน `https://iride-ecru.vercel.app`
 
 ## Out of Scope
 
@@ -70,4 +72,12 @@ Email/password signup, verification, password login และ password reset จ
 
 ## Handoff to Next Step
 
-ส่ง authenticated user context ให้ [Step 04](./04-profiles.md)
+ส่ง authenticated user context `{ userId, accessTokenClaims }` ให้ [Step 04](./04-profiles.md) โดยหน้าและ action ที่มีข้อมูลสำคัญต้องตรวจ authorization ซ้ำใน DAL; ห้ามพึ่ง Proxy เป็น security boundary เพียงจุดเดียว
+
+## Completion Notes
+
+- Production Google OAuth ผ่าน callback ภาษาไทยและสร้าง SSR session สำเร็จ
+- Protected account ตรวจ session และได้รับ `userId` ที่ API ยืนยันแล้ว โดยไม่คืน raw token, claims หรือ user metadata
+- Logout ล้าง session และ redirect กลับหน้า login สำเร็จ
+- Production web/API deployment จาก `main` อยู่ในสถานะ `READY`; Production API เปิดสาธารณะและคง Vercel Authentication สำหรับ Preview
+- Automated gates ผ่านครบ: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` และ Supabase advisors
