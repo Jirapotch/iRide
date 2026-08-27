@@ -125,8 +125,8 @@ export async function handleGetPublicProfile(
   dependencies: ProfileDependencies = productionDependencies(),
 ): Promise<Response> {
   const cors = createCorsDecision(request, dependencies.allowedOrigins);
-  if (!cors.allowed) return corsDenied(cors.headers);
   cors.headers.set("Cache-Control", "private, no-store");
+  if (!cors.allowed) return corsDenied(cors.headers);
 
   try {
     let viewer: AuthContext | null = null;
@@ -168,6 +168,7 @@ export function handleProfileOptions(
     allowedOrigins,
     "GET, PATCH, OPTIONS",
   );
+  cors.headers.set("Cache-Control", "private, no-store");
   return new Response(null, {
     status: cors.allowed ? 204 : 403,
     headers: cors.headers,
@@ -185,8 +186,8 @@ async function withProfileRequest(
     dependencies.allowedOrigins,
     methods,
   );
-  if (!cors.allowed) return corsDenied(cors.headers);
   cors.headers.set("Cache-Control", "private, no-store");
+  if (!cors.allowed) return corsDenied(cors.headers);
 
   try {
     const context = await dependencies.authenticate(request);
