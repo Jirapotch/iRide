@@ -47,7 +47,7 @@ export async function GET(
     validateAccessTokenClaims(data.claims, {
       supabaseUrl: getWebSupabaseConfig().url,
     });
-    return NextResponse.redirect(new URL(next, getAppOrigin()), 303);
+    return noStoreRedirect(new URL(next, getAppOrigin()));
   } catch {
     await clearAuthCookies();
     return loginError(locale);
@@ -59,8 +59,14 @@ async function clearAuthCookies() {
 }
 
 function loginError(locale: "th" | "en") {
-  return NextResponse.redirect(
+  return noStoreRedirect(
     new URL(`/${locale}/login?error=provider`, getAppOrigin()),
-    303,
   );
+}
+
+function noStoreRedirect(url: URL) {
+  const response = NextResponse.redirect(url, 303);
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  response.headers.set("Pragma", "no-cache");
+  return response;
 }
