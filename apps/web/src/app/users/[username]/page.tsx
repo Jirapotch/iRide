@@ -1,4 +1,5 @@
 import { buttonVariants } from "@iride/ui/button";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -44,12 +45,9 @@ export default async function PublicProfilePage({
   return (
     <AppShell authenticated={Boolean(session)} locale={locale}>
       <article className="mx-auto max-w-3xl overflow-hidden rounded-[2rem] border border-border bg-surface shadow-2xl shadow-black/25">
-        <div
-          className="relative h-44 overflow-hidden bg-gradient-to-br from-primary/75 via-primary/20 to-background"
-          aria-hidden="true"
-        >
-          <span className="absolute -right-16 -top-24 h-72 w-72 rounded-full border border-primary/25" />
-          <span className="absolute -right-4 -top-12 h-48 w-48 rounded-full border border-foreground/10" />
+        <div className="relative h-48 overflow-hidden">
+          <Image alt="Adventure rider profile cover" className="object-cover" fill priority sizes="768px" src="/media/hero-road.webp" />
+          <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
         </div>
         <div className="space-y-6 p-6 sm:p-9">
           <div className="-mt-24 flex h-28 w-28 items-center justify-center rounded-full border-4 border-surface bg-primary text-2xl font-black text-primary-foreground shadow-xl shadow-black/25">
