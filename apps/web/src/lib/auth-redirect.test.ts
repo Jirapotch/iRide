@@ -1,33 +1,41 @@
 import { describe, expect, it } from "vitest";
 
-import { safeNextPath } from "./auth-redirect";
+import { safeNextPath, safeReturnPath } from "./auth-redirect";
 
 describe("safeNextPath", () => {
-  it("accepts a clean path in the active locale", () => {
-    expect(safeNextPath("/th/account?tab=session", "th")).toBe(
-      "/th/account?tab=session",
+  it("accepts a clean local path", () => {
+    expect(safeNextPath("/account?tab=session")).toBe(
+      "/account?tab=session",
     );
-    expect(safeNextPath("/en", "en")).toBe("/en");
+    expect(safeNextPath("/")).toBe("/");
   });
 
   it.each([
-    "https://evil.example/th/account",
+    "https://evil.example/account",
     "//evil.example/path",
     "/%2f%2fevil.example",
-    "/th\\evil",
-    "/th/%5cevil",
-    "/th/%2500evil",
-    "/th/account#secret",
+    "/account\\evil",
+    "/account/%5cevil",
+    "/account/%2500evil",
+    "/account#secret",
+    "/th/account",
     "/en/account",
-    "/tha/account",
+    "/%74h/account",
+    "/%65n/account",
     "/%E0%A4%A",
-  ])("rejects an unsafe or cross-locale redirect: %s", (value) => {
-    expect(safeNextPath(value, "th")).toBe("/th/account");
+  ])("rejects an unsafe or legacy-locale redirect: %s", (value) => {
+    expect(safeNextPath(value)).toBe("/account");
   });
 
   it("limits redirect length", () => {
-    expect(safeNextPath(`/th/${"a".repeat(2_100)}`, "th")).toBe(
-      "/th/account",
+    expect(safeNextPath(`/account/${"a".repeat(2_100)}`)).toBe("/account");
+  });
+
+  it("uses a root fallback for language switch returns", () => {
+    expect(safeReturnPath("/login?next=%2Faccount")).toBe(
+      "/login?next=%2Faccount",
     );
+    expect(safeReturnPath("/en/account")).toBe("/");
+    expect(safeReturnPath("https://evil.example/")).toBe("/");
   });
 });

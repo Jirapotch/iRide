@@ -36,7 +36,7 @@ Start all applications:
 pnpm dev
 ```
 
-Open `http://localhost:3000/th` or `http://localhost:3000/en`. Health probes are available at:
+Open `http://localhost:3000`. The web app detects `th/en` from the browser and stores an explicit language choice in the HttpOnly `iride-locale` cookie without adding a locale prefix to the URL. Health probes are available at:
 
 - `http://localhost:3000/api/health` — web
 - `http://localhost:3001/api/health` — API
@@ -77,11 +77,11 @@ Applications import Supabase through `@iride/database/browser`, `@iride/database
 
 ### Google authentication
 
-Step 03 uses Google OAuth only. Add the Google Web Client ID and secret to `.env.local` using the server-only `SUPABASE_AUTH_EXTERNAL_GOOGLE_*` variables, then restart the local Supabase stack. Local callback routes are `http://localhost:3000/th/auth/callback` and `http://localhost:3000/en/auth/callback`.
+Step 03 uses Google OAuth only. Add the Google Web Client ID and secret to `.env.local` using the server-only `SUPABASE_AUTH_EXTERNAL_GOOGLE_*` variables, then restart the local Supabase stack. The local callback route is `http://localhost:3000/auth/callback`.
 
 The web app stores the PKCE session in HttpOnly, SameSite=Lax cookies. Protected pages verify claims server-side and forward the verified access token to `GET /api/v1/auth/me`; browser code never receives the token. Email/password signup, verification, and password reset remain deferred until production SMTP is available.
 
-Production uses `https://iride-ecru.vercel.app` and exact Thai/English callback URLs. Do not run `supabase config push` from the local configuration because local `site_url`, API schemas, and unrelated Auth settings differ from hosted production. Apply production Auth configuration as a reviewed, field-scoped change.
+Production uses `https://iride-ecru.vercel.app` and the exact callback URL `https://iride-ecru.vercel.app/auth/callback`. Do not run `supabase config push` from the local configuration because local `site_url`, API schemas, and unrelated Auth settings differ from hosted production. Apply production Auth configuration as a reviewed, field-scoped change.
 
 There is currently no staging Supabase project. Production project `bgflnssilreepfzxoqpc` is protected by the manual `Supabase Production` GitHub workflow and its `production` environment approval. Its one-time `bootstrap-reset` operation requires typing the project ref, uploads a backup artifact before mutation, and is intentionally separate from the normal forward-only `deploy` operation. Never run a linked reset from a developer shell.
 

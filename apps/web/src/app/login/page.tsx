@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import { safeNextPath } from "@/lib/auth-redirect";
-import { isLocale } from "@/lib/locale";
+import { getRequestLocale } from "@/lib/request-locale";
 
 import { signInWithGoogle } from "../auth/actions";
 import { AuthSubmitButton } from "../auth/submit-button";
+import { LanguageSwitcher } from "../language-switcher";
 
 const copy = {
   th: {
@@ -34,23 +35,20 @@ const copy = {
 } as const;
 
 export default async function LoginPage({
-  params,
   searchParams,
 }: {
-  readonly params: Promise<{ locale: string }>;
   readonly searchParams: Promise<{
     error?: string;
     next?: string;
     signed_out?: string;
   }>;
 }) {
-  const [{ locale }, query] = await Promise.all([params, searchParams]);
-  if (!isLocale(locale)) {
-    notFound();
-  }
-
-  const next = safeNextPath(query.next, locale);
-  const session = await getVerifiedWebSession();
+  const [locale, query, session] = await Promise.all([
+    getRequestLocale(),
+    searchParams,
+    getVerifiedWebSession(),
+  ]);
+  const next = safeNextPath(query.next);
   if (session) {
     redirect(next);
   }
@@ -64,6 +62,13 @@ export default async function LoginPage({
         : query.error
           ? text.invalidRequest
           : null;
+  const returnToParams = new URLSearchParams();
+  if (query.next) returnToParams.set("next", next);
+  if (query.error) returnToParams.set("error", query.error);
+  if (query.signed_out) returnToParams.set("signed_out", query.signed_out);
+  const returnTo = returnToParams.size
+    ? `/login?${returnToParams.toString()}`
+    : "/login";
 
   return (
     <main className="mx-auto grid min-h-screen w-full max-w-lg place-items-center px-5 py-12 sm:px-8">
@@ -88,7 +93,6 @@ export default async function LoginPage({
         ) : null}
 
         <form action={signInWithGoogle}>
-          <input name="locale" type="hidden" value={locale} />
           <input name="next" type="hidden" value={next} />
           <AuthSubmitButton
             idleLabel={text.button}
@@ -96,12 +100,18 @@ export default async function LoginPage({
           />
         </form>
 
-        <Link
-          className="block text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
-          href={`/${locale}`}
-        >
-          {text.back}
-        </Link>
+        <div className="flex flex-col items-center gap-4">
+          <LanguageSwitcher
+            locale={locale}
+            returnTo={returnTo}
+          />
+          <Link
+            className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+            href="/"
+          >
+            {text.back}
+          </Link>
+        </div>
       </section>
     </main>
   );

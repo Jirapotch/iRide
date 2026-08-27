@@ -1,11 +1,12 @@
 import { buttonVariants } from "@iride/ui/button";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
-import { isLocale } from "@/lib/locale";
+import { getRequestLocale } from "@/lib/request-locale";
 
 import { signOut } from "../auth/actions";
+import { LanguageSwitcher } from "../language-switcher";
 
 const copy = {
   th: {
@@ -30,19 +31,13 @@ const copy = {
   },
 } as const;
 
-export default async function AccountPage({
-  params,
-}: {
-  readonly params: Promise<{ locale: string }>;
-}) {
-  const { locale } = await params;
-  if (!isLocale(locale)) {
-    notFound();
-  }
-
-  const session = await getVerifiedWebSession();
+export default async function AccountPage() {
+  const [locale, session] = await Promise.all([
+    getRequestLocale(),
+    getVerifiedWebSession(),
+  ]);
   if (!session) {
-    redirect(`/${locale}/login?next=/${locale}/account`);
+    redirect("/login?next=/account");
   }
 
   const apiUserId = await getApiUserId(session.accessToken);
@@ -70,15 +65,15 @@ export default async function AccountPage({
           </div>
         </dl>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link
             className={buttonVariants({ variant: "outline" })}
-            href={`/${locale}`}
+            href="/"
           >
             {text.home}
           </Link>
+          <LanguageSwitcher locale={locale} returnTo="/account" />
           <form action={signOut} className="sm:ml-auto">
-            <input name="locale" type="hidden" value={locale} />
             <button
               className={buttonVariants({ variant: "default" })}
               type="submit"

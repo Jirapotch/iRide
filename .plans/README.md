@@ -92,5 +92,5 @@ Foundation 01-04
 3. Schema ทุกการเปลี่ยนต้องเป็น migration และ sensitive table ต้องมี RLS decision
 4. Webhook, worker และ retryable API ต้อง idempotent
 5. ห้ามใช้ mutable `balance` เป็น financial truth
-6. ทุก feature ต้องใช้งานบน mobile และรองรับ `th/en`
+6. ทุก feature ต้องใช้งานบน mobile และรองรับ `th/en` ผ่าน clean URL โดยใช้ browser preference/`iride-locale` cookie ไม่ใช้ locale prefix
 7. AI ranking, wallet, chat, native apps, OCR และ full parts marketplace อยู่นอก MVP

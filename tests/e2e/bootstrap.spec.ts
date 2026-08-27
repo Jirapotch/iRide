@@ -1,17 +1,62 @@
 import { expect, test } from "@playwright/test";
 
-test("serves the Thai and English bootstrap shells", async ({ page }) => {
-  await page.goto("/th");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+test("detects Thai and English from the browser without changing the URL", async ({
+  browser,
+}) => {
+  const thaiContext = await browser.newContext({ locale: "th-TH" });
+  const thaiPage = await thaiContext.newPage();
+  await thaiPage.goto("/");
+  await expect(thaiPage).toHaveURL(/\/$/);
+  await expect(thaiPage.getByRole("heading", { level: 1 })).toContainText(
     "ออกเดินทาง",
   );
-  await expect(page.getByRole("link", { name: "English" })).toBeVisible();
+  await thaiContext.close();
 
-  await page.goto("/en");
+  const englishContext = await browser.newContext({ locale: "en-US" });
+  const englishPage = await englishContext.newPage();
+  await englishPage.goto("/");
+  await expect(englishPage).toHaveURL(/\/$/);
+  await expect(englishPage.getByRole("heading", { level: 1 })).toContainText(
+    "Every story",
+  );
+  await englishContext.close();
+});
+
+test("persists a language switch on the same clean path", async ({ page }) => {
+  await page.goto("/");
+  const switchToThai = page.getByRole("button", { name: "ภาษาไทย" });
+
+  if (await switchToThai.isVisible()) {
+    await switchToThai.click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      "ออกเดินทาง",
+    );
+  }
+
+  await page.getByRole("button", { name: "English" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Every story",
   );
-  await expect(page.getByRole("link", { name: "ภาษาไทย" })).toBeVisible();
+
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sign in");
+  const localeCookie = (await page.context().cookies()).find(
+    (cookie) => cookie.name === "iride-locale",
+  );
+  expect(localeCookie).toMatchObject({
+    httpOnly: true,
+    sameSite: "Lax",
+    value: "en",
+  });
+});
+
+test("returns 404 for locale-prefixed legacy routes", async ({ page }) => {
+  for (const pathname of ["/th", "/en", "/th/account", "/en/auth/callback"]) {
+    const response = await page.goto(pathname);
+    expect(response?.status(), pathname).toBe(404);
+  }
 });
 
 test("serves web and API health contracts", async ({ request }) => {

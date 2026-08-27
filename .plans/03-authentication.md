@@ -10,7 +10,7 @@ Dependencies: [Step 02](./02-supabase-foundation.md)
 
 ## Architecture Decisions
 
-Supabase Auth เป็น identity provider; web ใช้ SSR cookie session ผ่าน `@supabase/ssr` ส่วน API รับ Bearer JWT และตรวจ signature ด้วย `getClaims(token)` ทุก request รองรับ locale `th/en` ใน callback/error flow โดยไม่ใช้ `getSession()` ตัดสิน authorization Email/password auth ถูกเลื่อนไปหลัง Step 03
+Supabase Auth เป็น identity provider; web ใช้ SSR cookie session ผ่าน `@supabase/ssr` ส่วน API รับ Bearer JWT และตรวจ signature ด้วย `getClaims(token)` ทุก request รองรับ locale `th/en` ผ่าน cookie/browser language บน clean URL โดยไม่ใช้ `getSession()` ตัดสิน authorization Email/password auth ถูกเลื่อนไปหลัง Step 03
 
 ## Deliverables
 
@@ -25,7 +25,7 @@ API context มี `{ userId: string; accessTokenClaims: SupabaseAccessTokenClai
 
 ## Implementation Tasks
 
-- [x] เปิด Google provider, ปิด Email provider และกำหนด callback `th/en` แบบ exact สำหรับ local/production
+- [x] เปิด Google provider, ปิด Email provider และกำหนด clean callback แบบ exact สำหรับ local/production
 - [x] ทำ mobile UI, loading/error states และข้อความภาษาไทย/อังกฤษ
 - [x] refresh expired sessions server-side และ clear เฉพาะ Supabase auth cookies เมื่อ session เสีย
 - [x] ตรวจ JWT signature, issuer, `aud=authenticated`, UUID subject และ expiry โดยไม่ trust client user ID
@@ -33,14 +33,14 @@ API context มี `{ userId: string; accessTokenClaims: SupabaseAccessTokenClai
 
 ## Security
 
-ใช้ `httpOnly`, `sameSite=lax`, `secure` เฉพาะ production, ใช้ Supabase rate limits ที่มีอยู่, generic provider errors และห้าม log authorization headers, cookies, codes หรือ tokens Redirect sanitizer ปฏิเสธ absolute/protocol-relative URLs, backslash, control/encoded control characters และ locale ที่ไม่ตรง flow
+ใช้ `httpOnly`, `sameSite=lax`, `secure` เฉพาะ production, ใช้ Supabase rate limits ที่มีอยู่, generic provider errors และห้าม log authorization headers, cookies, codes หรือ tokens Redirect sanitizer ปฏิเสธ absolute/protocol-relative URLs, backslash, control/encoded control characters และ legacy locale-prefixed paths
 
 ## Production Configuration
 
 - Web origin และ Site URL: `https://iride-ecru.vercel.app`
 - Production API: `https://iride-api-murex.vercel.app`
 - Supabase project: `bgflnssilreepfzxoqpc`
-- App callbacks: exact `/th/auth/callback` และ `/en/auth/callback` สำหรับ local/production
+- App callback: exact `/auth/callback` สำหรับ local/production
 - Google Console callback: `https://bgflnssilreepfzxoqpc.supabase.co/auth/v1/callback`
 - ไม่อนุญาต Vercel preview URLs จนกว่าจะมี staging environment
 - Google client secret ต้องอยู่ใน environment/config เท่านั้นและห้าม commit หรือแสดงใน log
@@ -76,7 +76,8 @@ Email/password signup, verification, password login และ password reset จ
 
 ## Completion Notes
 
-- Production Google OAuth ผ่าน callback ภาษาไทยและสร้าง SSR session สำเร็จ
+- Production Google OAuth ผ่าน clean callback และสร้าง SSR session สำเร็จ
+- ภาษาไทย/อังกฤษใช้ browser preference และ `iride-locale` cookie โดย URL ไม่มี `/th` หรือ `/en`
 - Protected account ตรวจ session และได้รับ `userId` ที่ API ยืนยันแล้ว โดยไม่คืน raw token, claims หรือ user metadata
 - Logout ล้าง session และ redirect กลับหน้า login สำเร็จ
 - Production web/API deployment จาก `main` อยู่ในสถานะ `READY`; Production API เปิดสาธารณะและคง Vercel Authentication สำหรับ Preview

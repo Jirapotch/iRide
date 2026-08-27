@@ -4,7 +4,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@iride/database/types";
 
 import { safeNextPath } from "../auth-redirect";
-import { isLocale, type Locale } from "../locale";
 import { clearSupabaseAuthCookies } from "./cookies";
 import {
   authCookieOptions,
@@ -53,17 +52,13 @@ export async function updateSession(request: NextRequest) {
     clearSupabaseAuthCookies(response.cookies);
   }
 
-  const locale = localeFromPath(request.nextUrl.pathname);
-  if (locale && isProtectedPath(request.nextUrl.pathname) && !data?.claims?.sub) {
+  if (isProtectedPath(request.nextUrl.pathname) && !data?.claims?.sub) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = `/${locale}/login`;
+    loginUrl.pathname = "/login";
     loginUrl.search = "";
     loginUrl.searchParams.set(
       "next",
-      safeNextPath(
-        `${request.nextUrl.pathname}${request.nextUrl.search}`,
-        locale,
-      ),
+      safeNextPath(`${request.nextUrl.pathname}${request.nextUrl.search}`),
     );
 
     const redirect = NextResponse.redirect(loginUrl, 307);
@@ -75,12 +70,7 @@ export async function updateSession(request: NextRequest) {
 }
 
 export function isProtectedPath(pathname: string): boolean {
-  return /^\/(th|en)\/account(?:\/|$)/.test(pathname);
-}
-
-function localeFromPath(pathname: string): Locale | null {
-  const value = pathname.split("/")[1] ?? "";
-  return isLocale(value) ? value : null;
+  return /^\/account(?:\/|$)/.test(pathname);
 }
 
 function isInvalidSessionError(error: {

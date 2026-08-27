@@ -138,7 +138,7 @@ function isAllowedCallback(value) {
     const callback = new URL(value);
     return (
       callback.origin === "http://127.0.0.1:3000" &&
-      /^\/(th|en)\/auth\/callback$/.test(callback.pathname)
+      callback.pathname === "/auth/callback"
     );
   } catch {
     return false;

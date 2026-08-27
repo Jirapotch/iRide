@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { getRequestLocale } from "@/lib/request-locale";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,11 +10,13 @@ export const metadata: Metadata = {
   description: "The community for every drive.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
+  const locale = await getRequestLocale();
+
   return (
-    <html lang="th">
+    <html lang={locale}>
       <body>{children}</body>
     </html>
   );
