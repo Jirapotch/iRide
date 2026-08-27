@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
+import { getOwnProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 
 import { signOut } from "../auth/actions";
@@ -11,22 +12,24 @@ import { LanguageSwitcher } from "../language-switcher";
 const copy = {
   th: {
     eyebrow: "บัญชีของคุณ",
-    title: "เข้าสู่ระบบแล้ว",
-    description: "Web session และ API identity ผ่านการตรวจสอบเรียบร้อย",
-    userId: "รหัสผู้ใช้",
-    apiOk: "API ยืนยันตัวตนสำเร็จ",
-    apiError: "API ยังไม่สามารถยืนยันตัวตนได้",
+    title: "จัดการตัวตนบน iRide",
+    description: "โปรไฟล์ของคุณพร้อมใช้งานและผ่านการตรวจสอบจาก API แล้ว",
+    username: "ชื่อผู้ใช้",
+    visibility: "การมองเห็น",
+    publicProfile: "ดูโปรไฟล์สาธารณะ",
+    edit: "แก้ไขโปรไฟล์",
     home: "กลับหน้าหลัก",
     signOut: "ออกจากระบบ",
   },
   en: {
     eyebrow: "Your account",
-    title: "You are signed in",
-    description: "Your web session and API identity have been verified.",
-    userId: "User ID",
-    apiOk: "API authentication succeeded",
-    apiError: "API authentication is currently unavailable",
-    home: "Back to home",
+    title: "Manage your iRide identity",
+    description: "Your profile is ready and verified by the API.",
+    username: "Username",
+    visibility: "Visibility",
+    publicProfile: "View public profile",
+    edit: "Edit profile",
+    home: "Back home",
     signOut: "Sign out",
   },
 } as const;
@@ -36,11 +39,10 @@ export default async function AccountPage() {
     getRequestLocale(),
     getVerifiedWebSession(),
   ]);
-  if (!session) {
-    redirect("/login?next=/account");
-  }
+  if (!session) redirect("/login?next=%2Faccount");
 
-  const apiUserId = await getApiUserId(session.accessToken);
+  const profile = await getOwnProfile(session.accessToken);
+  if (!profile.isComplete || !profile.username) redirect("/onboarding");
   const text = copy[locale];
 
   return (
@@ -50,70 +52,50 @@ export default async function AccountPage() {
           <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-primary">
             {text.eyebrow}
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight">{text.title}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            {text.title}
+          </h1>
           <p className="text-muted-foreground">{text.description}</p>
         </div>
 
         <dl className="space-y-3 rounded-2xl bg-muted p-5 text-sm">
-          <div className="space-y-1">
-            <dt className="text-muted-foreground">{text.userId}</dt>
-            <dd className="break-all font-mono">{session.userId}</dd>
+          <div>
+            <dt className="text-muted-foreground">{text.username}</dt>
+            <dd className="mt-1 font-mono">@{profile.username}</dd>
           </div>
-          <div className="space-y-1">
-            <dt className="text-muted-foreground">API</dt>
-            <dd>{apiUserId === session.userId ? text.apiOk : text.apiError}</dd>
+          <div>
+            <dt className="text-muted-foreground">{text.visibility}</dt>
+            <dd className="mt-1 capitalize">{profile.visibility}</dd>
           </div>
         </dl>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link
+            className={buttonVariants()}
+            href={`/users/${profile.username}`}
+          >
+            {text.publicProfile}
+          </Link>
           <Link
             className={buttonVariants({ variant: "outline" })}
-            href="/"
+            href="/profile/edit"
           >
+            {text.edit}
+          </Link>
+          <Link className={buttonVariants({ variant: "outline" })} href="/">
             {text.home}
           </Link>
-          <LanguageSwitcher locale={locale} returnTo="/account" />
-          <form action={signOut} className="sm:ml-auto">
+          <form action={signOut}>
             <button
-              className={buttonVariants({ variant: "default" })}
+              className={`${buttonVariants({ variant: "outline" })} w-full`}
               type="submit"
             >
               {text.signOut}
             </button>
           </form>
         </div>
+        <LanguageSwitcher locale={locale} returnTo="/account" />
       </section>
     </main>
   );
-}
-
-async function getApiUserId(accessToken: string): Promise<string | null> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "http://localhost:3001";
-
-  try {
-    const response = await fetch(new URL("/api/v1/auth/me", apiUrl), {
-      cache: "no-store",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!response.ok) {
-      return null;
-    }
-
-    const body: unknown = await response.json();
-    if (
-      typeof body === "object" &&
-      body !== null &&
-      "data" in body &&
-      typeof body.data === "object" &&
-      body.data !== null &&
-      "userId" in body.data &&
-      typeof body.data.userId === "string"
-    ) {
-      return body.data.userId;
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
 }

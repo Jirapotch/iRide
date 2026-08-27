@@ -1,8 +1,4 @@
-import {
-  createSign,
-  generateKeyPairSync,
-  randomUUID,
-} from "node:crypto";
+import { createSign, generateKeyPairSync, randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { createServer } from "node:http";
 import { URL } from "node:url";
@@ -17,6 +13,7 @@ const { privateKey, publicKey } = generateKeyPairSync("ec", {
   namedCurve: "prime256v1",
 });
 const publicJwk = publicKey.export({ format: "jwk" });
+let profile = completeProfile();
 
 export function startMockSupabaseAuth() {
   const server = createServer(async (request, response) => {
@@ -63,6 +60,52 @@ export function startMockSupabaseAuth() {
     if (request.method === "POST" && url.pathname === "/auth/v1/logout") {
       await readBody(request);
       response.writeHead(204);
+      return response.end();
+    }
+
+    if (request.method === "POST" && url.pathname === "/test/profiles/reset") {
+      const body = await readJsonBody(request);
+      profile =
+        body?.complete === false ? incompleteProfile() : completeProfile();
+      return json(response, 200, { data: profile });
+    }
+
+    if (request.method === "GET" && url.pathname === "/rest/v1/profiles") {
+      const id = filterValue(url.searchParams.get("id"));
+      const username = filterValue(url.searchParams.get("username"));
+      const matches =
+        (!id || id === profile.id) &&
+        (!username || username === profile.username);
+      return postgrestJson(response, matches ? [profile] : []);
+    }
+
+    if (request.method === "PATCH" && url.pathname === "/rest/v1/profiles") {
+      const id = filterValue(url.searchParams.get("id"));
+      const body = await readJsonBody(request);
+      if (id !== MOCK_USER_ID || !body || typeof body !== "object") {
+        return postgrestError(response, 400, "PGRST116", "profile_not_found");
+      }
+      if (body.username === "taken_name") {
+        return postgrestError(response, 409, "23505", "duplicate key value");
+      }
+      if (
+        typeof body.username === "string" &&
+        profile.username &&
+        body.username !== profile.username
+      ) {
+        return postgrestError(response, 400, "P0001", "username_cooldown");
+      }
+      profile = {
+        ...profile,
+        ...body,
+        username_changed_at:
+          typeof body.username === "string" &&
+          body.username !== profile.username
+            ? new Date().toISOString()
+            : profile.username_changed_at,
+        updated_at: new Date().toISOString(),
+      };
+      response.writeHead(204, { "Cache-Control": "no-store" });
       return response.end();
     }
 
@@ -150,6 +193,73 @@ async function readBody(request) {
     // Drain the request body before responding.
     if (!chunk) break;
   }
+}
+
+async function readJsonBody(request) {
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  if (!chunks.length) return null;
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function filterValue(value) {
+  return value?.startsWith("eq.") ? value.slice(3) : null;
+}
+
+function completeProfile() {
+  const timestamp = "2026-08-27T00:00:00.000Z";
+  return {
+    id: MOCK_USER_ID,
+    username: "e2e_rider",
+    display_name: "E2E Rider",
+    bio: "Roads and stories",
+    avatar_media_id: null,
+    cover_media_id: null,
+    location_name: "Bangkok",
+    latitude: 13.7563,
+    longitude: 100.5018,
+    visibility: "public",
+    username_changed_at: timestamp,
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+}
+
+function incompleteProfile() {
+  const timestamp = "2026-08-27T00:00:00.000Z";
+  return {
+    ...completeProfile(),
+    username: null,
+    display_name: null,
+    bio: null,
+    location_name: null,
+    latitude: null,
+    longitude: null,
+    username_changed_at: null,
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+}
+
+function postgrestJson(response, body) {
+  const value = JSON.stringify(body);
+  response.writeHead(200, {
+    "Cache-Control": "no-store",
+    "Content-Length": Buffer.byteLength(value),
+    "Content-Type": "application/json",
+    "Content-Range": body.length
+      ? `0-${body.length - 1}/${body.length}`
+      : "*/0",
+  });
+  response.end(value);
+}
+
+function postgrestError(response, status, code, message) {
+  return json(response, status, { code, details: null, hint: null, message });
 }
 
 function json(response, status, body) {
