@@ -26,11 +26,9 @@ for (const locale of ["th", "en"] as const) {
     await page.getByRole("button", { name: /Google/ }).click();
     await expect(page).toHaveURL(/\/onboarding$/);
     await expect(page.locator('[data-ui="standalone-shell"]')).toBeVisible();
-    await page.getByRole("button", { name: /ตั้งค่า|Settings/ }).click();
     await expect(
       page.getByRole("button", { name: /ออกจากระบบ|Sign out/ }),
     ).toBeVisible();
-    await page.getByRole("button", { name: /ปิด|Close/ }).click();
 
     await page.getByLabel(/ชื่อผู้ใช้|Username/).fill(`rider_${locale}`);
     await page
@@ -46,9 +44,11 @@ for (const locale of ["th", "en"] as const) {
     await expect(page.locator('[data-ui="app-shell"]')).toBeVisible();
     await expect(page.getByText(`@rider_${locale}`)).toBeVisible();
     await expect(page.getByText("Roads and stories")).toBeVisible();
+    await page.getByRole("button", { name: /ตั้งค่า|Settings/ }).click();
     await expect(
       page.getByRole("button", { name: /ออกจากระบบ|Sign out/ }),
     ).toBeVisible();
+    await page.getByRole("button", { name: /ปิด|Close/ }).click();
 
     await page.getByRole("link", { name: /แก้ไขโปรไฟล์|Edit profile/ }).click();
     await page

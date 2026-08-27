@@ -39,6 +39,41 @@ test("community post, market filter, search and notification state persist", asy
   await expect(page.locator(".notification-row:not(.is-read)")).toHaveCount(0);
 });
 
+test("creates a meeting and returns to its activity sheet", async ({ page }) => {
+  await page.goto("/create");
+  await page.getByRole("button", { name: /Meeting A simple get-together/ }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Title").fill("Sunday Vehicle Meetup");
+  await page.getByLabel("Meeting point").fill("Rama VIII Bridge");
+  await page.getByLabel("Date and time").fill("2026-09-06T08:30");
+  await page.getByLabel("Description").fill("All vehicle types are welcome.");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "car", exact: true }).click();
+  await page.getByRole("button", { name: "bicycle", exact: true }).click();
+  await page.getByRole("button", { name: "Create activity" }).click();
+
+  await expect(page).toHaveURL(/\/?activity=activity-/);
+  await expect(
+    page.getByRole("dialog", { name: "Sunday Vehicle Meetup" }),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: /Meeting Sunday Vehicle Meetup/ }),
+  ).toBeVisible();
+});
+
+test("authenticated profile keeps Garage inside Profile", async ({ page }) => {
+  await page.goto("/profile");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await page.getByRole("tab", { name: "Garage" }).click();
+  await expect(page.getByRole("heading", { name: "My vehicles" })).toBeVisible();
+  await expect(page.getByText("Grand Tourer S")).toBeVisible();
+  await expect(page.getByText("Trail Master 900")).toBeVisible();
+  await expect(page.getByText("Aero Road Pro")).toBeVisible();
+});
+
 test("removed routes return 404", async ({ page }) => {
   for (const route of ["/garage", "/trips", "/events", "/photography", "/messages", "/explore"]) {
     const response = await page.goto(route);

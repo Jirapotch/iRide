@@ -26,6 +26,10 @@ test("language and account actions live only in settings drawer", async ({ page 
   await expect(drawer.getByText("Language")).toBeVisible();
   await expect(drawer.getByRole("link", { name: "Sign in" })).toBeVisible();
   await expect(drawer.getByRole("button", { name: /เปลี่ยนเป็นภาษาไทย/ })).toBeVisible();
+  const drawerBox = await page.locator(".drawer-backdrop").boundingBox();
+  const viewportHeight = await page.evaluate(() => window.innerHeight);
+  expect(drawerBox?.y).toBe(0);
+  expect(drawerBox?.height).toBe(viewportHeight);
 });
 
 test("desktop header uses the same five destinations", async ({ page }) => {
