@@ -1,6 +1,6 @@
 # Step 04 - Profiles
 
-Status: `in_progress`
+Status: `done`
 Dependencies: [Step 03](./03-authentication.md)
 
 ## Goal
@@ -59,5 +59,5 @@ Follows, garage, full media upload และ recommendation
 - API แยก database failure เป็น `PROFILE_UPDATE_FAILED` 503; web ใช้ validation schema เดียวกับ API และแสดง field errors
 - เพิ่ม logout ใน onboarding และ AppShell สำหรับ session ทั้ง mobile/desktop พร้อม Playwright coverage
 - Automated lint, TypeScript, unit tests 87 รายการ, production builds และ mobile Playwright 15 รายการผ่านแล้ว
-- เครื่องที่ใช้ตรวจไม่มี Docker/Podman จึงต้องให้ CI รัน database reset, pgTAP, type drift และ advisors ก่อน deploy
-- ก่อนเปลี่ยนสถานะเป็น `done` ต้องให้ database gates ผ่าน, deploy migration แบบ forward-only และทำ production smoke ทั้ง save/persistence/logout ตาม Definition of Done
+- Supabase Production #9 deploy แบบ forward-only จาก `main` สำเร็จ พร้อม migration list, database contracts และ advisors ผ่านทั้งหมด
+- Production smoke ผ่านครบ: บันทึก `jirapotch` / `gentleman`, redirect ไป public profile, refresh แล้วยัง persist และ logout กลับ `/login?signed_out=1`
