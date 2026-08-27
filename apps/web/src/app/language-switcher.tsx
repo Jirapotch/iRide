@@ -18,7 +18,10 @@ export function LanguageSwitcher({
       <input name="locale" type="hidden" value={alternateLocale} />
       <input name="returnTo" type="hidden" value={returnTo} />
       <button
-        className={buttonVariants({ variant: "outline" })}
+        className={buttonVariants({
+          variant: "outline",
+          className: "h-10 px-4 text-xs tracking-[0.08em]",
+        })}
         type="submit"
       >
         {locale === "th" ? "English" : "ภาษาไทย"}

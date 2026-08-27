@@ -70,19 +70,19 @@ export function ProfileForm({
     <form action={formAction} className="space-y-5">
       {error ? (
         <p
-          className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground"
+          className="rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger"
           role="alert"
         >
           {error}
         </p>
       ) : null}
 
-      <label className="block space-y-2 text-sm font-medium">
+      <label className="block space-y-2 text-sm font-semibold">
         <span>{text.username}</span>
         <input
           autoCapitalize="none"
           autoComplete="username"
-          className="h-11 w-full rounded-xl border bg-background px-3 font-mono outline-none focus:ring-2 focus:ring-ring"
+          className="h-12 w-full rounded-2xl border border-border bg-background/40 px-4 font-mono text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-surface"
           defaultValue={state.values?.username ?? initialProfile.username ?? ""}
           maxLength={30}
           minLength={3}
@@ -95,10 +95,10 @@ export function ProfileForm({
         </span>
       </label>
 
-      <label className="block space-y-2 text-sm font-medium">
+      <label className="block space-y-2 text-sm font-semibold">
         <span>{text.displayName}</span>
         <input
-          className="h-11 w-full rounded-xl border bg-background px-3 outline-none focus:ring-2 focus:ring-ring"
+          className="h-12 w-full rounded-2xl border border-border bg-background/40 px-4 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-surface"
           defaultValue={
             state.values?.displayName ?? initialProfile.displayName ?? ""
           }
@@ -108,20 +108,20 @@ export function ProfileForm({
         />
       </label>
 
-      <label className="block space-y-2 text-sm font-medium">
+      <label className="block space-y-2 text-sm font-semibold">
         <span>{text.bio}</span>
         <textarea
-          className="min-h-28 w-full rounded-xl border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-ring"
+          className="min-h-32 w-full resize-y rounded-2xl border border-border bg-background/40 px-4 py-3 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-surface"
           defaultValue={state.values?.bio ?? initialProfile.bio ?? ""}
           maxLength={500}
           name="bio"
         />
       </label>
 
-      <label className="block space-y-2 text-sm font-medium">
+      <label className="block space-y-2 text-sm font-semibold">
         <span>{text.location}</span>
         <input
-          className="h-11 w-full rounded-xl border bg-background px-3 outline-none focus:ring-2 focus:ring-ring"
+          className="h-12 w-full rounded-2xl border border-border bg-background/40 px-4 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-surface"
           defaultValue={
             state.values?.locationName ?? initialProfile.locationName ?? ""
           }
@@ -130,10 +130,10 @@ export function ProfileForm({
         />
       </label>
 
-      <label className="block space-y-2 text-sm font-medium">
+      <label className="block space-y-2 text-sm font-semibold">
         <span>{text.visibility}</span>
         <select
-          className="h-11 w-full rounded-xl border bg-background px-3 outline-none focus:ring-2 focus:ring-ring"
+          className="h-12 w-full rounded-2xl border border-border bg-background/40 px-4 text-foreground outline-none transition focus:border-primary/45 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-surface"
           defaultValue={state.values?.visibility ?? initialProfile.visibility}
           name="visibility"
         >
@@ -144,7 +144,7 @@ export function ProfileForm({
       </label>
 
       <button
-        className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:opacity-45"
         disabled={pending}
         type="submit"
       >

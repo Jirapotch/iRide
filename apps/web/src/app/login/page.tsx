@@ -5,6 +5,7 @@ import { getVerifiedWebSession } from "@/lib/auth-session";
 import { safeNextPath } from "@/lib/auth-redirect";
 import { getRequestLocale } from "@/lib/request-locale";
 
+import { StandaloneShell } from "../_components/standalone-shell";
 import { signInWithGoogle } from "../auth/actions";
 import { AuthSubmitButton } from "../auth/submit-button";
 import { LanguageSwitcher } from "../language-switcher";
@@ -24,7 +25,8 @@ const copy = {
   en: {
     eyebrow: "iRide account",
     title: "Sign in",
-    description: "Use your Google account to securely join the iRide community.",
+    description:
+      "Use your Google account to securely join the iRide community.",
     button: "Continue with Google",
     pending: "Opening Google…",
     providerError: "Google sign-in is unavailable. Please try again.",
@@ -71,13 +73,15 @@ export default async function LoginPage({
     : "/login";
 
   return (
-    <main className="mx-auto grid min-h-screen w-full max-w-lg place-items-center px-5 py-12 sm:px-8">
-      <section className="w-full space-y-7 rounded-3xl border bg-background p-6 shadow-xl shadow-primary/5 sm:p-9">
+    <StandaloneShell locale={locale}>
+      <div className="space-y-7">
         <div className="space-y-3 text-center">
-          <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-primary">
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-primary">
             {text.eyebrow}
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight">{text.title}</h1>
+          <h1 className="text-4xl font-black tracking-[-0.05em]">
+            {text.title}
+          </h1>
           <p className="text-sm leading-6 text-muted-foreground">
             {text.description}
           </p>
@@ -85,7 +89,7 @@ export default async function LoginPage({
 
         {status ? (
           <p
-            className="rounded-xl bg-muted px-4 py-3 text-center text-sm text-muted-foreground"
+            className="rounded-2xl border border-border bg-muted px-4 py-3 text-center text-sm text-muted-foreground"
             role="status"
           >
             {status}
@@ -101,18 +105,15 @@ export default async function LoginPage({
         </form>
 
         <div className="flex flex-col items-center gap-4">
-          <LanguageSwitcher
-            locale={locale}
-            returnTo={returnTo}
-          />
+          <LanguageSwitcher locale={locale} returnTo={returnTo} />
           <Link
-            className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+            className="rounded-full px-3 py-2 text-center text-sm text-muted-foreground transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             href="/"
           >
             {text.back}
           </Link>
         </div>
-      </section>
-    </main>
+      </div>
+    </StandaloneShell>
   );
 }

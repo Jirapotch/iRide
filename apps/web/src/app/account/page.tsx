@@ -6,8 +6,9 @@ import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getOwnProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 
+import { AppShell } from "../(main)/_components/app-shell";
+import { PageIntro } from "../(main)/_components/page-intro";
 import { signOut } from "../auth/actions";
-import { LanguageSwitcher } from "../language-switcher";
 
 const copy = {
   th: {
@@ -46,56 +47,61 @@ export default async function AccountPage() {
   const text = copy[locale];
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center px-5 py-12 sm:px-8">
-      <section className="w-full space-y-7 rounded-3xl border bg-background p-6 shadow-xl shadow-primary/5 sm:p-10">
-        <div className="space-y-3">
-          <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-primary">
-            {text.eyebrow}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {text.title}
-          </h1>
-          <p className="text-muted-foreground">{text.description}</p>
-        </div>
+    <AppShell locale={locale}>
+      <div className="space-y-8">
+        <PageIntro
+          description={text.description}
+          eyebrow={text.eyebrow}
+          title={text.title}
+        />
 
-        <dl className="space-y-3 rounded-2xl bg-muted p-5 text-sm">
-          <div>
-            <dt className="text-muted-foreground">{text.username}</dt>
-            <dd className="mt-1 font-mono">@{profile.username}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">{text.visibility}</dt>
-            <dd className="mt-1 capitalize">{profile.visibility}</dd>
-          </div>
-        </dl>
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <dl className="grid gap-4 rounded-[2rem] border border-border bg-surface p-6 text-sm sm:grid-cols-2 sm:p-8">
+            <div className="rounded-2xl border border-border bg-background/25 p-5">
+              <dt className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                {text.username}
+              </dt>
+              <dd className="mt-4 font-mono text-lg text-primary">
+                @{profile.username}
+              </dd>
+            </div>
+            <div className="rounded-2xl border border-border bg-background/25 p-5">
+              <dt className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                {text.visibility}
+              </dt>
+              <dd className="mt-4 text-lg font-semibold capitalize">
+                {profile.visibility}
+              </dd>
+            </div>
+          </dl>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Link
-            className={buttonVariants()}
-            href={`/users/${profile.username}`}
-          >
-            {text.publicProfile}
-          </Link>
-          <Link
-            className={buttonVariants({ variant: "outline" })}
-            href="/profile/edit"
-          >
-            {text.edit}
-          </Link>
-          <Link className={buttonVariants({ variant: "outline" })} href="/">
-            {text.home}
-          </Link>
-          <form action={signOut}>
-            <button
-              className={`${buttonVariants({ variant: "outline" })} w-full`}
-              type="submit"
+          <div className="grid content-start gap-3 rounded-[2rem] border border-border bg-surface p-6">
+            <Link
+              className={buttonVariants()}
+              href={`/users/${profile.username}`}
             >
-              {text.signOut}
-            </button>
-          </form>
-        </div>
-        <LanguageSwitcher locale={locale} returnTo="/account" />
-      </section>
-    </main>
+              {text.publicProfile}
+            </Link>
+            <Link
+              className={buttonVariants({ variant: "outline" })}
+              href="/profile/edit"
+            >
+              {text.edit}
+            </Link>
+            <Link className={buttonVariants({ variant: "outline" })} href="/">
+              {text.home}
+            </Link>
+            <form action={signOut}>
+              <button
+                className={`${buttonVariants({ variant: "outline" })} w-full`}
+                type="submit"
+              >
+                {text.signOut}
+              </button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </AppShell>
   );
 }

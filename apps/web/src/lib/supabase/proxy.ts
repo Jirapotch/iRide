@@ -70,7 +70,7 @@ export async function updateSession(request: NextRequest) {
 }
 
 export function isProtectedPath(pathname: string): boolean {
-  return /^\/(?:account|onboarding|profile\/edit)(?:\/|$)/.test(pathname);
+  return /^\/(?:account|onboarding|profile)(?:\/|$)/.test(pathname);
 }
 
 function isInvalidSessionError(error: {

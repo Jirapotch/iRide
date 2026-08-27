@@ -6,6 +6,8 @@ import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getPublicProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 
+import { AppShell } from "../../(main)/_components/app-shell";
+
 const copy = {
   th: {
     profile: "โปรไฟล์ผู้ขับขี่",
@@ -40,21 +42,24 @@ export default async function PublicProfilePage({
   const initials = profile.displayName.slice(0, 2).toUpperCase();
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-2xl px-5 py-10 sm:px-8 sm:py-16">
-      <article className="overflow-hidden rounded-3xl border bg-background shadow-xl shadow-primary/5">
+    <AppShell locale={locale}>
+      <article className="mx-auto max-w-3xl overflow-hidden rounded-[2rem] border border-border bg-surface shadow-2xl shadow-black/25">
         <div
-          className="h-36 bg-gradient-to-br from-primary/80 via-primary/40 to-muted"
+          className="relative h-44 overflow-hidden bg-gradient-to-br from-primary/75 via-primary/20 to-background"
           aria-hidden="true"
-        />
+        >
+          <span className="absolute -right-16 -top-24 h-72 w-72 rounded-full border border-primary/25" />
+          <span className="absolute -right-4 -top-12 h-48 w-48 rounded-full border border-foreground/10" />
+        </div>
         <div className="space-y-6 p-6 sm:p-9">
-          <div className="-mt-20 flex h-24 w-24 items-center justify-center rounded-3xl border-4 border-background bg-primary text-2xl font-semibold text-primary-foreground">
+          <div className="-mt-24 flex h-28 w-28 items-center justify-center rounded-full border-4 border-surface bg-primary text-2xl font-black text-primary-foreground shadow-xl shadow-black/25">
             {initials}
           </div>
           <div className="space-y-2">
-            <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-primary">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-primary">
               {text.profile}
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="text-4xl font-black tracking-[-0.05em]">
               {profile.displayName}
             </h1>
             <p className="font-mono text-sm text-muted-foreground">
@@ -65,7 +70,7 @@ export default async function PublicProfilePage({
             {profile.bio ?? text.emptyBio}
           </p>
           {profile.locationName ? (
-            <dl className="rounded-2xl bg-muted p-4 text-sm">
+            <dl className="rounded-2xl border border-border bg-background/25 p-4 text-sm">
               <dt className="text-muted-foreground">{text.location}</dt>
               <dd className="mt-1 font-medium">{profile.locationName}</dd>
             </dl>
@@ -82,6 +87,6 @@ export default async function PublicProfilePage({
           </div>
         </div>
       </article>
-    </main>
+    </AppShell>
   );
 }
