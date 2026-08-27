@@ -6,6 +6,7 @@ import {
   handleGetOwnProfile,
   handleGetPublicProfile,
   handlePatchOwnProfile,
+  handleProfileOptions,
   type ProfileDependencies,
   type ProfileRepository,
 } from "./profiles";
@@ -228,6 +229,9 @@ describe("profile API handlers", () => {
       invalidDependencies,
     );
     expect(invalidResponse.status).toBe(401);
+    expect(invalidResponse.headers.get("cache-control")).toBe(
+      "private, no-store",
+    );
 
     const denied = setup();
     const deniedResponse = await handleGetOwnProfile(
@@ -237,6 +241,28 @@ describe("profile API handlers", () => {
       denied.dependencies,
     );
     expect(deniedResponse.status).toBe(403);
+    expect(deniedResponse.headers.get("cache-control")).toBe(
+      "private, no-store",
+    );
     expect(denied.dependencies.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("marks profile preflight responses as private and non-cacheable", () => {
+    const response = handleProfileOptions(
+      new Request("http://localhost:3001/api/v1/profile/me", {
+        method: "OPTIONS",
+        headers: {
+          origin: "http://localhost:3000",
+          "access-control-request-method": "PATCH",
+        },
+      }),
+      "http://localhost:3000",
+    );
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-methods")).toBe(
+      "GET, PATCH, OPTIONS",
+    );
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });
