@@ -1,5 +1,6 @@
 "use client";
 
+import { GoogleLogo } from "@phosphor-icons/react";
 import { Button } from "@iride/ui/button";
 import { useFormStatus } from "react-dom";
 
@@ -18,14 +19,9 @@ export function AuthSubmitButton({
       className="h-12 w-full gap-3 text-base"
       disabled={pending}
       type="submit"
-      variant="outline"
+      variant="default"
     >
-      <span
-        aria-hidden="true"
-        className="grid size-7 place-items-center rounded-full border border-primary/25 bg-primary/[0.06] font-black text-primary"
-      >
-        G
-      </span>
+      <GoogleLogo aria-hidden size={22} weight="bold" />
       {pending ? pendingLabel : idleLabel}
     </Button>
   );

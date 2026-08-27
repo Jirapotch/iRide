@@ -8,7 +8,7 @@ test("detects Thai and English from the browser without changing the URL", async
   await thaiPage.goto("/");
   await expect(thaiPage).toHaveURL(/\/$/);
   await expect(thaiPage.getByRole("heading", { level: 1 })).toHaveText(
-    "ฟีดของคุณ",
+    "ออกไปเจอกัน",
   );
   await thaiContext.close();
 
@@ -17,26 +17,31 @@ test("detects Thai and English from the browser without changing the URL", async
   await englishPage.goto("/");
   await expect(englishPage).toHaveURL(/\/$/);
   await expect(englishPage.getByRole("heading", { level: 1 })).toHaveText(
-    "Your feed",
+    "Find your next move",
   );
   await englishContext.close();
 });
 
 test("persists a language switch on the same clean path", async ({ page }) => {
   await page.goto("/");
-  const switchToThai = page.getByRole("button", { name: "ภาษาไทย" });
+  await page.getByRole("button", { name: /Settings|ตั้งค่า/ }).click();
+  const switchToThai = page.getByRole("button", {
+    name: /เปลี่ยนเป็นภาษาไทย/,
+  });
+  if (await switchToThai.isVisible()) await switchToThai.click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "ออกไปเจอกัน",
+  );
 
-  if (await switchToThai.isVisible()) {
-    await switchToThai.click();
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "ฟีดของคุณ",
-    );
-  }
-
-  await page.getByRole("button", { name: "English" }).click();
+  await page.getByRole("button", { name: "ตั้งค่า" }).click();
+  await page
+    .getByRole("button", { name: /Switch to English/ })
+    .click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your feed");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Find your next move",
+  );
 
   await page.goto("/login");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sign in");
