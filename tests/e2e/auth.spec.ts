@@ -22,6 +22,12 @@ for (const locale of ["th", "en"] as const) {
     await page.getByRole("button", { name: /Google/ }).click();
     await expect(page).toHaveURL(/\/account$/);
     await expect(page.getByText("@e2e_rider")).toBeVisible();
+    await expect(page.locator('[data-ui="app-shell"]')).toBeVisible();
+    await expect(
+      page.getByRole("navigation").getByRole("link", {
+        name: /โปรไฟล์|Profile/,
+      }),
+    ).toHaveAttribute("aria-current", "page");
 
     const authCookies = (await context.cookies()).filter((cookie) =>
       cookie.name.startsWith("iride-auth"),
@@ -67,5 +73,16 @@ test("sanitizes callback destinations and localizes provider errors", async ({
   await expect(page).toHaveURL(/\/login\?error=provider$/);
   await expect(page.getByRole("status")).toContainText(
     "Google sign-in is unavailable",
+  );
+});
+
+test("returns to the protected profile after sign-in", async ({ page }) => {
+  await page.goto("/profile");
+  await expect(page).toHaveURL(/\/login\?next=%2Fprofile$/);
+
+  await page.getByRole("button", { name: /Google/ }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    /โปรไฟล์ของคุณ|Your profile/,
   );
 });

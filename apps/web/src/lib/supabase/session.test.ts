@@ -44,10 +44,13 @@ describe("Supabase auth cookies", () => {
 });
 
 describe("protected web routes", () => {
-  it.each(["/account", "/account/security", "/onboarding", "/profile/edit"])(
-    "protects %s",
-    (pathname) => expect(isProtectedPath(pathname)).toBe(true),
-  );
+  it.each([
+    "/account",
+    "/account/security",
+    "/onboarding",
+    "/profile",
+    "/profile/edit",
+  ])("protects %s", (pathname) => expect(isProtectedPath(pathname)).toBe(true));
 
   it.each([
     "/",
@@ -55,7 +58,7 @@ describe("protected web routes", () => {
     "/th/account",
     "/en/account",
     "/accounting",
-    "/profile",
+    "/profiles",
     "/users/rider",
   ])("does not overmatch %s", (pathname) =>
     expect(isProtectedPath(pathname)).toBe(false),

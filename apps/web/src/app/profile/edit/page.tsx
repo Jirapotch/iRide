@@ -4,6 +4,8 @@ import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getOwnProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 
+import { AppShell } from "../../(main)/_components/app-shell";
+import { PageIntro } from "../../(main)/_components/page-intro";
 import { editProfile } from "../actions";
 import { ProfileForm } from "../profile-form";
 
@@ -32,23 +34,21 @@ export default async function EditProfilePage() {
   const text = copy[locale];
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl px-5 py-10 sm:px-8 sm:py-16">
-      <section className="space-y-7 rounded-3xl border bg-background p-6 shadow-xl shadow-primary/5 sm:p-9">
-        <div className="space-y-3">
-          <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-primary">
-            {text.eyebrow}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {text.title}
-          </h1>
-          <p className="leading-6 text-muted-foreground">{text.description}</p>
-        </div>
-        <ProfileForm
-          action={editProfile}
-          initialProfile={profile}
-          locale={locale}
+    <AppShell locale={locale}>
+      <div className="space-y-8">
+        <PageIntro
+          description={text.description}
+          eyebrow={text.eyebrow}
+          title={text.title}
         />
-      </section>
-    </main>
+        <section className="max-w-2xl rounded-[2rem] border border-border bg-surface p-6 sm:p-9">
+          <ProfileForm
+            action={editProfile}
+            initialProfile={profile}
+            locale={locale}
+          />
+        </section>
+      </div>
+    </AppShell>
   );
 }

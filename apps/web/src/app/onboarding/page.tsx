@@ -4,6 +4,8 @@ import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getOwnProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 
+import { StandaloneShell } from "../_components/standalone-shell";
+import { LanguageSwitcher } from "../language-switcher";
 import { completeOnboarding } from "../profile/actions";
 import { ProfileForm } from "../profile/profile-form";
 
@@ -33,13 +35,13 @@ export default async function OnboardingPage() {
   const text = copy[locale];
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl px-5 py-10 sm:px-8 sm:py-16">
-      <section className="space-y-7 rounded-3xl border bg-background p-6 shadow-xl shadow-primary/5 sm:p-9">
+    <StandaloneShell locale={locale} wide>
+      <div className="space-y-7">
         <div className="space-y-3">
-          <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-primary">
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-primary">
             {text.eyebrow}
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight">
+          <h1 className="text-4xl font-black tracking-[-0.05em]">
             {text.title}
           </h1>
           <p className="leading-6 text-muted-foreground">{text.description}</p>
@@ -49,7 +51,10 @@ export default async function OnboardingPage() {
           initialProfile={profile}
           locale={locale}
         />
-      </section>
-    </main>
+        <div className="flex justify-center border-t border-border pt-6">
+          <LanguageSwitcher locale={locale} returnTo="/onboarding" />
+        </div>
+      </div>
+    </StandaloneShell>
   );
 }

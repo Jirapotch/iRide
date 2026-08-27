@@ -22,7 +22,7 @@ export function AuthSubmitButton({
     >
       <span
         aria-hidden="true"
-        className="grid size-6 place-items-center rounded-full bg-white font-semibold text-blue-600 shadow-sm"
+        className="grid size-7 place-items-center rounded-full border border-primary/25 bg-primary/[0.06] font-black text-primary"
       >
         G
       </span>

@@ -25,6 +25,7 @@ for (const locale of ["th", "en"] as const) {
     await page.goto("/account");
     await page.getByRole("button", { name: /Google/ }).click();
     await expect(page).toHaveURL(/\/onboarding$/);
+    await expect(page.locator('[data-ui="standalone-shell"]')).toBeVisible();
 
     await page.getByLabel(/ชื่อผู้ใช้|Username/).fill(`rider_${locale}`);
     await page
@@ -37,6 +38,7 @@ for (const locale of ["th", "en"] as const) {
       .click();
 
     await expect(page).toHaveURL(new RegExp(`/users/rider_${locale}$`));
+    await expect(page.locator('[data-ui="app-shell"]')).toBeVisible();
     await expect(page.getByText(`@rider_${locale}`)).toBeVisible();
     await expect(page.getByText("Roads and stories")).toBeVisible();
 
