@@ -1,10 +1,12 @@
 import { getWorkerEnv } from "@iride/config/worker";
 
 import { createWorkerServer } from "./server";
+import { createMediaWorkerDependencies, startMediaWorker } from "./media-worker";
 
 const env = getWorkerEnv();
 const version = process.env.APP_VERSION ?? "0.1.0";
 const server = createWorkerServer(version);
+const stopMediaWorker = startMediaWorker(createMediaWorkerDependencies(env));
 
 server.listen(env.WORKER_PORT, "0.0.0.0", () => {
   console.info(
@@ -18,6 +20,7 @@ server.listen(env.WORKER_PORT, "0.0.0.0", () => {
 });
 
 function shutdown(signal: NodeJS.Signals) {
+  stopMediaWorker();
   console.info(
     JSON.stringify({ level: "info", event: "worker_stopping", signal }),
   );

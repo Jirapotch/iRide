@@ -1,23 +1,32 @@
 "use server";
 
 import {
+  createMarketProductSchema,
+  createVehicleSchema,
   createEventSchema,
   createPhotographerSpotSchema,
   createPostSchema,
   updatePostSchema,
 } from "@iride/validation";
-import type { CreateEventInput } from "@iride/types";
+import type { CreateEventInput, CreatePostInput, MarkerTagInput, UpdatePostInput } from "@iride/types";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import {
   createEvent,
+  createMarketProduct,
   createPhotographerSpot,
   createPost,
   deleteContent,
   updateEvent,
   updatePhotographerSpot,
   updatePost,
+  updateMarketProduct,
+  createVehicle,
+  updateVehicle,
+  deleteVehicle,
+  deleteMarketProduct,
 } from "@/lib/content-api";
 
 export async function saveContent(formData: FormData) {
@@ -27,10 +36,18 @@ export async function saveContent(formData: FormData) {
   const editId = optional(formData, "editId");
 
   if (type === "post") {
-    const schema = editId ? updatePostSchema : createPostSchema;
-    const input = schema.parse({ body: String(formData.get("body") ?? "") });
-    const result = editId ? await updatePost(session.accessToken, editId, input) : await createPost(session.accessToken, input);
+    const tags = markerTags(formData);
+    const raw = { body: String(formData.get("body") ?? ""), ...(tags.length ? { markerTags: tags } : {}) };
+    const result = editId
+      ? await updatePost(session.accessToken, editId, updatePostSchema.parse(raw) as UpdatePostInput)
+      : await createPost(session.accessToken, createPostSchema.parse(raw) as CreatePostInput);
     redirect(`/community?room=talk&post=${result.id}`);
+  }
+
+  if(type==="market"){
+    const input=createMarketProductSchema.parse({name:String(formData.get("name")??""),priceSatang:Math.round(Number(formData.get("price"))*100),category:String(formData.get("category")??""),vehicleKinds:formData.getAll("vehicleKinds").map(String),coverMediaId:optional(formData,"coverMediaId")});
+    const result=editId?await updateMarketProduct(session.accessToken,editId,input):await createMarketProduct(session.accessToken,input);
+    redirect(`/community?room=market&product=${result.id}`);
   }
 
   if (type === "photographer-spot") {
@@ -70,6 +87,17 @@ export async function saveContent(formData: FormData) {
   redirect(`/?marker=${result.id}`);
 }
 
+export async function saveVehicleAction(formData:FormData){
+  const session=await getVerifiedWebSession();if(!session)redirect("/login");
+  const id=optional(formData,"editId");const username=String(formData.get("username")??"");
+  const input=createVehicleSchema.parse({kind:String(formData.get("kind")),brand:String(formData.get("brand")??""),model:String(formData.get("model")??""),year:optional(formData,"year")?Number(formData.get("year")):null,nickname:nullable(formData,"nickname"),description:nullable(formData,"description"),visibility:String(formData.get("visibility")??"public"),mediaIds:formData.getAll("mediaIds").map(String)});
+  const result=id?await updateVehicle(session.accessToken,id,input):await createVehicle(session.accessToken,input);
+  redirect(`/users/${encodeURIComponent(username)}?tab=garage&vehicle=${result.id}`);
+}
+
+export async function removeVehicleAction(formData:FormData){const session=await getVerifiedWebSession();if(!session)redirect("/login");const id=String(formData.get("id")??"");const username=String(formData.get("username")??"");await deleteVehicle(session.accessToken,id);redirect(`/users/${encodeURIComponent(username)}?tab=garage`)}
+export async function removeMarketAction(formData:FormData){const session=await getVerifiedWebSession();if(!session)redirect("/login");await deleteMarketProduct(session.accessToken,String(formData.get("id")??""));redirect("/community?room=market")}
+
 export async function removeContent(formData: FormData) {
   const session = await getVerifiedWebSession();
   if (!session) redirect("/login");
@@ -77,6 +105,7 @@ export async function removeContent(formData: FormData) {
   const domain = String(formData.get("domain") ?? "") as "posts" | "events" | "photographer-spots";
   if (!id || !["posts", "events", "photographer-spots"].includes(domain)) throw new Error("INVALID_DELETE");
   await deleteContent(session.accessToken, domain, id);
+  revalidatePath(domain === "posts" ? "/community" : "/");
   redirect(domain === "posts" ? "/community?room=talk" : "/");
 }
 
@@ -84,3 +113,4 @@ function optional(data: FormData, key: string) { const value = String(data.get(k
 function nullable(data: FormData, key: string) { return optional(data, key); }
 function numberOrNull(data: FormData, key: string) { const value = optional(data, key); return value === null ? null : Number(value); }
 function iso(data: FormData, key: string) { return new Date(String(data.get(key) ?? "")).toISOString(); }
+function markerTags(data:FormData):MarkerTagInput[]{return data.getAll("markerTags").flatMap((value)=>{const [kind,id]=String(value).split(":");return(kind==="event"||kind==="photographerSpot")&&id?[{kind,id}]:[]})}

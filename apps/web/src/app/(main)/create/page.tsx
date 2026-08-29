@@ -2,7 +2,8 @@ import { getRequestLocale } from "@/lib/request-locale";
 import { redirect } from "next/navigation";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
-import { getEvent, getPhotographerSpot, getPost } from "@/lib/content-api";
+import { getEvents, getPhotographerSpots } from "@/lib/content-api";
+import { legacyEditRedirect } from "@/lib/edit-modal-domain";
 import { CreateContentScreen } from "../_components/create-content-screen";
 
 const createTypes = ["post", "activity", "trip", "photographer-spot", "market"] as const;
@@ -13,14 +14,8 @@ export default async function CreatePage({ searchParams }: { readonly searchPara
   const params = await searchParams;
   const type: CreateType = createTypes.includes(params.type as CreateType) ? params.type as CreateType : "post";
   if (!session) redirect(`/login?next=${encodeURIComponent(`/create?type=${type}`)}`);
-  const initial = params.edit ? await loadInitial(type, params.edit, session.accessToken) : null;
-  if (initial && !initial.canEdit) redirect("/");
-  return <CreateContentScreen initial={initial} locale={await getRequestLocale()} type={type} />;
-}
-
-function loadInitial(type: CreateType, id: string, token: string) {
-  if (type === "post") return getPost(id, token);
-  if (type === "photographer-spot") return getPhotographerSpot(id, token);
-  if (type === "activity" || type === "trip") return getEvent(id, token);
-  return Promise.resolve(null);
+  if(params.edit)redirect(legacyEditRedirect(type,params.edit));
+  const [events,spots]=await Promise.all([getEvents(session.accessToken).catch(()=>[]),getPhotographerSpots(session.accessToken).catch(()=>[])]);
+  const markerOptions=[...events.map((item)=>({kind:"event" as const,id:item.id,title:item.title,subtitle:item.locationLabel})),...spots.map((item)=>({kind:"photographerSpot" as const,id:item.id,title:item.title,subtitle:item.locationLabel}))];
+  return <CreateContentScreen initial={null} locale={await getRequestLocale()} markerOptions={markerOptions} type={type} />;
 }

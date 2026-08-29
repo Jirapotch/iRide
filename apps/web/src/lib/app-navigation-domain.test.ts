@@ -35,6 +35,10 @@ describe("application navigation domain", () => {
       { id: "s1", kind: "photographerSpot", title: "Corner", subtitle: "Khao Yai", username: "maya" },
       "/?marker=s1",
     ],
+    [
+      { id: "m1", kind: "marketProduct", title: "Helmet", subtitle: "Maya", username: "maya" },
+      "/community?room=market&product=m1",
+    ],
   ] satisfies [SearchResultDto, string][])("routes %s to %s", (result, href) => {
     expect(searchResultHref(result)).toBe(href);
   });

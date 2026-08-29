@@ -14,6 +14,12 @@ export type Database = {
   };
   public: {
     Tables: {
+      comments: {
+        Row: { id:string; post_id:string; author_id:string; parent_id:string|null; reply_to_user_id:string|null; body:string; deleted_at:string|null; created_at:string; updated_at:string };
+        Insert: { id?:string; post_id:string; author_id:string; parent_id?:string|null; reply_to_user_id?:string|null; body:string; deleted_at?:string|null; created_at?:string; updated_at?:string };
+        Update: { id?:string; post_id?:string; author_id?:string; parent_id?:string|null; reply_to_user_id?:string|null; body?:string; deleted_at?:string|null; created_at?:string; updated_at?:string };
+        Relationships: [];
+      };
       events: {
         Row: {
           created_at: string;
@@ -150,6 +156,30 @@ export type Database = {
           },
         ];
       };
+      market_products: {
+        Row: { id:string; owner_id:string; name:string; price_satang:number; currency:string; category:string; vehicle_kinds:Database["public"]["Enums"]["vehicle_kind"][]; cover_media_id:string|null; deleted_at:string|null; created_at:string; updated_at:string };
+        Insert: { id?:string; owner_id:string; name:string; price_satang:number; currency?:string; category:string; vehicle_kinds:Database["public"]["Enums"]["vehicle_kind"][]; cover_media_id?:string|null; deleted_at?:string|null; created_at?:string; updated_at?:string };
+        Update: { id?:string; owner_id?:string; name?:string; price_satang?:number; currency?:string; category?:string; vehicle_kinds?:Database["public"]["Enums"]["vehicle_kind"][]; cover_media_id?:string|null; deleted_at?:string|null; created_at?:string; updated_at?:string };
+        Relationships: [];
+      };
+      media: {
+        Row: { id:string; owner_id:string; purpose:Database["public"]["Enums"]["media_purpose"]; status:Database["public"]["Enums"]["media_status"]; original_object_key:string; filename:string; mime_type:string; bytes:number; width:number|null; height:number|null; failure_reason:string|null; deleted_at:string|null; created_at:string; updated_at:string };
+        Insert: { id?:string; owner_id:string; purpose:Database["public"]["Enums"]["media_purpose"]; status?:Database["public"]["Enums"]["media_status"]; original_object_key:string; filename:string; mime_type:string; bytes:number; width?:number|null; height?:number|null; failure_reason?:string|null; deleted_at?:string|null; created_at?:string; updated_at?:string };
+        Update: { id?:string; owner_id?:string; purpose?:Database["public"]["Enums"]["media_purpose"]; status?:Database["public"]["Enums"]["media_status"]; original_object_key?:string; filename?:string; mime_type?:string; bytes?:number; width?:number|null; height?:number|null; failure_reason?:string|null; deleted_at?:string|null; created_at?:string; updated_at?:string };
+        Relationships: [];
+      };
+      media_variants: {
+        Row: { id:string; media_id:string; kind:Database["public"]["Enums"]["media_variant_kind"]; object_key:string; mime_type:string; bytes:number; width:number; height:number; created_at:string };
+        Insert: { id?:string; media_id:string; kind:Database["public"]["Enums"]["media_variant_kind"]; object_key:string; mime_type?:string; bytes:number; width:number; height:number; created_at?:string };
+        Update: { id?:string; media_id?:string; kind?:Database["public"]["Enums"]["media_variant_kind"]; object_key?:string; mime_type?:string; bytes?:number; width?:number; height?:number; created_at?:string };
+        Relationships: [];
+      };
+      post_marker_tags: {
+        Row: { post_id:string; position:number; event_id:string|null; photographer_spot_id:string|null; created_at:string };
+        Insert: { post_id:string; position:number; event_id?:string|null; photographer_spot_id?:string|null; created_at?:string };
+        Update: { post_id?:string; position?:number; event_id?:string|null; photographer_spot_id?:string|null; created_at?:string };
+        Relationships: [];
+      };
       posts: {
         Row: {
           author_id: string;
@@ -233,6 +263,18 @@ export type Database = {
         };
         Relationships: [];
       };
+      vehicle_media: {
+        Row: { vehicle_id:string; media_id:string; position:number; is_cover:boolean };
+        Insert: { vehicle_id:string; media_id:string; position:number; is_cover?:boolean };
+        Update: { vehicle_id?:string; media_id?:string; position?:number; is_cover?:boolean };
+        Relationships: [];
+      };
+      vehicles: {
+        Row: { id:string; owner_id:string; kind:Database["public"]["Enums"]["vehicle_kind"]; brand:string; model:string; year:number|null; nickname:string|null; description:string|null; visibility:Database["public"]["Enums"]["vehicle_visibility"]; archived_at:string|null; created_at:string; updated_at:string };
+        Insert: { id?:string; owner_id:string; kind:Database["public"]["Enums"]["vehicle_kind"]; brand:string; model:string; year?:number|null; nickname?:string|null; description?:string|null; visibility?:Database["public"]["Enums"]["vehicle_visibility"]; archived_at?:string|null; created_at?:string; updated_at?:string };
+        Update: { id?:string; owner_id?:string; kind?:Database["public"]["Enums"]["vehicle_kind"]; brand?:string; model?:string; year?:number|null; nickname?:string|null; description?:string|null; visibility?:Database["public"]["Enums"]["vehicle_visibility"]; archived_at?:string|null; created_at?:string; updated_at?:string };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -241,6 +283,10 @@ export type Database = {
       archive_job: {
         Args: { message_id: number; queue_name: string };
         Returns: boolean;
+      };
+      complete_media_upload: {
+        Args: { target_media_id:string; expected_owner_id:string; message:Json };
+        Returns: number;
       };
       enqueue_job: {
         Args: { delay_seconds?: number; message: Json; queue_name: string };
@@ -268,6 +314,10 @@ export type Database = {
           title: string;
         }[];
       };
+      finish_media_processing: {
+        Args: { target_media_id:string; source_width:number; source_height:number; variants:Json };
+        Returns: undefined;
+      };
       read_jobs: {
         Args: {
           batch_size?: number;
@@ -286,8 +336,12 @@ export type Database = {
     };
     Enums: {
       event_kind: "meeting" | "event" | "trip";
+      media_purpose: "avatar" | "cover" | "vehicle" | "market";
+      media_status: "uploading" | "processing" | "ready" | "failed" | "deleted";
+      media_variant_kind: "thumbnail" | "preview";
       profile_visibility: "public" | "followers" | "private";
       vehicle_kind: "car" | "motorcycle" | "bicycle";
+      vehicle_visibility: "public" | "private";
     };
     CompositeTypes: {
       [_ in never]: never;

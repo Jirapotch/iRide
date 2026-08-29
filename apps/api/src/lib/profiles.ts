@@ -239,6 +239,12 @@ function productionDependencies(): ProfileDependencies {
       return data;
     },
     async updateOwner(userId, accessToken, input) {
+      for (const [mediaId, purpose] of [[input.avatarMediaId, "avatar"], [input.coverMediaId, "cover"]] as const) {
+        if (!mediaId) continue;
+        const { data: media, error: mediaError } = await admin.from("media").select("id").eq("id", mediaId).eq("owner_id", userId).eq("purpose", purpose).eq("status", "ready").is("deleted_at", null).maybeSingle();
+        if (mediaError) throw mediaError;
+        if (!media) throw Object.assign(new Error("PROFILE_MEDIA_FORBIDDEN"), { code: "42501" });
+      }
       const client = createServerDatabaseClient({
         url: supabaseUrl,
         publishableKey,
@@ -277,6 +283,8 @@ function toProfileUpdate(input: UpdateProfileInput): TablesUpdate<"profiles"> {
     ...(input.latitude !== undefined ? { latitude: input.latitude } : {}),
     ...(input.longitude !== undefined ? { longitude: input.longitude } : {}),
     ...(input.visibility !== undefined ? { visibility: input.visibility } : {}),
+    ...(input.avatarMediaId !== undefined ? { avatar_media_id: input.avatarMediaId } : {}),
+    ...(input.coverMediaId !== undefined ? { cover_media_id: input.coverMediaId } : {}),
   };
 }
 

@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createCommentSchema,
   createEventSchema,
+  createMarketProductSchema,
   createPhotographerSpotSchema,
   createPostSchema,
+  createVehicleSchema,
+  mediaUploadRequestSchema,
   updateEventSchema,
 } from "./index";
 
@@ -13,6 +17,71 @@ describe("content validation", () => {
       body: "Sunday meetup",
     });
     expect(() => createPostSchema.parse({ body: "   " })).toThrow();
+  });
+
+  it("accepts up to five marker tags and rejects duplicates", () => {
+    const tag = { kind: "event" as const, id: "10000000-0000-4000-8000-000000000001" };
+    expect(createPostSchema.parse({ body: "Meet here", markerTags: [tag] })).toEqual({
+      body: "Meet here",
+      markerTags: [tag],
+    });
+    expect(() => createPostSchema.parse({ body: "Meet here", markerTags: [tag, tag] })).toThrow();
+    expect(() => createPostSchema.parse({
+      body: "Too many",
+      markerTags: Array.from({ length: 6 }, (_, index) => ({
+        kind: "event" as const,
+        id: `10000000-0000-4000-8000-00000000000${index}`,
+      })),
+    })).toThrow();
+  });
+
+  it("validates comments and one-level reply identifiers", () => {
+    expect(createCommentSchema.parse({ body: "  Great route  ", parentId: null })).toEqual({
+      body: "Great route",
+      parentId: null,
+    });
+    expect(() => createCommentSchema.parse({ body: "", parentId: null })).toThrow();
+  });
+
+  it("validates vehicle and market inputs", () => {
+    expect(createVehicleSchema.parse({
+      kind: "motorcycle",
+      brand: "Honda",
+      model: "Africa Twin",
+      year: 2025,
+      nickname: "Atlas",
+      description: null,
+      visibility: "public",
+      mediaIds: [],
+    })).toMatchObject({ brand: "Honda", visibility: "public" });
+    expect(createMarketProductSchema.parse({
+      name: "Touring helmet",
+      priceSatang: 1450000,
+      category: "Protection",
+      vehicleKinds: ["motorcycle"],
+      coverMediaId: null,
+    })).toMatchObject({ currency: "THB", priceSatang: 1450000 });
+  });
+
+  it("restricts media uploads to supported images under 10 MB", () => {
+    expect(mediaUploadRequestSchema.parse({
+      filename: "avatar.webp",
+      mimeType: "image/webp",
+      bytes: 1024,
+      purpose: "avatar",
+    })).toMatchObject({ purpose: "avatar" });
+    expect(() => mediaUploadRequestSchema.parse({
+      filename: "avatar.gif",
+      mimeType: "image/gif",
+      bytes: 1024,
+      purpose: "avatar",
+    })).toThrow();
+    expect(() => mediaUploadRequestSchema.parse({
+      filename: "cover.jpg",
+      mimeType: "image/jpeg",
+      bytes: 10 * 1024 * 1024 + 1,
+      purpose: "cover",
+    })).toThrow();
   });
 
   it("requires destination details for trips", () => {

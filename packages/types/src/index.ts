@@ -57,6 +57,8 @@ export interface UpdateProfileInput {
   readonly latitude?: number | null;
   readonly longitude?: number | null;
   readonly visibility?: ProfileVisibility;
+  readonly avatarMediaId?: string | null;
+  readonly coverMediaId?: string | null;
 }
 
 export const profileErrorCodes = [
@@ -88,15 +90,53 @@ export interface PostDto {
   readonly body: string;
   readonly author: ContentAuthorDto;
   readonly canEdit: boolean;
+  readonly commentCount: number;
+  readonly markerTags: readonly PostMarkerTagDto[];
   readonly createdAt: string;
   readonly updatedAt: string;
 }
 
 export interface CreatePostInput {
   readonly body: string;
+  readonly markerTags?: readonly MarkerTagInput[];
 }
 
 export type UpdatePostInput = CreatePostInput;
+
+export type MarkerTagKind = "event" | "photographerSpot";
+
+export interface MarkerTagInput {
+  readonly kind: MarkerTagKind;
+  readonly id: string;
+}
+
+export interface PostMarkerTagDto extends MarkerTagInput {
+  readonly title: string | null;
+  readonly markerKind: ExploreFeatureKind | null;
+  readonly available: boolean;
+}
+
+export interface CommentDto {
+  readonly id: string;
+  readonly postId: string;
+  readonly body: string | null;
+  readonly author: ContentAuthorDto;
+  readonly parentId: string | null;
+  readonly replyTo: ContentAuthorDto | null;
+  readonly deleted: boolean;
+  readonly canEdit: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CreateCommentInput {
+  readonly body: string;
+  readonly parentId: string | null;
+}
+
+export interface UpdateCommentInput {
+  readonly body: string;
+}
 
 export interface EventDto {
   readonly id: string;
@@ -169,6 +209,94 @@ export type UpdatePhotographerSpotInput =
 
 export type ExploreFeatureKind = EventKind | "photographerSpot";
 
+export const vehicleVisibilities = ["public", "private"] as const;
+export type VehicleVisibility = (typeof vehicleVisibilities)[number];
+
+export interface VehicleDto {
+  readonly id: string;
+  readonly owner: ContentAuthorDto;
+  readonly kind: VehicleKind;
+  readonly brand: string;
+  readonly model: string;
+  readonly year: number | null;
+  readonly nickname: string | null;
+  readonly description: string | null;
+  readonly visibility: VehicleVisibility;
+  readonly mediaIds: readonly string[];
+  readonly canEdit: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CreateVehicleInput {
+  readonly kind: VehicleKind;
+  readonly brand: string;
+  readonly model: string;
+  readonly year: number | null;
+  readonly nickname: string | null;
+  readonly description: string | null;
+  readonly visibility: VehicleVisibility;
+  readonly mediaIds: readonly string[];
+}
+
+export type UpdateVehicleInput = Partial<CreateVehicleInput>;
+
+export interface MarketProductDto {
+  readonly id: string;
+  readonly owner: ContentAuthorDto;
+  readonly name: string;
+  readonly priceSatang: number;
+  readonly currency: "THB";
+  readonly category: string;
+  readonly vehicleKinds: readonly VehicleKind[];
+  readonly coverMediaId: string | null;
+  readonly canEdit: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CreateMarketProductInput {
+  readonly name: string;
+  readonly priceSatang: number;
+  readonly currency?: "THB";
+  readonly category: string;
+  readonly vehicleKinds: readonly VehicleKind[];
+  readonly coverMediaId: string | null;
+}
+
+export type UpdateMarketProductInput = Partial<CreateMarketProductInput>;
+
+export const mediaPurposes = ["avatar", "cover", "vehicle", "market"] as const;
+export type MediaPurpose = (typeof mediaPurposes)[number];
+export const mediaStatuses = ["uploading", "processing", "ready", "failed", "deleted"] as const;
+export type MediaStatus = (typeof mediaStatuses)[number];
+export type MediaVariantKind = "thumbnail" | "preview";
+
+export interface MediaAssetDto {
+  readonly id: string;
+  readonly purpose: MediaPurpose;
+  readonly status: MediaStatus;
+  readonly filename: string;
+  readonly mimeType: "image/jpeg" | "image/png" | "image/webp";
+  readonly bytes: number;
+  readonly variants: readonly MediaVariantKind[];
+  readonly createdAt: string;
+}
+
+export interface MediaUploadRequest {
+  readonly filename: string;
+  readonly mimeType: "image/jpeg" | "image/png" | "image/webp";
+  readonly bytes: number;
+  readonly purpose: MediaPurpose;
+}
+
+export interface MediaUploadAuthorizationDto {
+  readonly mediaId: string;
+  readonly uploadUrl: string;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly expiresAt: string;
+}
+
 export interface ExploreFeatureDto {
   readonly id: string;
   readonly kind: ExploreFeatureKind;
@@ -186,7 +314,8 @@ export type SearchResultKind =
   | "profile"
   | "post"
   | "event"
-  | "photographerSpot";
+  | "photographerSpot"
+  | "marketProduct";
 
 export interface SearchResultDto {
   readonly id: string;

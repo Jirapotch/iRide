@@ -1,15 +1,26 @@
 import type {
   CreateEventInput,
+  CreateCommentInput,
+  CreateMarketProductInput,
   CreatePhotographerSpotInput,
   CreatePostInput,
+  CreateVehicleInput,
+  CommentDto,
   EventDto,
   ExploreFeatureDto,
   PhotographerSpotDto,
   PostDto,
+  MarketProductDto,
+  MediaUploadAuthorizationDto,
+  MediaUploadRequest,
   SearchResultDto,
   UpdateEventInput,
   UpdatePhotographerSpotInput,
   UpdatePostInput,
+  UpdateCommentInput,
+  UpdateMarketProductInput,
+  UpdateVehicleInput,
+  VehicleDto,
 } from "@iride/types";
 
 export class ContentApiError extends Error {
@@ -33,6 +44,24 @@ export function getEvents(accessToken?: string) {
 export function getPhotographerSpots(accessToken?: string) {
   return contentGet<PhotographerSpotDto[]>("/api/v1/photographer-spots", accessToken);
 }
+
+export function getComments(postId:string,accessToken?:string){return contentGet<CommentDto[]>(`/api/v1/posts/${encodeURIComponent(postId)}/comments`,accessToken)}
+export function createComment(accessToken:string,postId:string,input:CreateCommentInput){return contentMutation<CommentDto>(`/api/v1/posts/${encodeURIComponent(postId)}/comments`,accessToken,"POST",input)}
+export function updateComment(accessToken:string,id:string,input:UpdateCommentInput){return contentMutation<CommentDto>(`/api/v1/comments/${encodeURIComponent(id)}`,accessToken,"PATCH",input)}
+export function deleteComment(accessToken:string,id:string){return contentDelete(`/api/v1/comments/${encodeURIComponent(id)}`,accessToken)}
+export function getGarage(username:string,accessToken?:string){return contentGet<VehicleDto[]>(`/api/v1/users/${encodeURIComponent(username)}/garage`,accessToken)}
+export function getVehicle(id:string,accessToken?:string){return contentGet<VehicleDto>(`/api/v1/vehicles/${encodeURIComponent(id)}`,accessToken)}
+export function createVehicle(accessToken:string,input:CreateVehicleInput){return contentMutation<VehicleDto>("/api/v1/vehicles",accessToken,"POST",input)}
+export function updateVehicle(accessToken:string,id:string,input:UpdateVehicleInput){return contentMutation<VehicleDto>(`/api/v1/vehicles/${encodeURIComponent(id)}`,accessToken,"PATCH",input)}
+export function deleteVehicle(accessToken:string,id:string){return contentDelete(`/api/v1/vehicles/${encodeURIComponent(id)}`,accessToken)}
+export function getMarketProducts(accessToken?:string){return contentGet<MarketProductDto[]>("/api/v1/market-products",accessToken)}
+export function getMarketProduct(id:string,accessToken?:string){return contentGet<MarketProductDto>(`/api/v1/market-products/${encodeURIComponent(id)}`,accessToken)}
+export function createMarketProduct(accessToken:string,input:CreateMarketProductInput){return contentMutation<MarketProductDto>("/api/v1/market-products",accessToken,"POST",input)}
+export function updateMarketProduct(accessToken:string,id:string,input:UpdateMarketProductInput){return contentMutation<MarketProductDto>(`/api/v1/market-products/${encodeURIComponent(id)}`,accessToken,"PATCH",input)}
+export function deleteMarketProduct(accessToken:string,id:string){return contentDelete(`/api/v1/market-products/${encodeURIComponent(id)}`,accessToken)}
+export function authorizeMediaUpload(accessToken:string,input:MediaUploadRequest){return contentMutation<MediaUploadAuthorizationDto>("/api/v1/media/uploads",accessToken,"POST",input)}
+export function completeMediaUpload(accessToken:string,id:string){return contentMutation<{mediaId:string;status:string}>(`/api/v1/media/${encodeURIComponent(id)}/complete`,accessToken,"POST",{})}
+export function mediaVariantUrl(id:string,kind:"thumbnail"|"preview"="preview"){return apiUrl(`/api/v1/media/${encodeURIComponent(id)}/variants/${kind}`).toString()}
 
 export function getPost(id: string, accessToken?: string) {
   return contentGet<PostDto>(`/api/v1/posts/${encodeURIComponent(id)}`, accessToken);
@@ -136,6 +165,8 @@ async function contentMutation<T>(
   if (!response.ok) await throwApiError(response);
   return readData<T>(response);
 }
+
+async function contentDelete(pathname:string,accessToken:string){const response=await fetch(apiUrl(pathname),{method:"DELETE",cache:"no-store",headers:{Authorization:`Bearer ${accessToken}`}});if(!response.ok)await throwApiError(response)}
 
 function apiUrl(pathname: string): URL {
   return new URL(
