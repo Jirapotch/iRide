@@ -3,56 +3,40 @@ import type { ExploreFeatureKind } from "@iride/types";
 import type { AppTheme } from "./app-navigation-domain";
 
 export type SemanticMapLayer =
-  | "background"
-  | "land"
+  | "ground"
+  | "block"
   | "water"
-  | "building"
+  | "block2"
   | "road"
-  | "boundary"
+  | "edge"
   | "label"
   | "raster";
 
 export interface MapPalette {
-  readonly background: string;
-  readonly land: string;
+  readonly ground: string;
+  readonly block: string;
+  readonly block2: string;
+  readonly edge: string;
   readonly water: string;
-  readonly waterEdge: string;
-  readonly building: string;
   readonly road: string;
-  readonly roadMinor: string;
-  readonly roadCasing: string;
-  readonly boundary: string;
   readonly label: string;
-  readonly labelHalo: string;
+  readonly veil: string;
 }
 
+export const naturalMistPalette: MapPalette = {
+  ground: "#e3eae8",
+  block: "#d7e0de",
+  block2: "#ced9d6",
+  road: "#f9fffd",
+  edge: "#c6d0ce",
+  water: "#c0dee3",
+  label: "#45504d",
+  veil: "oklch(15% .016 168 / .94)",
+};
+
 export const mapPalettes: Record<AppTheme, MapPalette> = {
-  light: {
-    background: "#edf4f1",
-    land: "#f3f8f6",
-    water: "#d7ebe8",
-    waterEdge: "#c1ddd8",
-    building: "#e4ece9",
-    road: "#fbfdfc",
-    roadMinor: "#f7faf8",
-    roadCasing: "#d9e4e0",
-    boundary: "#bdcdc7",
-    label: "#20312c",
-    labelHalo: "#f8fbfa",
-  },
-  dark: {
-    background: "#182521",
-    land: "#1d2d28",
-    water: "#1b3839",
-    waterEdge: "#285153",
-    building: "#263832",
-    road: "#40534c",
-    roadMinor: "#34463f",
-    roadCasing: "#14201c",
-    boundary: "#536b62",
-    label: "#e8f1ed",
-    labelHalo: "#17231f",
-  },
+  light: naturalMistPalette,
+  dark: naturalMistPalette,
 };
 
 export const contentKindColors: Record<ExploreFeatureKind, string> = {
@@ -74,32 +58,32 @@ interface MapPaletteTarget {
 }
 
 const WATER_PATTERN = /water|ocean|river|lake|stream|canal|basin/;
-const BUILDING_PATTERN = /building/;
+const BLOCK_PATTERN = /park|forest|landcover/;
+const BLOCK2_PATTERN = /building|dense|urban/;
 const ROAD_PATTERN =
   /road|street|transport|motorway|trunk|primary|secondary|tertiary|bridge|tunnel|path/;
-const BOUNDARY_PATTERN = /boundary|admin|border/;
-const MAJOR_ROAD_PATTERN = /motorway|trunk|primary/;
-const ROAD_CASING_PATTERN = /casing|outline/;
+const EDGE_PATTERN = /casing|outline|boundary|admin|border|support/;
 
 export function classifyMapLayer(
   layer: MapStyleLayer,
 ): SemanticMapLayer | null {
   const id = layer.id.toLowerCase();
-  if (layer.type === "background") return "background";
+  if (layer.type === "background") return "ground";
   if (layer.type === "raster") return "raster";
   if (layer.type === "symbol") return "label";
-  if (layer.type === "fill-extrusion" && BUILDING_PATTERN.test(id)) {
-    return "building";
+  if (layer.type === "fill-extrusion" && BLOCK2_PATTERN.test(id)) {
+    return "block2";
   }
   if (layer.type === "fill") {
     if (WATER_PATTERN.test(id)) return "water";
-    if (BUILDING_PATTERN.test(id)) return "building";
-    return "land";
+    if (BLOCK2_PATTERN.test(id)) return "block2";
+    if (BLOCK_PATTERN.test(id)) return "block";
+    return "ground";
   }
   if (layer.type === "line") {
     if (WATER_PATTERN.test(id)) return "water";
+    if (EDGE_PATTERN.test(id)) return "edge";
     if (ROAD_PATTERN.test(id)) return "road";
-    if (BOUNDARY_PATTERN.test(id)) return "boundary";
   }
   return null;
 }
@@ -121,37 +105,36 @@ export function applyMapPalette(map: MapPaletteTarget, theme: AppTheme): void {
       }
     };
 
-    if (semanticLayer === "background") {
-      set("background-color", palette.background);
-    } else if (semanticLayer === "land") {
-      set("fill-color", palette.land);
-      set("fill-outline-color", palette.roadCasing);
+    if (semanticLayer === "ground") {
+      if (layer.type === "background") {
+        set("background-color", palette.ground);
+      } else {
+        set("fill-color", palette.ground);
+        set("fill-outline-color", palette.edge);
+      }
+    } else if (semanticLayer === "block") {
+      set("fill-color", palette.block);
+      set("fill-outline-color", palette.edge);
     } else if (semanticLayer === "water") {
       if (layer.type === "fill") {
         set("fill-color", palette.water);
-        set("fill-outline-color", palette.waterEdge);
+        set("fill-outline-color", palette.edge);
       } else {
-        set("line-color", palette.waterEdge);
+        set("line-color", palette.water);
       }
-    } else if (semanticLayer === "building") {
+    } else if (semanticLayer === "block2") {
       const prefix =
         layer.type === "fill-extrusion" ? "fill-extrusion" : "fill";
-      set(`${prefix}-color`, palette.building);
-      if (prefix === "fill") set("fill-outline-color", palette.roadCasing);
+      set(`${prefix}-color`, palette.block2);
+      if (prefix === "fill") set("fill-outline-color", palette.edge);
     } else if (semanticLayer === "road") {
-      const id = layer.id.toLowerCase();
-      const color = ROAD_CASING_PATTERN.test(id)
-        ? palette.roadCasing
-        : MAJOR_ROAD_PATTERN.test(id)
-          ? palette.road
-          : palette.roadMinor;
-      set("line-color", color);
-    } else if (semanticLayer === "boundary") {
-      set("line-color", palette.boundary);
+      set("line-color", palette.road);
+    } else if (semanticLayer === "edge") {
+      set("line-color", palette.edge);
     } else if (semanticLayer === "label") {
       set("text-color", palette.label);
-      set("text-halo-color", palette.labelHalo);
-      set("text-halo-width", 1.25);
+      set("text-halo-color", palette.road);
+      set("text-halo-width", 1.1);
     }
   }
 }

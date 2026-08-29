@@ -7,7 +7,7 @@ import {
   mapPalettes,
 } from "./map-palette";
 
-describe("paper mint map palette", () => {
+describe("Natural Mist map palette", () => {
   it("assigns each content kind a distinct vivid color", () => {
     expect(contentKindColors).toEqual({
       meeting: "#168568",
@@ -18,28 +18,33 @@ describe("paper mint map palette", () => {
     expect(new Set(Object.values(contentKindColors))).toHaveLength(4);
   });
 
-  it("keeps labels readable against distinct light and dark surfaces", () => {
-    expect(mapPalettes.light).toMatchObject({
-      background: "#edf4f1",
-      label: "#20312c",
-      water: "#d7ebe8",
+  it("uses the same Natural Mist vector palette in both app themes", () => {
+    expect(mapPalettes.light).toEqual({
+      ground: "#e3eae8",
+      block: "#d7e0de",
+      block2: "#ced9d6",
+      road: "#f9fffd",
+      edge: "#c6d0ce",
+      water: "#c0dee3",
+      label: "#45504d",
+      veil: "oklch(15% .016 168 / .94)",
     });
-    expect(mapPalettes.dark).toMatchObject({
-      background: "#182521",
-      label: "#e8f1ed",
-      water: "#1b3839",
-    });
+    expect(mapPalettes.dark).toBe(mapPalettes.light);
   });
 });
 
 describe("classifyMapLayer", () => {
   it.each([
-    [{ id: "background", type: "background" }, "background"],
+    [{ id: "background", type: "background" }, "ground"],
     [{ id: "water", type: "fill" }, "water"],
-    [{ id: "park-landcover", type: "fill" }, "land"],
-    [{ id: "building-3d", type: "fill-extrusion" }, "building"],
+    [{ id: "general-land", type: "fill" }, "ground"],
+    [{ id: "park-landcover", type: "fill" }, "block"],
+    [{ id: "building-3d", type: "fill-extrusion" }, "block2"],
+    [{ id: "dense-urban-area", type: "fill" }, "block2"],
     [{ id: "road_primary", type: "line" }, "road"],
-    [{ id: "admin-boundary", type: "line" }, "boundary"],
+    [{ id: "road-casing", type: "line" }, "edge"],
+    [{ id: "admin-boundary", type: "line" }, "edge"],
+    [{ id: "transit-support", type: "line" }, "edge"],
     [{ id: "place-label", type: "symbol" }, "label"],
     [{ id: "osm", type: "raster" }, "raster"],
     [{ id: "weather", type: "heatmap" }, null],
@@ -49,14 +54,17 @@ describe("classifyMapLayer", () => {
 });
 
 describe("applyMapPalette", () => {
-  it("recolors supported vector layers with semantic paint properties", () => {
+  it("recolors supported vector layers with Natural Mist color and halo paint", () => {
     const calls: Array<[string, string, unknown]> = [];
     const map = {
       getStyle: () => ({
         layers: [
           { id: "background", type: "background" },
+          { id: "park", type: "fill" },
+          { id: "building", type: "fill-extrusion" },
           { id: "water", type: "fill" },
           { id: "road_primary", type: "line" },
+          { id: "road-casing", type: "line" },
           { id: "place-label", type: "symbol" },
         ],
       }),
@@ -67,10 +75,16 @@ describe("applyMapPalette", () => {
 
     applyMapPalette(map, "light");
 
-    expect(calls).toContainEqual(["background", "background-color", "#edf4f1"]);
-    expect(calls).toContainEqual(["water", "fill-color", "#d7ebe8"]);
-    expect(calls).toContainEqual(["road_primary", "line-color", "#fbfdfc"]);
-    expect(calls).toContainEqual(["place-label", "text-color", "#20312c"]);
+    expect(calls).toContainEqual(["background", "background-color", "#e3eae8"]);
+    expect(calls).toContainEqual(["park", "fill-color", "#d7e0de"]);
+    expect(calls).toContainEqual(["building", "fill-extrusion-color", "#ced9d6"]);
+    expect(calls).toContainEqual(["water", "fill-color", "#c0dee3"]);
+    expect(calls).toContainEqual(["road_primary", "line-color", "#f9fffd"]);
+    expect(calls).toContainEqual(["road-casing", "line-color", "#c6d0ce"]);
+    expect(calls).toContainEqual(["place-label", "text-color", "#45504d"]);
+    expect(calls).toContainEqual(["place-label", "text-halo-color", "#f9fffd"]);
+    expect(calls).toContainEqual(["place-label", "text-halo-width", 1.1]);
+    expect(calls.every(([, property]) => /(?:-color|-halo-width)$/.test(property))).toBe(true);
   });
 
   it("continues styling after an unsupported property throws", () => {

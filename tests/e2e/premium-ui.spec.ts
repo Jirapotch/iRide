@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test.beforeEach(async ({ context, page }) => { await context.addCookies([{ name: "iride-locale", value: "en", domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Lax" }]); await page.setViewportSize({ width: 390, height: 844 }); });
 
 test("discover renders the full map and marker filter FAB without list mode", async ({ page }) => {
-  await page.goto("/"); await expect(page.locator(".maplibregl-canvas")).toBeVisible(); await expect(page.getByRole("button", { name: "List" })).toHaveCount(0); await page.getByRole("button", { name: "Filter markers" }).click();
+  await page.goto("/"); const map = page.getByRole("region", { name: "Discover map" }); const canvas = page.locator(".maplibregl-canvas"); await expect(canvas).toBeVisible(); await expect(map).not.toHaveAttribute("data-map-raster", "true"); await expect(canvas).toHaveCSS("filter", "none"); await expect(page.getByRole("button", { name: "List" })).toHaveCount(0); await page.getByRole("button", { name: "Filter markers" }).click();
   for (const label of ["Meeting", "Event", "Trip", "Photographer spot"]) await expect(page.getByLabel(label)).toBeVisible();
 });
 
@@ -21,6 +21,7 @@ test("map chrome follows theme without replacing the map canvas", async ({ page 
   const map = page.getByRole("region", { name: "Discover map" });
   const canvas = page.locator(".maplibregl-canvas");
   await canvas.evaluate((element) => { element.dataset.mapIdentity = "initial"; });
+  await expect(map).toHaveCSS("background-color", "rgb(227, 234, 232)");
   const initialTheme = await page.locator("html").getAttribute("data-theme");
   const initialPaper = await map.evaluate((element) => getComputedStyle(element).getPropertyValue("--map-paper"));
   await page.getByRole("button", { name: "Settings" }).click();
@@ -30,7 +31,9 @@ test("map chrome follows theme without replacing the map canvas", async ({ page 
   await expect(page.locator("html")).toHaveAttribute("data-theme", nextTheme);
   const nextPaper = await map.evaluate((element) => getComputedStyle(element).getPropertyValue("--map-paper"));
   expect(nextPaper).not.toBe(initialPaper);
+  await expect(map).toHaveCSS("background-color", "rgb(227, 234, 232)");
   await expect(canvas).toHaveAttribute("data-map-identity", "initial");
+  await expect(canvas).toHaveCSS("filter", "none");
 });
 
 test("legacy routes return 404", async ({ page }) => {

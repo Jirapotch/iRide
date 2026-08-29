@@ -45,13 +45,12 @@ describe("application navigation domain", () => {
     expect(resolveTheme("invalid", false)).toBe("light");
   });
 
-  it("uses MapTiler with a key and inline OSM raster without one", () => {
+  it("uses MapTiler with a key and OpenFreeMap Positron without one", () => {
     expect(mapStyle("public-key")).toBe(
       "https://api.maptiler.com/maps/streets-v2/style.json?key=public-key",
     );
-    expect(mapStyle(undefined)).toMatchObject({
-      version: 8,
-      sources: { osm: { type: "raster" } },
-    });
+    expect(mapStyle(undefined)).toBe(
+      "https://tiles.openfreemap.org/styles/positron",
+    );
   });
 });

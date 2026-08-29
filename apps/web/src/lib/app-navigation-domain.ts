@@ -36,16 +36,5 @@ export function mapStyle(mapTilerKey: string | undefined) {
   if (key) {
     return `https://api.maptiler.com/maps/streets-v2/style.json?key=${encodeURIComponent(key)}`;
   }
-  return {
-    version: 8 as const,
-    sources: {
-      osm: {
-        type: "raster" as const,
-        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors",
-      },
-    },
-    layers: [{ id: "osm", type: "raster" as const, source: "osm" }],
-  };
+  return "https://tiles.openfreemap.org/styles/positron";
 }

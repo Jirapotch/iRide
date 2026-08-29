@@ -33,7 +33,6 @@ export function ActivityHub({ locale }: { readonly locale: Locale }) {
   const timerRef = useRef<number | null>(null);
   const enabledRef = useRef(enabled);
   const themeRef = useRef(theme);
-  const usesRasterMap = !process.env.NEXT_PUBLIC_MAPTILER_KEY?.trim();
 
   useEffect(() => { enabledRef.current = enabled; }, [enabled]);
   useEffect(() => { themeRef.current = theme; const map = mapRef.current; if (map?.isStyleLoaded()) applyMapPalette(map, theme); }, [theme]);
@@ -54,7 +53,7 @@ export function ActivityHub({ locale }: { readonly locale: Locale }) {
   useEffect(() => {
     if (!containerRef.current) return;
     try {
-      const map = new maplibregl.Map({ container: containerRef.current, style: mapStyle(process.env.NEXT_PUBLIC_MAPTILER_KEY) as maplibregl.StyleSpecification, center, zoom: 10, attributionControl: false });
+      const map = new maplibregl.Map({ container: containerRef.current, style: mapStyle(process.env.NEXT_PUBLIC_MAPTILER_KEY), center, zoom: 10, attributionControl: false });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
       map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
       mapRef.current = map;
@@ -80,7 +79,7 @@ export function ActivityHub({ locale }: { readonly locale: Locale }) {
   function toggle(kind: ExploreFeatureKind) { setEnabled((current) => current.includes(kind) ? current.filter((value) => value !== kind) : [...current, kind]); }
   function locate() { navigator.geolocation?.getCurrentPosition(({ coords }) => mapRef.current?.flyTo({ center: [coords.longitude, coords.latitude], zoom: 13 })); }
 
-  return <section className="discover-map on-map" data-map-raster={usesRasterMap || undefined} aria-label={locale === "th" ? "แผนที่ค้นพบ" : "Discover map"}>
+  return <section className="discover-map on-map" aria-label={locale === "th" ? "แผนที่ค้นพบ" : "Discover map"}>
     <div className="map-canvas" ref={containerRef}/>
     {loading ? <div className="map-loading" role="status">{locale === "th" ? "กำลังโหลดพื้นที่…" : "Loading area…"}</div> : null}
     {error ? <div className="map-error-banner" role="alert"><WarningCircle size={18}/>{locale === "th" ? "โหลดข้อมูล marker ไม่สำเร็จ แผนที่ยังใช้งานได้" : "Markers could not load. The map is still available."}</div> : null}
