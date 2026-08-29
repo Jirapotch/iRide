@@ -15,6 +15,7 @@ export async function signInWithGoogle(formData: FormData): Promise<never> {
   );
   const callback = new URL("/auth/callback", getAppOrigin());
   callback.searchParams.set("next", next);
+  if (formData.get("intent") === "profile") callback.searchParams.set("intent", "profile");
 
   let providerUrl: string | null = null;
   try {

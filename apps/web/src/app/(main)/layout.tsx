@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
+import { getOwnProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 
 import { AppShell } from "./_components/app-shell";
@@ -12,9 +13,12 @@ export default async function MainLayout({
     getRequestLocale(),
     getVerifiedWebSession().catch(() => null),
   ]);
+  const profile = session
+    ? await getOwnProfile(session.accessToken).catch(() => null)
+    : null;
 
   return (
-    <AppShell authenticated={Boolean(session)} locale={locale}>
+    <AppShell authenticated={Boolean(session)} locale={locale} username={profile?.username ?? null}>
       {children}
     </AppShell>
   );

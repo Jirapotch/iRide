@@ -16,14 +16,13 @@ for (const locale of ["th", "en"] as const) {
       },
     ]);
 
-    await page.goto("/account");
-    await expect(page).toHaveURL(/\/login\?next=%2Faccount/);
+    await page.goto("/login?intent=profile");
 
     await page.getByRole("button", { name: /Google/ }).click();
-    await expect(page).toHaveURL(/\/account$/);
+    await expect(page).toHaveURL(/\/users\/e2e_rider$/);
     await expect(page.getByText("@e2e_rider")).toBeVisible();
     await expect(page.locator('[data-ui="app-shell"]')).toBeVisible();
-    await expect(page.getByRole("heading", { name: /จัดการตัวตนบน iRide|Manage your iRide identity/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "E2E Rider" })).toBeVisible();
 
     const authCookies = (await context.cookies()).filter((cookie) =>
       cookie.name.startsWith("iride-auth"),
@@ -64,7 +63,7 @@ test("sanitizes callback destinations and localizes provider errors", async ({
 
   await page.goto("/login?next=https://evil.example/stolen");
   await page.getByRole("button", { name: /Google/ }).click();
-  await expect(page).toHaveURL(/\/account$/);
+  await expect(page).toHaveURL(/\/$/);
 
   await page.goto("/auth/callback?error=access_denied");
   await expect(page).toHaveURL(/\/login\?error=provider$/);
@@ -74,12 +73,11 @@ test("sanitizes callback destinations and localizes provider errors", async ({
 });
 
 test("returns to the protected profile after sign-in", async ({ page }) => {
-  await page.goto("/profile");
-  await expect(page).toHaveURL(/\/login\?next=%2Fprofile$/);
+  await page.goto("/login?intent=profile");
 
   await page.getByRole("button", { name: /Google/ }).click();
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/users\/e2e_rider$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "RiderXplorer",
+    "E2E Rider",
   );
 });

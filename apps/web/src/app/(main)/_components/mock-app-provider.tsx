@@ -18,8 +18,8 @@ import {
   serializeMockAppState,
 } from "@/lib/mock-app-state";
 
-const STORAGE_KEY = "iride-demo-state-v2";
-const LEGACY_STORAGE_KEY = "iride-demo-state-v1";
+const STORAGE_KEY = "iride-demo-state-v3";
+const LEGACY_STORAGE_KEYS = ["iride-demo-state-v2", "iride-demo-state-v1"];
 
 const MockAppContext = createContext<
   { state: MockAppState; dispatch: Dispatch<MockAppAction> } | undefined
@@ -49,7 +49,8 @@ export function MockAppProvider({ children }: { readonly children: ReactNode }) 
   useEffect(() => {
     const stored = parseMockAppState(
       window.localStorage.getItem(STORAGE_KEY) ??
-        window.localStorage.getItem(LEGACY_STORAGE_KEY),
+        LEGACY_STORAGE_KEYS.map((key) => window.localStorage.getItem(key)).find(Boolean) ??
+        null,
     );
     dispatch({ type: "hydrate", state: stored });
   }, []);

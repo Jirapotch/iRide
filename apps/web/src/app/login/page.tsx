@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import { safeNextPath } from "@/lib/auth-redirect";
+import { getOwnProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 
 import { StandaloneShell } from "../_components/standalone-shell";
@@ -43,6 +44,7 @@ export default async function LoginPage({
     error?: string;
     next?: string;
     signed_out?: string;
+    intent?: string;
   }>;
 }) {
   const [locale, query, session] = await Promise.all([
@@ -52,6 +54,10 @@ export default async function LoginPage({
   ]);
   const next = safeNextPath(query.next);
   if (session) {
+    if (query.intent === "profile") {
+      const profile = await getOwnProfile(session.accessToken).catch(() => null);
+      redirect(profile?.username ? `/users/${profile.username}` : "/onboarding");
+    }
     redirect(next);
   }
 
@@ -68,6 +74,7 @@ export default async function LoginPage({
   if (query.next) returnToParams.set("next", next);
   if (query.error) returnToParams.set("error", query.error);
   if (query.signed_out) returnToParams.set("signed_out", query.signed_out);
+  if (query.intent === "profile") returnToParams.set("intent", "profile");
   const returnTo = returnToParams.size
     ? `/login?${returnToParams.toString()}`
     : "/login";
@@ -98,6 +105,7 @@ export default async function LoginPage({
 
         <form action={signInWithGoogle}>
           <input name="next" type="hidden" value={next} />
+          {query.intent === "profile" ? <input name="intent" type="hidden" value="profile" /> : null}
           <AuthSubmitButton
             idleLabel={text.button}
             pendingLabel={text.pending}

@@ -1,5 +1,5 @@
 const MAX_REDIRECT_LENGTH = 2_048;
-const DEFAULT_AUTH_PATH = "/account";
+const DEFAULT_AUTH_PATH = "/";
 
 export function safeNextPath(
   value: string | null | undefined,

@@ -78,7 +78,7 @@ async function saveProfile(
     };
   }
 
-  redirect(onboarding ? `/users/${username}` : "/account");
+  redirect(`/users/${username}`);
 }
 
 function fieldErrors(

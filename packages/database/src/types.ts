@@ -9,6 +9,153 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      events: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          description: string | null;
+          destination_label: string | null;
+          destination_latitude: number | null;
+          destination_location: unknown | null;
+          destination_longitude: number | null;
+          ends_at: string | null;
+          id: string;
+          kind: Database["public"]["Enums"]["event_kind"];
+          latitude: number;
+          location: unknown;
+          location_label: string;
+          longitude: number;
+          organizer_id: string;
+          starts_at: string;
+          timezone: string;
+          title: string;
+          updated_at: string;
+          vehicle_kinds: Database["public"]["Enums"]["vehicle_kind"][];
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          destination_label?: string | null;
+          destination_latitude?: number | null;
+          destination_location?: never;
+          destination_longitude?: number | null;
+          ends_at?: string | null;
+          id?: string;
+          kind: Database["public"]["Enums"]["event_kind"];
+          latitude: number;
+          location?: never;
+          location_label: string;
+          longitude: number;
+          organizer_id: string;
+          starts_at: string;
+          timezone: string;
+          title: string;
+          updated_at?: string;
+          vehicle_kinds: Database["public"]["Enums"]["vehicle_kind"][];
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          destination_label?: string | null;
+          destination_latitude?: number | null;
+          destination_location?: never;
+          destination_longitude?: number | null;
+          ends_at?: string | null;
+          id?: string;
+          kind?: Database["public"]["Enums"]["event_kind"];
+          latitude?: number;
+          location?: never;
+          location_label?: string;
+          longitude?: number;
+          organizer_id?: string;
+          starts_at?: string;
+          timezone?: string;
+          title?: string;
+          updated_at?: string;
+          vehicle_kinds?: Database["public"]["Enums"]["vehicle_kind"][];
+        };
+        Relationships: [];
+      };
+      photographer_spots: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          description: string | null;
+          ends_at: string;
+          id: string;
+          latitude: number;
+          location: unknown;
+          location_label: string;
+          longitude: number;
+          owner_id: string;
+          starts_at: string;
+          timezone: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          ends_at: string;
+          id?: string;
+          latitude: number;
+          location?: never;
+          location_label: string;
+          longitude: number;
+          owner_id: string;
+          starts_at: string;
+          timezone: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          ends_at?: string;
+          id?: string;
+          latitude?: number;
+          location?: never;
+          location_label?: string;
+          longitude?: number;
+          owner_id?: string;
+          starts_at?: string;
+          timezone?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      posts: {
+        Row: {
+          author_id: string;
+          body: string;
+          created_at: string;
+          deleted_at: string | null;
+          id: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_id: string;
+          body: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          updated_at?: string;
+        };
+        Update: {
+          author_id?: string;
+          body?: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           avatar_media_id: string | null;
@@ -70,6 +217,28 @@ export type Database = {
         Args: { delay_seconds?: number; message: Json; queue_name: string };
         Returns: number;
       };
+      explore_content: {
+        Args: {
+          east: number;
+          layers: string[];
+          north: number;
+          south: number;
+          west: number;
+        };
+        Returns: {
+          author_display_name: string;
+          author_id: string;
+          author_username: string;
+          ends_at: string | null;
+          id: string;
+          kind: string;
+          latitude: number;
+          longitude: number;
+          starts_at: string;
+          subtitle: string;
+          title: string;
+        }[];
+      };
       read_jobs: {
         Args: {
           batch_size?: number;
@@ -87,7 +256,9 @@ export type Database = {
       };
     };
     Enums: {
+      event_kind: "meeting" | "event" | "trip";
       profile_visibility: "public" | "followers" | "private";
+      vehicle_kind: "car" | "motorcycle" | "bicycle";
     };
     CompositeTypes: {
       [_ in never]: never;

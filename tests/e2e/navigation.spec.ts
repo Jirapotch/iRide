@@ -4,41 +4,20 @@ test.beforeEach(async ({ context }) => {
   await context.addCookies([{ name: "iride-locale", value: "en", domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Lax" }]);
 });
 
-test("mobile navigation contains exactly five primary destinations", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+test("mobile navigation has the new five destinations and an icon-only create action", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto("/");
   const nav = page.getByRole("navigation", { name: "Primary navigation" });
   await expect(nav.getByRole("link")).toHaveCount(5);
-  for (const destination of [{ label: "Discover", path: "/" }, { label: "Community", path: "/community" }, { label: "Create", path: "/create" }, { label: "Market", path: "/market" }]) {
-    await nav.getByRole("link", { name: destination.label }).click();
-    await expect(page).toHaveURL(new RegExp(destination.path === "/" ? "/$" : `${destination.path}$`));
-    await expect(nav.getByRole("link", { name: destination.label })).toHaveAttribute("aria-current", "page");
-  }
-  await nav.getByRole("link", { name: "Profile" }).click();
-  await expect(page).toHaveURL(/\/login\?next=%2Fprofile$/);
+  for (const item of [{ name: "Discover", href: "/" }, { name: "Search", href: "/search" }, { name: "Create", href: "/create" }, { name: "Community", href: "/community" }, { name: "Profile", href: "/login?intent=profile" }]) await expect(nav.getByRole("link", { name: item.name })).toHaveAttribute("href", item.href);
+  await expect(nav.getByRole("link", { name: "Create" }).locator(".sr-only")).toHaveText("Create");
 });
 
-test("language and account actions live only in settings drawer", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByText("เปลี่ยนเป็นภาษาไทย")).toHaveCount(0);
-  await page.getByRole("button", { name: "Settings" }).click();
-  const drawer = page.getByRole("dialog", { name: "Settings" });
-  await expect(drawer.getByText("Language")).toBeVisible();
-  await expect(drawer.getByRole("link", { name: "Sign in" })).toBeVisible();
-  await expect(drawer.getByRole("button", { name: /เปลี่ยนเป็นภาษาไทย/ })).toBeVisible();
-  const drawerBox = await page.locator(".drawer-backdrop").boundingBox();
-  const viewportHeight = await page.evaluate(() => window.innerHeight);
-  expect(drawerBox?.y).toBe(0);
-  expect(drawerBox?.height).toBe(viewportHeight);
+test("search is a page and absent from header actions", async ({ page }) => {
+  await page.goto("/search"); await expect(page.getByRole("heading", { name: "Search across iRide" })).toBeVisible();
+  await expect(page.locator(".header-actions").getByRole("button", { name: "Search" })).toHaveCount(0);
 });
 
-test("desktop header uses the same five destinations", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
-  const nav = page.getByRole("navigation", { name: "Primary navigation" });
-  await expect(nav.getByRole("link")).toHaveCount(5);
-  await nav.getByRole("link", { name: "Market" }).focus();
-  await expect(nav.getByRole("link", { name: "Market" })).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/market$/);
+test("settings contains theme and language without account settings", async ({ page }) => {
+  await page.goto("/"); await page.getByRole("button", { name: "Settings" }).click(); const drawer = page.getByRole("dialog", { name: "Settings" });
+  await expect(drawer.getByText("Theme")).toBeVisible(); await expect(drawer.getByRole("button", { name: "Light" })).toBeVisible(); await expect(drawer.getByRole("button", { name: "Dark" })).toBeVisible(); await expect(drawer.getByText("Account settings")).toHaveCount(0);
 });

@@ -4,8 +4,8 @@ import { safeNextPath, safeReturnPath } from "./auth-redirect";
 
 describe("safeNextPath", () => {
   it("accepts a clean local path", () => {
-    expect(safeNextPath("/account?tab=session")).toBe(
-      "/account?tab=session",
+    expect(safeNextPath("/create?type=post")).toBe(
+      "/create?type=post",
     );
     expect(safeNextPath("/")).toBe("/");
   });
@@ -24,11 +24,11 @@ describe("safeNextPath", () => {
     "/%65n/account",
     "/%E0%A4%A",
   ])("rejects an unsafe or legacy-locale redirect: %s", (value) => {
-    expect(safeNextPath(value)).toBe("/account");
+    expect(safeNextPath(value)).toBe("/");
   });
 
   it("limits redirect length", () => {
-    expect(safeNextPath(`/account/${"a".repeat(2_100)}`)).toBe("/account");
+    expect(safeNextPath(`/account/${"a".repeat(2_100)}`)).toBe("/");
   });
 
   it("uses a root fallback for language switch returns", () => {

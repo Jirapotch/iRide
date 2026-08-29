@@ -9,6 +9,7 @@ import {
   getWebSupabaseConfig,
 } from "@/lib/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getOwnProfile } from "@/lib/profile-api";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -41,6 +42,12 @@ export async function GET(request: Request) {
     validateAccessTokenClaims(data.claims, {
       supabaseUrl: getWebSupabaseConfig().url,
     });
+    if (requestUrl.searchParams.get("intent") === "profile") {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      const profile = accessToken ? await getOwnProfile(accessToken).catch(() => null) : null;
+      return noStoreRedirect(new URL(profile?.username ? `/users/${profile.username}` : "/onboarding", getAppOrigin()));
+    }
     return noStoreRedirect(new URL(next, getAppOrigin()));
   } catch {
     await clearAuthCookies();

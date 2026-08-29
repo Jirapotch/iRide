@@ -22,7 +22,7 @@ for (const locale of ["th", "en"] as const) {
       },
     ]);
 
-    await page.goto("/account");
+    await page.goto("/login?intent=profile");
     await page.getByRole("button", { name: /Google/ }).click();
     await expect(page).toHaveURL(/\/onboarding$/);
     await expect(page.locator('[data-ui="standalone-shell"]')).toBeVisible();
@@ -50,15 +50,17 @@ for (const locale of ["th", "en"] as const) {
     ).toBeVisible();
     await page.getByRole("button", { name: /ปิด|Close/ }).click();
 
-    await page.getByRole("link", { name: /แก้ไขโปรไฟล์|Edit profile/ }).click();
+    await page.getByRole("button", { name: /แก้ไขโปรไฟล์|Edit profile/ }).click();
     await page
       .getByLabel(/การมองเห็นโปรไฟล์|Profile visibility/)
       .selectOption("private");
     await page
       .getByRole("button", { name: /บันทึกโปรไฟล์|Save profile/ })
       .click();
-    await expect(page).toHaveURL(/\/account$/);
+    await expect(page).toHaveURL(new RegExp(`/users/rider_${locale}$`));
 
+    await page.reload();
+    await expect(page.getByRole("button", { name: /แก้ไขโปรไฟล์|Edit profile/ })).toBeVisible();
     await page.getByRole("button", { name: /ตั้งค่า|Settings/ }).click();
     await page.getByRole("button", { name: /ออกจากระบบ|Sign out/ }).click();
     await expect(page).toHaveURL(/\/login\?signed_out=1/);
@@ -90,7 +92,7 @@ test("shows duplicate and cooldown username errors", async ({
       sameSite: "Lax",
     },
   ]);
-  await page.goto("/account");
+  await page.goto("/login?intent=profile");
   await page.getByRole("button", { name: /Google/ }).click();
   await page.getByLabel("Username").fill("admin");
   await page.getByLabel("Display name").fill("Reserved Rider");
@@ -108,7 +110,7 @@ test("shows duplicate and cooldown username errors", async ({
 
   await page.getByLabel("Username").fill("first_name");
   await page.getByRole("button", { name: "Save profile" }).click();
-  await page.getByRole("link", { name: "Edit profile" }).click();
+  await page.getByRole("button", { name: "Edit profile" }).click();
   await page.getByLabel("Username").fill("second_name");
   await page.getByRole("button", { name: "Save profile" }).click();
   await expect(page.locator('p[role="alert"]')).toContainText("30 days");
@@ -133,7 +135,7 @@ test("signs out from onboarding and hides the action when anonymous", async ({
     },
   ]);
 
-  await page.goto("/account");
+  await page.goto("/login?intent=profile");
   await page.getByRole("button", { name: /Google/ }).click();
   await expect(page).toHaveURL(/\/onboarding$/);
   await page.getByRole("button", { name: "Sign out" }).click();
@@ -162,7 +164,7 @@ test("keeps sign out available inside settings at mobile and desktop widths", as
     },
   ]);
 
-  await page.goto("/profile");
+  await page.goto("/login?intent=profile");
   await page.getByRole("button", { name: /Google/ }).click();
   await page.getByRole("button", { name: "Settings" }).click();
   const signOut = page.getByRole("button", { name: "Sign out" });

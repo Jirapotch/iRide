@@ -8,77 +8,66 @@ import {
 } from "./mock-app-state";
 
 describe("mock app state", () => {
-  it("joins activities without mutating the previous state", () => {
+  it("selects products without mutating the previous state", () => {
     const initial = defaultMockAppState();
-    const joined = reduceMockAppState(initial, {
-      type: "toggle-activity",
-      activityId: "khao-yai-drive",
+    const selected = reduceMockAppState(initial, {
+      type: "toggle-product",
+      productId: "helmet",
     });
 
-    expect(joined.joinedActivityIds).toEqual(["khao-yai-drive"]);
-    expect(initial.joinedActivityIds).toEqual([]);
+    expect(selected.selectedProductIds).toEqual(["helmet"]);
+    expect(initial.selectedProductIds).toEqual([]);
     expect(
-      reduceMockAppState(joined, {
-        type: "toggle-activity",
-        activityId: "khao-yai-drive",
-      }).joinedActivityIds,
+      reduceMockAppState(selected, {
+        type: "toggle-product",
+        productId: "helmet",
+      }).selectedProductIds,
     ).toEqual([]);
   });
 
-  it("persists created activities, posts, products, notifications, and view mode", () => {
-    const createdActivity = {
-      id: "created-meeting",
-      kind: "meeting" as const,
-      title: "City meetup",
-      coordinate: [100.5018, 13.7563] as [number, number],
-      locationLabel: "Bangkok",
-      startsAt: "2026-09-01T18:00",
-      summary: "Meet the community",
-      host: "You",
-      participantCount: 1,
-      vehicleKinds: ["car" as const],
-      createdByViewer: true,
+  it("persists created market products and local UI state", () => {
+    const createdProduct = {
+      id: "market-created",
+      name: "Touring gloves",
+      price: "฿1,900",
+      image: "/media/market-gear.webp",
+      category: "Protection",
+      vehicleKinds: ["motorcycle" as const],
     };
     const actions = [
-      { type: "create-activity", activity: createdActivity },
-      { type: "create-post", post: { id: "post-1", body: "See you there", createdAt: "now" } },
+      { type: "create-product", product: createdProduct },
       { type: "toggle-product", productId: "helmet" },
       { type: "read-notification", notificationId: "comment-1" },
-      { type: "set-view-mode", viewMode: "list" },
     ] as const;
     const state = actions.reduce(reduceMockAppState, defaultMockAppState());
     const restored = parseMockAppState(serializeMockAppState(state));
 
     expect(restored).toEqual({
-      version: 2,
-      joinedActivityIds: [],
-      createdActivities: [createdActivity],
-      posts: [{ id: "post-1", body: "See you there", createdAt: "now" }],
+      version: 3,
+      createdProducts: [createdProduct],
       followedPhotographerIds: [],
       selectedProductIds: ["helmet"],
       readNotificationIds: ["comment-1"],
-      viewMode: "list",
     });
   });
 
-  it("migrates version one state without retaining chat data", () => {
+  it("migrates legacy state without retaining local posts or activities", () => {
     expect(parseMockAppState(JSON.stringify({
-      version: 1,
+      version: 2,
       savedTripIds: ["trans-alp"],
       joinedEventIds: ["northern-meetup"],
+      createdActivities: [{ id: "legacy-activity" }],
+      posts: [{ id: "legacy-post" }],
       followedPhotographerIds: ["wander-lens"],
       selectedProductIds: ["helmet"],
       readNotificationIds: ["comment-1"],
       messages: { mike: ["legacy chat"] },
     }))).toEqual({
-      version: 2,
-      joinedActivityIds: ["trans-alp", "northern-meetup"],
-      createdActivities: [],
-      posts: [],
+      version: 3,
+      createdProducts: [],
       followedPhotographerIds: ["wander-lens"],
       selectedProductIds: ["helmet"],
       readNotificationIds: ["comment-1"],
-      viewMode: "map",
     });
   });
 
@@ -89,7 +78,6 @@ describe("mock app state", () => {
   it("hydrates persisted state idempotently", () => {
     const persisted = {
       ...defaultMockAppState(),
-      joinedActivityIds: ["khao-yai-drive"],
       readNotificationIds: ["comment-1"],
     };
 

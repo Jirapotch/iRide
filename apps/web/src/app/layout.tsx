@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import type { ReactNode } from "react";
 
 import { getRequestLocale } from "@/lib/request-locale";
+import { ThemeProvider } from "./_components/theme-provider";
 
 import "./globals.css";
 
@@ -36,8 +38,20 @@ export default async function RootLayout({
   const locale = await getRequestLocale();
 
   return (
-    <html lang={locale}>
-      <body>{children}</body>
+    <html lang={locale} suppressHydrationWarning>
+      <body>
+        <Script id="iride-theme" strategy="beforeInteractive">{`
+          try {
+            var stored = localStorage.getItem('iride-theme');
+            var theme = stored === 'light' || stored === 'dark'
+              ? stored
+              : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.dataset.theme = theme;
+            document.documentElement.style.colorScheme = theme;
+          } catch (_) {}
+        `}</Script>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }
