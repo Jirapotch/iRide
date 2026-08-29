@@ -2,9 +2,11 @@ import { z } from "zod";
 
 import {
   eventKinds,
+  mediaPurposes,
   profileVisibilities,
   serviceNames,
   vehicleKinds,
+  vehicleVisibilities,
   type HealthResponse,
 } from "@iride/types";
 
@@ -83,6 +85,8 @@ export const updateProfileSchema = z
     latitude: z.number().min(-90).max(90).nullable().optional(),
     longitude: z.number().min(-180).max(180).nullable().optional(),
     visibility: z.enum(profileVisibilities).optional(),
+    avatarMediaId: z.uuid().nullable().optional(),
+    coverMediaId: z.uuid().nullable().optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, "empty_update")
@@ -125,11 +129,73 @@ const longitude = coordinate.min(-180).max(180);
 const dateTime = z.iso.datetime({ offset: true });
 const timezone = requiredText(64);
 
+const markerTagSchema = z.object({
+  kind: z.enum(["event", "photographerSpot"]),
+  id: z.uuid(),
+}).strict();
+
 export const createPostSchema = z
-  .object({ body: requiredText(2_000) })
-  .strict();
+  .object({
+    body: requiredText(2_000),
+    markerTags: z.array(markerTagSchema).max(5).optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const keys = (value.markerTags ?? []).map((tag) => `${tag.kind}:${tag.id}`);
+    if (new Set(keys).size !== keys.length) {
+      context.addIssue({ code: "custom", message: "duplicate_marker_tag", path: ["markerTags"] });
+    }
+  });
 
 export const updatePostSchema = createPostSchema;
+
+export const createCommentSchema = z.object({
+  body: requiredText(1_000),
+  parentId: z.uuid().nullable(),
+}).strict();
+
+export const updateCommentSchema = z.object({ body: requiredText(1_000) }).strict();
+
+const vehicleFields = {
+  kind: z.enum(vehicleKinds),
+  brand: requiredText(80),
+  model: requiredText(80),
+  year: z.number().int().min(1886).max(2100).nullable(),
+  nickname: nullableText(80),
+  description: nullableText(1_000),
+  visibility: z.enum(vehicleVisibilities),
+  mediaIds: z.array(z.uuid()).max(8),
+} as const;
+
+export const createVehicleSchema = z.object(vehicleFields).strict();
+export const updateVehicleSchema = z.object(
+  Object.fromEntries(Object.entries(vehicleFields).map(([key, value]) => [key, value.optional()])) as {
+    [Key in keyof typeof vehicleFields]: z.ZodOptional<(typeof vehicleFields)[Key]>;
+  },
+).strict().refine((value) => Object.keys(value).length > 0, "empty_update");
+
+const marketFields = {
+  name: requiredText(120),
+  priceSatang: z.number().int().min(0).max(1_000_000_000),
+  currency: z.literal("THB").default("THB"),
+  category: requiredText(80),
+  vehicleKinds: z.array(z.enum(vehicleKinds)).min(1).max(vehicleKinds.length),
+  coverMediaId: z.uuid().nullable(),
+} as const;
+
+export const createMarketProductSchema = z.object(marketFields).strict();
+export const updateMarketProductSchema = z.object(
+  Object.fromEntries(Object.entries(marketFields).map(([key, value]) => [key, value.optional()])) as {
+    [Key in keyof typeof marketFields]: z.ZodOptional<(typeof marketFields)[Key]>;
+  },
+).strict().refine((value) => Object.keys(value).length > 0, "empty_update");
+
+export const mediaUploadRequestSchema = z.object({
+  filename: requiredText(255),
+  mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  bytes: z.number().int().positive().max(10 * 1024 * 1024),
+  purpose: z.enum(mediaPurposes),
+}).strict();
 
 const eventFields = {
   kind: z.enum(eventKinds),

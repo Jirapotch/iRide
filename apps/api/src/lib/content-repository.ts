@@ -4,6 +4,7 @@ import type { Tables, TablesInsert } from "@iride/database/types";
 import type {
   CreateEventInput,
   CreatePhotographerSpotInput,
+  CreatePostInput,
   EventDto,
   PhotographerSpotDto,
   PostDto,
@@ -52,16 +53,19 @@ export function createContentRepository(
       return (await postDtos(admin, [row], viewerId))[0] ?? null;
     },
     async createPost(userId, accessToken, input) {
+      await validateMarkerTags(admin, input.markerTags ?? []);
       const { data, error } = await ownerClient(accessToken)
         .from("posts")
         .insert({ author_id: userId, body: input.body })
         .select("*")
         .single();
       ensureWrite(error, data);
+      await replacePostMarkerTags(ownerClient(accessToken), data!.id, input.markerTags ?? []);
       return (await postDtos(admin, [data!], userId))[0]!;
     },
     async updatePost(userId, accessToken, id, input) {
       await assertOwner(await findPost(admin, id), "author_id", userId);
+      await validateMarkerTags(admin, input.markerTags ?? []);
       const { data, error } = await ownerClient(accessToken)
         .from("posts")
         .update({ body: input.body })
@@ -70,6 +74,7 @@ export function createContentRepository(
         .select("*")
         .maybeSingle();
       ensureWrite(error, data);
+      await replacePostMarkerTags(ownerClient(accessToken), id, input.markerTags ?? []);
       return (await postDtos(admin, [data!], userId))[0]!;
     },
     async deletePost(userId, accessToken, id) {
@@ -247,10 +252,58 @@ async function authors(admin: AdminClient, ids: readonly string[]) {
 
 async function postDtos(admin: AdminClient, rows: Tables<"posts">[], viewerId: string | null): Promise<PostDto[]> {
   const people = await authors(admin, rows.map((row) => row.author_id));
+  const postIds = rows.map((row) => row.id);
+  const tags = await postMarkerTags(admin, postIds);
+  const counts = new Map<string, number>();
+  if (postIds.length) {
+    const { data, error } = await admin.from("comments").select("post_id").in("post_id", postIds);
+    ensureQuery(error);
+    for (const item of data ?? []) counts.set(item.post_id, (counts.get(item.post_id) ?? 0) + 1);
+  }
   return rows.flatMap((row) => {
     const author = people.get(row.author_id);
-    return author ? [{ id: row.id, body: row.body, author, canEdit: row.author_id === viewerId, createdAt: row.created_at, updatedAt: row.updated_at }] : [];
+    return author ? [{ id: row.id, body: row.body, author, canEdit: row.author_id === viewerId, commentCount: counts.get(row.id) ?? 0, markerTags: tags.get(row.id) ?? [], createdAt: row.created_at, updatedAt: row.updated_at }] : [];
   });
+}
+
+async function postMarkerTags(admin: AdminClient, postIds: readonly string[]) {
+  const result = new Map<string, PostDto["markerTags"]>();
+  if (!postIds.length) return result;
+  const { data, error } = await admin.from("post_marker_tags").select("*").in("post_id", [...postIds]).order("position");
+  ensureQuery(error);
+  const eventIds=(data??[]).flatMap((row)=>row.event_id?[row.event_id]:[]);
+  const spotIds=(data??[]).flatMap((row)=>row.photographer_spot_id?[row.photographer_spot_id]:[]);
+  const [events,spots]=await Promise.all([
+    eventIds.length?admin.from("events").select("id,title,kind,deleted_at").in("id",eventIds):Promise.resolve({data:[],error:null}),
+    spotIds.length?admin.from("photographer_spots").select("id,title,deleted_at").in("id",spotIds):Promise.resolve({data:[],error:null}),
+  ]);
+  ensureQuery(events.error);ensureQuery(spots.error);
+  const eventMap=new Map((events.data??[]).map((row)=>[row.id,row]));
+  const spotMap=new Map((spots.data??[]).map((row)=>[row.id,row]));
+  for(const row of data??[]){
+    const target=row.event_id?eventMap.get(row.event_id):row.photographer_spot_id?spotMap.get(row.photographer_spot_id):undefined;
+    const value = row.event_id
+      ? {kind:"event" as const,id:row.event_id,title:target&&!target.deleted_at?target.title:null,markerKind:target&&!target.deleted_at&&"kind" in target?normalizeExploreKind(String(target.kind)):null,available:Boolean(target&&!target.deleted_at)}
+      : {kind:"photographerSpot" as const,id:row.photographer_spot_id!,title:target&&!target.deleted_at?target.title:null,markerKind:target&&!target.deleted_at?"photographerSpot" as const:null,available:Boolean(target&&!target.deleted_at)};
+    result.set(row.post_id,[...(result.get(row.post_id)??[]),value]);
+  }
+  return result;
+}
+
+async function validateMarkerTags(admin:AdminClient,tags:NonNullable<CreatePostInput["markerTags"]>){
+  const eventIds=tags.filter((tag)=>tag.kind==="event").map((tag)=>tag.id);
+  const spotIds=tags.filter((tag)=>tag.kind==="photographerSpot").map((tag)=>tag.id);
+  const [events,spots]=await Promise.all([
+    eventIds.length?admin.from("events").select("id").in("id",eventIds).is("deleted_at",null):Promise.resolve({data:[],error:null}),
+    spotIds.length?admin.from("photographer_spots").select("id").in("id",spotIds).is("deleted_at",null):Promise.resolve({data:[],error:null}),
+  ]);
+  ensureQuery(events.error);ensureQuery(spots.error);
+  if((events.data??[]).length!==eventIds.length||(spots.data??[]).length!==spotIds.length)throw repositoryError("CONTENT_VALIDATION_FAILED",400);
+}
+
+async function replacePostMarkerTags(client:ReturnType<typeof createServerDatabaseClient>,postId:string,tags:NonNullable<CreatePostInput["markerTags"]>){
+  const removed=await client.from("post_marker_tags").delete().eq("post_id",postId);ensureQuery(removed.error);
+  if(tags.length){const inserted=await client.from("post_marker_tags").insert(tags.map((tag,position)=>({post_id:postId,position,event_id:tag.kind==="event"?tag.id:null,photographer_spot_id:tag.kind==="photographerSpot"?tag.id:null})));ensureQuery(inserted.error);}
 }
 
 async function eventDtos(admin: AdminClient, rows: Tables<"events">[], viewerId: string | null): Promise<EventDto[]> {
@@ -416,6 +469,11 @@ async function searchContent(
     ensureQuery(error);
     const people = await authors(admin, (data ?? []).map((row) => row.owner_id));
     for (const row of data ?? []) { const owner = people.get(row.owner_id); if (owner) results.push({ id: row.id, kind: "photographerSpot", title: row.title, subtitle: row.location_label, username: owner.username }); }
+  }
+  if (types.includes("market-products")) {
+    const { data, error } = await admin.from("market_products").select("id,name,category").is("deleted_at", null).ilike("name", pattern).limit(8);
+    ensureQuery(error);
+    for (const row of data ?? []) results.push({ id: row.id, kind: "marketProduct", title: row.name, subtitle: row.category, username: null });
   }
   void viewerId;
   return results.slice(0, 30);

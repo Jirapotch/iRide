@@ -25,6 +25,8 @@ const post: PostDto = {
   body: "Sunday meetup",
   author,
   canEdit: true,
+  commentCount: 0,
+  markerTags: [],
   createdAt: "2026-08-30T00:00:00.000Z",
   updatedAt: "2026-08-30T00:00:00.000Z",
 };

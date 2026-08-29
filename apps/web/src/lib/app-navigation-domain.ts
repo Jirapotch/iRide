@@ -20,6 +20,9 @@ export function searchResultHref(result: SearchResultDto): string {
   if (result.kind === "post") {
     return `/community?room=talk&post=${encodeURIComponent(result.id)}`;
   }
+  if (result.kind === "marketProduct") {
+    return `/community?room=market&product=${encodeURIComponent(result.id)}`;
+  }
   return `/?marker=${encodeURIComponent(result.id)}`;
 }
 

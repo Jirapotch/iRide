@@ -36,7 +36,8 @@ export type SearchType =
   | "profiles"
   | "posts"
   | "events"
-  | "photographer-spots";
+  | "photographer-spots"
+  | "market-products";
 export interface ExploreBounds {
   readonly west: number;
   readonly south: number;
@@ -230,8 +231,8 @@ export async function handleSearch(
     }
     const types = parseValues<SearchType>(
       url.searchParams.get("types"),
-      ["profiles", "posts", "events", "photographer-spots"],
-      ["profiles", "posts", "events", "photographer-spots"],
+      ["profiles", "posts", "events", "photographer-spots", "market-products"],
+      ["profiles", "posts", "events", "photographer-spots", "market-products"],
     );
     const viewerId = await optionalViewer(request, dependencies);
     return json({ data: await dependencies.repository.search(query, types, viewerId) });

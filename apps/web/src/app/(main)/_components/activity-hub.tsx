@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarBlank, Camera, Crosshair, Funnel, Path, Trash, UsersThree, WarningCircle, X } from "@phosphor-icons/react";
-import type { ExploreFeatureDto, ExploreFeatureKind } from "@iride/types";
+import type { EventDto,ExploreFeatureDto, ExploreFeatureKind,PhotographerSpotDto } from "@iride/types";
 import * as maplibregl from "maplibre-gl";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -11,12 +11,14 @@ import { mapStyle } from "@/lib/app-navigation-domain";
 import { getExploreContent } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
 import { removeContent } from "../create/actions";
+import { BackendForm } from "./create-content-screen";
+import { EditModal } from "./edit-modal";
 
 const center: [number, number] = [100.5018, 13.7563];
 const kinds: ExploreFeatureKind[] = ["meeting", "event", "trip", "photographerSpot"];
 const colors: Record<ExploreFeatureKind, string> = { meeting: "#168cff", event: "#9b7cff", trip: "#22c99a", photographerSpot: "#ff9d2e" };
 
-export function ActivityHub({ locale }: { readonly locale: Locale }) {
+export function ActivityHub({ locale,initialEdit=null }: { readonly locale: Locale;readonly initialEdit?:EventDto|PhotographerSpotDto|null }) {
   const params = useSearchParams();
   const [features, setFeatures] = useState<ExploreFeatureDto[]>([]);
   const [enabled, setEnabled] = useState<ExploreFeatureKind[]>(kinds);
@@ -66,8 +68,8 @@ export function ActivityHub({ locale }: { readonly locale: Locale }) {
     const map = mapRef.current; if (!map) return;
     markerRefs.current.forEach((marker) => marker.remove());
     markerRefs.current = features.filter((feature) => enabled.includes(feature.kind)).map((feature) => {
-      const button = document.createElement("button"); button.type = "button"; button.className = `activity-marker ${feature.id === selectedId ? "is-selected" : ""}`; button.style.setProperty("--marker-color", colors[feature.kind]); button.setAttribute("aria-label", feature.title); button.addEventListener("click", () => setSelectedId(feature.id));
-      return new maplibregl.Marker({ element: button }).setLngLat([feature.longitude, feature.latitude]).addTo(map);
+      const button = document.createElement("button"); button.type = "button"; button.className = `activity-marker marker-${feature.kind} ${feature.id === selectedId ? "is-selected" : ""}`; button.style.setProperty("--marker-color", colors[feature.kind]); button.setAttribute("aria-label", feature.title);button.textContent=feature.kind==="meeting"?"M":feature.kind==="event"?"E":feature.kind==="trip"?"T":"C"; button.addEventListener("click", () => setSelectedId(feature.id));
+      return new maplibregl.Marker({ element: button,anchor:"bottom" }).setLngLat([feature.longitude, feature.latitude]).addTo(map);
     });
   }, [enabled, features, selectedId]);
 
@@ -83,13 +85,13 @@ export function ActivityHub({ locale }: { readonly locale: Locale }) {
     <button aria-label={locale === "th" ? "ตำแหน่งฉัน" : "Locate me"} className="map-locate-fab" onClick={locate} type="button"><Crosshair size={20}/></button>
     {filtersOpen ? <div className="map-filter-menu">{kinds.map((kind) => { const Icon = kind === "meeting" ? UsersThree : kind === "event" ? CalendarBlank : kind === "trip" ? Path : Camera; return <label key={kind}><input checked={enabled.includes(kind)} onChange={() => toggle(kind)} type="checkbox"/><Icon size={17}/>{label(kind, locale)}</label>; })}</div> : null}
     {selected ? <FeatureSheet feature={selected} locale={locale} onClose={() => setSelectedId(null)}/> : null}
+    {initialEdit?<EditModal closeUrl={`/?marker=${initialEdit.id}`} title={locale==="th"?"แก้ไขข้อมูล":"Edit details"}><BackendForm initial={initialEdit} locale={locale} type={"photographer" in initialEdit?"photographer-spot":initialEdit.kind==="trip"?"trip":"activity"}/></EditModal>:null}
   </section>;
 }
 
 function FeatureSheet({ feature, locale, onClose }: { readonly feature: ExploreFeatureDto; readonly locale: Locale; readonly onClose: () => void }) {
-  const type = feature.kind === "photographerSpot" ? "photographer-spot" : feature.kind === "trip" ? "trip" : "activity";
   const domain = feature.kind === "photographerSpot" ? "photographer-spots" : "events";
-  return <aside className="activity-sheet" aria-label={feature.title} role="dialog"><button aria-label="Close" className="sheet-close" onClick={onClose} type="button"><X size={18}/></button><div className="activity-sheet-body"><span className={`kind-badge kind-${feature.kind}`}>{label(feature.kind, locale)}</span><h2>{feature.title}</h2><p>{feature.subtitle}</p><p><Link href={`/users/${feature.author.username}`}>{feature.author.displayName}</Link> · <time dateTime={feature.startsAt}>{new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(feature.startsAt))}</time></p>{feature.canEdit ? <div className="owner-actions"><Link href={`/create?type=${type}&edit=${feature.id}`}>{locale === "th" ? "แก้ไข" : "Edit"}</Link><form action={removeContent}><input name="domain" type="hidden" value={domain}/><input name="id" type="hidden" value={feature.id}/><button type="submit"><Trash size={16}/>{locale === "th" ? "ลบ" : "Delete"}</button></form></div> : null}</div></aside>;
+  return <aside className="activity-sheet" aria-label={feature.title} role="dialog"><button aria-label="Close" className="sheet-close" onClick={onClose} type="button"><X size={18}/></button><div className="activity-sheet-body"><span className={`kind-badge kind-${feature.kind}`}>{label(feature.kind, locale)}</span><h2>{feature.title}</h2><p>{feature.subtitle}</p><p><Link href={`/users/${feature.author.username}`}>{feature.author.displayName}</Link> · <time dateTime={feature.startsAt}>{new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(feature.startsAt))}</time></p>{feature.canEdit ? <div className="owner-actions"><Link href={`/?marker=${feature.id}&modal=edit`}>{locale === "th" ? "แก้ไข" : "Edit"}</Link><form action={removeContent}><input name="domain" type="hidden" value={domain}/><input name="id" type="hidden" value={feature.id}/><button type="submit"><Trash size={16}/>{locale === "th" ? "ลบ" : "Delete"}</button></form></div> : null}</div></aside>;
 }
 
 function label(kind: ExploreFeatureKind, locale: Locale) { const labels = locale === "th" ? { meeting: "นัดพบ", event: "กิจกรรม", trip: "ทริป", photographerSpot: "จุดช่างภาพ" } : { meeting: "Meeting", event: "Event", trip: "Trip", photographerSpot: "Photographer spot" }; return labels[kind]; }
