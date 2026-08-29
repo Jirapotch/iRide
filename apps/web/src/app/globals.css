@@ -193,9 +193,9 @@ a {
 .on-map button:focus-visible,.on-map input:focus-visible { outline:3px solid var(--map-focus); outline-offset:3px; }
 .kind-badge,.joined-chip { display:inline-flex; align-items:center; min-height:24px; padding:0 .5rem; border-radius:999px; font-size:.61rem; font-weight:850; text-transform:uppercase; letter-spacing:.06em; }
 .kind-badge { border:1px solid color-mix(in oklch,var(--marker-color,var(--map-accent)) 35%,transparent); background:color-mix(in oklch,var(--marker-color,var(--map-accent)) 14%,var(--map-paper-raised)); color:var(--marker-color,var(--map-accent)); }.joined-chip{background:rgb(79 211 157 / .14);color:var(--success)}
-.activity-marker { width:34px; height:34px; border:3px solid var(--map-edge-lit); border-radius:12px 12px 12px 3px; background:var(--marker-color); box-shadow:inset 1px 1px 0 color-mix(in oklch,var(--map-edge-lit) 75%,transparent),0 7px 18px color-mix(in oklch,var(--map-veil) 22%,transparent); transform:rotate(-45deg); transition:transform .18s ease,box-shadow .18s ease; }
-.activity-marker::after { content:""; position:absolute; width:8px; height:8px; left:10px; top:10px; border-radius:50%; background:var(--map-edge-lit); }
-.activity-marker.is-selected { transform:rotate(-45deg) scale(1.25); box-shadow:0 0 0 3px var(--map-edge-lit),0 0 0 6px color-mix(in oklch,var(--marker-color) 24%,transparent),0 10px 24px color-mix(in oklch,var(--map-veil) 30%,transparent); }
+.activity-marker{width:40px;height:48px;display:grid;place-items:center;padding:0 0 9px;border:0;clip-path:polygon(50% 100%,12% 48%,7% 35%,8% 25%,13% 15%,22% 7%,34% 2%,50% 0,66% 2%,78% 7%,87% 15%,92% 25%,93% 35%,88% 48%);background:var(--marker-color);color:white;font-size:.65rem;font-weight:950;filter:drop-shadow(0 7px 7px rgb(0 0 0/.42));transform-origin:50% 100%;transition:transform .16s ease,filter .16s ease}
+.activity-marker::before{content:"";position:absolute;top:9px;width:18px;height:18px;border:3px solid white;border-radius:50%}
+.activity-marker.is-selected{transform:scale(1.23);filter:drop-shadow(0 0 6px white) drop-shadow(0 10px 9px rgb(0 0 0/.55))}
 .maplibregl-map { font-family:inherit; }
 .on-map .maplibregl-ctrl-group { overflow:hidden; border:1px solid var(--map-rule)!important; background:var(--map-paper-raised)!important; box-shadow:0 10px 30px var(--map-shadow)!important; }
 .on-map .maplibregl-ctrl-group button { filter:none; }.on-map .maplibregl-ctrl-group button+button { border-top-color:var(--map-rule-soft); }.on-map .maplibregl-ctrl-icon { filter:var(--map-control-filter,none); opacity:.8; }

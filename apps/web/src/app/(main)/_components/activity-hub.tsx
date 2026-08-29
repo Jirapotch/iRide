@@ -18,6 +18,7 @@ import { EditModal } from "./edit-modal";
 
 const center: [number, number] = [100.5018, 13.7563];
 const kinds: ExploreFeatureKind[] = ["meeting", "event", "trip", "photographerSpot"];
+const markerColors: Record<ExploreFeatureKind, string> = { meeting: "#168cff", event: "#9b7cff", trip: "#22c99a", photographerSpot: "#ff9d2e" };
 
 export function ActivityHub({ locale,initialEdit=null,editDenied=false }: { readonly locale: Locale;readonly initialEdit?:EventDto|PhotographerSpotDto|null;readonly editDenied?:boolean }) {
   const { theme } = useTheme();
@@ -72,8 +73,8 @@ export function ActivityHub({ locale,initialEdit=null,editDenied=false }: { read
     const map = mapRef.current; if (!map) return;
     markerRefs.current.forEach((marker) => marker.remove());
     markerRefs.current = features.filter((feature) => enabled.includes(feature.kind)).map((feature) => {
-      const button = document.createElement("button"); button.type = "button"; button.className = `activity-marker ${feature.id === selectedId ? "is-selected" : ""}`; button.style.setProperty("--marker-color", contentKindColors[feature.kind]); button.setAttribute("aria-label", feature.title); button.addEventListener("click", () => setSelectedId(feature.id));
-      return new maplibregl.Marker({ element: button }).setLngLat([feature.longitude, feature.latitude]).addTo(map);
+      const button = document.createElement("button"); button.type = "button"; button.className = `activity-marker marker-${feature.kind} ${feature.id === selectedId ? "is-selected" : ""}`; button.style.setProperty("--marker-color", markerColors[feature.kind]); button.setAttribute("aria-label", feature.title); button.textContent = feature.kind === "meeting" ? "M" : feature.kind === "event" ? "E" : feature.kind === "trip" ? "T" : "C"; button.addEventListener("click", () => setSelectedId(feature.id));
+      return new maplibregl.Marker({ element: button, anchor: "bottom" }).setLngLat([feature.longitude, feature.latitude]).addTo(map);
     });
   }, [enabled, features, selectedId]);
 

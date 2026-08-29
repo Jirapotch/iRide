@@ -3,8 +3,14 @@ import { expect, test } from "@playwright/test";
 test.beforeEach(async ({ context, page }) => { await context.addCookies([{ name: "iride-locale", value: "en", domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Lax" }]); await page.setViewportSize({ width: 390, height: 844 }); });
 
 test("discover renders the full map and marker filter FAB without list mode", async ({ page }) => {
+  await page.route("**/api/explore?**", async (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ data: [{ id: "marker-1", kind: "meeting", title: "Test meeting", subtitle: "Bangkok", latitude: 13.7563, longitude: 100.5018, startsAt: "2026-09-01T06:00:00.000Z", endsAt: null, author: { id: "author-1", username: "rider", displayName: "Rider" }, canEdit: false }] }) }));
   await page.goto("/"); const map = page.getByRole("region", { name: "Discover map" }); const canvas = page.locator(".maplibregl-canvas"); await expect(canvas).toBeVisible(); await expect(map).not.toHaveAttribute("data-map-raster", "true"); await expect(canvas).toHaveCSS("filter", "none"); await expect(page.getByRole("button", { name: "List" })).toHaveCount(0); await page.getByRole("button", { name: "Filter markers" }).click();
-  for (const label of ["Meeting", "Event", "Trip", "Photographer spot"]) await expect(page.getByLabel(label)).toBeVisible();
+  for (const label of ["Meeting", "Event", "Trip", "Photographer spot"]) await expect(page.getByRole("checkbox", { name: label, exact: true })).toBeVisible();
+  const marker = page.locator(".activity-marker").first();
+  await expect(marker).toBeVisible();
+  await expect(marker).toHaveCSS("width", "40px");
+  await expect(marker).toHaveCSS("height", "48px");
+  await expect(marker).toHaveCSS("clip-path", /polygon\(50% 100%/);
 });
 
 test("community exposes rooms and market deep links", async ({ page }) => {
