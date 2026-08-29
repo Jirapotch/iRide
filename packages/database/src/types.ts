@@ -7,6 +7,11 @@ export type Json =
   | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5";
+  };
   public: {
     Tables: {
       events: {
@@ -16,7 +21,7 @@ export type Database = {
           description: string | null;
           destination_label: string | null;
           destination_latitude: number | null;
-          destination_location: unknown | null;
+          destination_location: unknown;
           destination_longitude: number | null;
           ends_at: string | null;
           id: string;
@@ -38,13 +43,13 @@ export type Database = {
           description?: string | null;
           destination_label?: string | null;
           destination_latitude?: number | null;
-          destination_location?: never;
+          destination_location?: unknown;
           destination_longitude?: number | null;
           ends_at?: string | null;
           id?: string;
           kind: Database["public"]["Enums"]["event_kind"];
           latitude: number;
-          location?: never;
+          location?: unknown;
           location_label: string;
           longitude: number;
           organizer_id: string;
@@ -60,13 +65,13 @@ export type Database = {
           description?: string | null;
           destination_label?: string | null;
           destination_latitude?: number | null;
-          destination_location?: never;
+          destination_location?: unknown;
           destination_longitude?: number | null;
           ends_at?: string | null;
           id?: string;
           kind?: Database["public"]["Enums"]["event_kind"];
           latitude?: number;
-          location?: never;
+          location?: unknown;
           location_label?: string;
           longitude?: number;
           organizer_id?: string;
@@ -76,7 +81,15 @@ export type Database = {
           updated_at?: string;
           vehicle_kinds?: Database["public"]["Enums"]["vehicle_kind"][];
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "events_organizer_id_fkey";
+            columns: ["organizer_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       photographer_spots: {
         Row: {
@@ -102,7 +115,7 @@ export type Database = {
           ends_at: string;
           id?: string;
           latitude: number;
-          location?: never;
+          location?: unknown;
           location_label: string;
           longitude: number;
           owner_id: string;
@@ -118,7 +131,7 @@ export type Database = {
           ends_at?: string;
           id?: string;
           latitude?: number;
-          location?: never;
+          location?: unknown;
           location_label?: string;
           longitude?: number;
           owner_id?: string;
@@ -127,7 +140,15 @@ export type Database = {
           title?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "photographer_spots_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       posts: {
         Row: {
@@ -154,7 +175,15 @@ export type Database = {
           id?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "posts_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       profiles: {
         Row: {
@@ -229,7 +258,7 @@ export type Database = {
           author_display_name: string;
           author_id: string;
           author_username: string;
-          ends_at: string | null;
+          ends_at: string;
           id: string;
           kind: string;
           latitude: number;
@@ -386,7 +415,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      event_kind: ["meeting", "event", "trip"],
       profile_visibility: ["public", "followers", "private"],
+      vehicle_kind: ["car", "motorcycle", "bicycle"],
     },
   },
 } as const;
