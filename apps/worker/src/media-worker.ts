@@ -5,12 +5,17 @@ import type { WorkerEnv } from "@iride/config/worker";
 
 import { processMediaJob, type MediaProcessingJob } from "./media-processor";
 
-interface QueueMessage { readonly messageId:number; readonly readCount:number; readonly message:MediaProcessingJob }
+interface QueueMessage { readonly messageId:number; readonly readCount:number; readonly message:MediaProcessingJob|null }
 export interface MediaWorkerDependencies { readonly queue:{read:()=>Promise<readonly QueueMessage[]>;archive:(id:number)=>Promise<void>}; readonly process:(message:MediaProcessingJob)=>Promise<void> }
 
 export async function runMediaBatch(dependencies:MediaWorkerDependencies){
   const jobs=await dependencies.queue.read();
   for(const job of jobs){
+    if(!job.message){
+      console.error(JSON.stringify({level:"error",event:"media_job_invalid",messageId:job.messageId}));
+      await dependencies.queue.archive(job.messageId);
+      continue;
+    }
     try{await dependencies.process(job.message);await dependencies.queue.archive(job.messageId)}catch(error){
       console.error(JSON.stringify({level:"error",event:"media_job_failed",jobId:job.message.jobId,mediaId:job.message.mediaId,readCount:job.readCount,message:error instanceof Error?error.message:"unknown"}));
       if(job.readCount>=QUEUE_POLICIES.MEDIA_PROCESSING.maxAttempts)await dependencies.queue.archive(job.messageId);
@@ -24,7 +29,7 @@ export function createMediaWorkerDependencies(env:WorkerEnv):MediaWorkerDependen
   const storage=createR2Storage({accountId:env.CLOUDFLARE_ACCOUNT_ID,accessKeyId:env.R2_ACCESS_KEY_ID,secretAccessKey:env.R2_SECRET_ACCESS_KEY,bucket:env.R2_BUCKET});
   return{
     queue:{
-      async read(){const {data,error}=await admin.rpc("read_jobs",{queue_name:QUEUE_NAMES.MEDIA_PROCESSING,visibility_timeout_seconds:QUEUE_POLICIES.MEDIA_PROCESSING.visibilityTimeoutSeconds,batch_size:2});if(error)throw error;return(data??[]).flatMap((row)=>{const message=parseMessage(row.message);return message?[{messageId:row.msg_id,readCount:row.read_ct,message}]:[]})},
+      async read(){const {data,error}=await admin.rpc("read_jobs",{queue_name:QUEUE_NAMES.MEDIA_PROCESSING,visibility_timeout_seconds:QUEUE_POLICIES.MEDIA_PROCESSING.visibilityTimeoutSeconds,batch_size:2});if(error)throw error;return(data??[]).map((row)=>({messageId:row.msg_id,readCount:row.read_ct,message:parseMessage(row.message)}))},
       async archive(id){const {error}=await admin.rpc("archive_job",{queue_name:QUEUE_NAMES.MEDIA_PROCESSING,message_id:id});if(error)throw error},
     },
     async process(message){

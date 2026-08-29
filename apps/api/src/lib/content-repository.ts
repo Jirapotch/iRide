@@ -1,6 +1,6 @@
 import { createAdminDatabaseClient } from "@iride/database/admin";
 import { createServerDatabaseClient } from "@iride/database/server";
-import type { Tables, TablesInsert } from "@iride/database/types";
+import type { Json, Tables, TablesInsert } from "@iride/database/types";
 import type {
   CreateEventInput,
   CreatePhotographerSpotInput,
@@ -54,27 +54,21 @@ export function createContentRepository(
     },
     async createPost(userId, accessToken, input) {
       await validateMarkerTags(admin, input.markerTags ?? []);
-      const { data, error } = await ownerClient(accessToken)
-        .from("posts")
-        .insert({ author_id: userId, body: input.body })
-        .select("*")
-        .single();
-      ensureWrite(error, data);
-      await replacePostMarkerTags(ownerClient(accessToken), data!.id, input.markerTags ?? []);
+      const { data:id, error } = await ownerClient(accessToken).rpc("save_post_with_markers", {
+        target_post_id:null as unknown as string, post_body:input.body, marker_tags:(input.markerTags ?? []) as unknown as Json,
+      });
+      ensureWrite(error, id);
+      const data=await findPost(admin,id!);ensureWrite(null,data);
       return (await postDtos(admin, [data!], userId))[0]!;
     },
     async updatePost(userId, accessToken, id, input) {
       await assertOwner(await findPost(admin, id), "author_id", userId);
       await validateMarkerTags(admin, input.markerTags ?? []);
-      const { data, error } = await ownerClient(accessToken)
-        .from("posts")
-        .update({ body: input.body })
-        .eq("id", id)
-        .is("deleted_at", null)
-        .select("*")
-        .maybeSingle();
-      ensureWrite(error, data);
-      await replacePostMarkerTags(ownerClient(accessToken), id, input.markerTags ?? []);
+      const { data:savedId, error } = await ownerClient(accessToken).rpc("save_post_with_markers", {
+        target_post_id:id, post_body:input.body, marker_tags:(input.markerTags ?? []) as unknown as Json,
+      });
+      ensureWrite(error, savedId);
+      const data=await findPost(admin,savedId!);ensureWrite(null,data);
       return (await postDtos(admin, [data!], userId))[0]!;
     },
     async deletePost(userId, accessToken, id) {
@@ -299,11 +293,6 @@ async function validateMarkerTags(admin:AdminClient,tags:NonNullable<CreatePostI
   ]);
   ensureQuery(events.error);ensureQuery(spots.error);
   if((events.data??[]).length!==eventIds.length||(spots.data??[]).length!==spotIds.length)throw repositoryError("CONTENT_VALIDATION_FAILED",400);
-}
-
-async function replacePostMarkerTags(client:ReturnType<typeof createServerDatabaseClient>,postId:string,tags:NonNullable<CreatePostInput["markerTags"]>){
-  const removed=await client.from("post_marker_tags").delete().eq("post_id",postId);ensureQuery(removed.error);
-  if(tags.length){const inserted=await client.from("post_marker_tags").insert(tags.map((tag,position)=>({post_id:postId,position,event_id:tag.kind==="event"?tag.id:null,photographer_spot_id:tag.kind==="photographerSpot"?tag.id:null})));ensureQuery(inserted.error);}
 }
 
 async function eventDtos(admin: AdminClient, rows: Tables<"events">[], viewerId: string | null): Promise<EventDto[]> {

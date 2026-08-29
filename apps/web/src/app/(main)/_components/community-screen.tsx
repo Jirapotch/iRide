@@ -21,6 +21,7 @@ export function CommunityScreen({authenticated,locale,markerOptions,posts,produc
   const editId=params.get("modal")==="edit"?(room==="talk"?params.get("post"):room==="market"?params.get("product"):null):null;
   const editPost=editId?posts.find((item)=>item.id===editId&&item.canEdit)??null:null;
   const editProduct=editId?products.find((item)=>item.id===editId&&item.canEdit)??null:null;
+  const editDenied=Boolean(editId&&!editPost&&!editProduct);
   return <div className="community-page"><header className="community-heading"><p className="premium-kicker">iRide Community</p><h1>{locale==="th"?"ชุมชนของคนรักการเดินทาง":"A community built around movement"}</h1></header><nav aria-label={locale==="th"?"ห้องชุมชน":"Community rooms"} className="community-rooms">{communityRooms.map((item)=><Link aria-current={item.id===room?"page":undefined} href={`/community?room=${item.id}`} key={item.id}>{item.label[locale]}</Link>)}</nav>
     {room==="talk"?<TalkRoom authenticated={authenticated} locale={locale} posts={posts} viewer={viewer}/>:null}
     {room==="market"?<MarketRoom locale={locale} products={products}/>:null}
@@ -28,6 +29,7 @@ export function CommunityScreen({authenticated,locale,markerOptions,posts,produc
     {room==="groups"?<GroupsRoom locale={locale}/>:null}
     {editPost?<EditModal closeUrl={`/community?room=talk&post=${editPost.id}`} title={locale==="th"?"แก้ไขโพสต์":"Edit post"}><BackendForm initial={editPost} locale={locale} markerOptions={markerOptions} type="post"/></EditModal>:null}
     {editProduct?<EditModal closeUrl={`/community?room=market&product=${editProduct.id}`} title={locale==="th"?"แก้ไขสินค้า":"Edit product"}><MarketForm initial={editProduct} locale={locale}/></EditModal>:null}
+    {editDenied?<div className="permission-toast" role="alert">{locale==="th"?"คุณไม่มีสิทธิ์แก้ไขรายการนี้":"You do not have permission to edit this item."}</div>:null}
   </div>;
 }
 

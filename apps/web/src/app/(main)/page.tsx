@@ -7,5 +7,5 @@ export default async function HomePage({searchParams}:{readonly searchParams:Pro
   const [locale,params,session]=await Promise.all([getRequestLocale(),searchParams,getVerifiedWebSession().catch(()=>null)]);
   let initialEdit=null;
   if(params.modal==="edit"&&params.marker&&session){initialEdit=await getEvent(params.marker,session.accessToken).catch(()=>getPhotographerSpot(params.marker!,session.accessToken).catch(()=>null));if(initialEdit&&!initialEdit.canEdit)initialEdit=null}
-  return <ActivityHub initialEdit={initialEdit} locale={locale} />;
+  return <ActivityHub editDenied={params.modal==="edit"&&Boolean(params.marker)&&!initialEdit} initialEdit={initialEdit} locale={locale} />;
 }

@@ -21,4 +21,11 @@ describe("media queue worker",()=>{
     const terminal:MediaWorkerDependencies={queue:{read:vi.fn().mockResolvedValue([{messageId:2,readCount:5,message}]),archive:vi.fn().mockResolvedValue(undefined)},process:vi.fn().mockRejectedValue(new Error("fail"))};
     await runMediaBatch(terminal);expect(terminal.queue.archive).toHaveBeenCalledWith(2);
   });
+
+  it("archives malformed messages instead of leaving them stuck",async()=>{
+    const dependencies:MediaWorkerDependencies={queue:{read:vi.fn().mockResolvedValue([{messageId:9,readCount:1,message:null}]),archive:vi.fn().mockResolvedValue(undefined)},process:vi.fn()};
+    expect(await runMediaBatch(dependencies)).toBe(1);
+    expect(dependencies.process).not.toHaveBeenCalled();
+    expect(dependencies.queue.archive).toHaveBeenCalledWith(9);
+  });
 });

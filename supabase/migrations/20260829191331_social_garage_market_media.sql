@@ -160,6 +160,53 @@ create trigger enforce_comment_thread
 before insert or update of parent_id, post_id on public.comments
 for each row execute function private.enforce_comment_thread();
 
+create or replace function private.scrub_deleted_comment()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  if old.deleted_at is null and new.deleted_at is not null then
+    new.body := '[deleted]';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger scrub_deleted_comment
+before update of deleted_at on public.comments
+for each row execute function private.scrub_deleted_comment();
+
+create or replace function private.validate_profile_media()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  if new.avatar_media_id is not null and not exists (
+    select 1 from public.media
+    where id = new.avatar_media_id and owner_id = new.id and purpose = 'avatar'
+      and status = 'ready' and deleted_at is null
+  ) then
+    raise exception using errcode = '23514', message = 'profile_avatar_media_invalid';
+  end if;
+  if new.cover_media_id is not null and not exists (
+    select 1 from public.media
+    where id = new.cover_media_id and owner_id = new.id and purpose = 'cover'
+      and status = 'ready' and deleted_at is null
+  ) then
+    raise exception using errcode = '23514', message = 'profile_cover_media_invalid';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger validate_profile_media
+before update of avatar_media_id, cover_media_id on public.profiles
+for each row execute function private.validate_profile_media();
+
 create trigger set_media_updated_at before update on public.media for each row execute function public.set_updated_at();
 create trigger set_vehicles_updated_at before update on public.vehicles for each row execute function public.set_updated_at();
 create trigger set_comments_updated_at before update on public.comments for each row execute function public.set_updated_at();
@@ -202,6 +249,95 @@ begin
 end;
 $$;
 
+create or replace function public.save_post_with_markers(target_post_id uuid, post_body text, marker_tags jsonb)
+returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare saved_id uuid;
+begin
+  if jsonb_typeof(marker_tags) is distinct from 'array' or jsonb_array_length(marker_tags) > 5
+    or exists (
+      select 1 from jsonb_array_elements(marker_tags) item
+      where item->>'kind' not in ('event', 'photographerSpot')
+        or (item->>'id') is null
+    )
+    or exists (
+      select 1 from jsonb_array_elements(marker_tags) item
+      group by item->>'kind', item->>'id' having count(*) > 1
+    ) then
+    raise exception using errcode = '22023', message = 'post_marker_tags_invalid';
+  end if;
+
+  if target_post_id is null then
+    insert into public.posts(author_id, body)
+    values ((select auth.uid()), post_body)
+    returning id into saved_id;
+  else
+    update public.posts set body = post_body
+    where id = target_post_id and deleted_at is null
+    returning id into saved_id;
+    if saved_id is null then raise exception using errcode = 'P0002', message = 'post_not_found'; end if;
+  end if;
+
+  delete from public.post_marker_tags where post_id = saved_id;
+  insert into public.post_marker_tags(post_id, position, event_id, photographer_spot_id)
+  select saved_id, (ordinality - 1)::smallint,
+    case when item->>'kind' = 'event' then (item->>'id')::uuid end,
+    case when item->>'kind' = 'photographerSpot' then (item->>'id')::uuid end
+  from jsonb_array_elements(marker_tags) with ordinality as tags(item, ordinality);
+  return saved_id;
+end;
+$$;
+
+create or replace function public.save_vehicle_with_media(target_vehicle_id uuid, vehicle_input jsonb, media_ids uuid[])
+returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare saved_id uuid;
+begin
+  media_ids := coalesce(media_ids, array[]::uuid[]);
+  if cardinality(media_ids) > 8
+    or cardinality(media_ids) <> (select count(distinct media_id) from unnest(media_ids) media_id)
+    or cardinality(media_ids) <> (
+      select count(*) from public.media
+      where id = any(media_ids) and owner_id = (select auth.uid())
+        and purpose = 'vehicle' and status = 'ready' and deleted_at is null
+    ) then
+    raise exception using errcode = '22023', message = 'vehicle_media_invalid';
+  end if;
+
+  if target_vehicle_id is null then
+    insert into public.vehicles(owner_id, kind, brand, model, year, nickname, description, visibility)
+    values (
+      (select auth.uid()), (vehicle_input->>'kind')::public.vehicle_kind,
+      vehicle_input->>'brand', vehicle_input->>'model', (vehicle_input->>'year')::integer,
+      vehicle_input->>'nickname', vehicle_input->>'description',
+      (vehicle_input->>'visibility')::public.vehicle_visibility
+    ) returning id into saved_id;
+  else
+    update public.vehicles set
+      kind = (vehicle_input->>'kind')::public.vehicle_kind,
+      brand = vehicle_input->>'brand', model = vehicle_input->>'model',
+      year = (vehicle_input->>'year')::integer, nickname = vehicle_input->>'nickname',
+      description = vehicle_input->>'description',
+      visibility = (vehicle_input->>'visibility')::public.vehicle_visibility
+    where id = target_vehicle_id and archived_at is null
+    returning id into saved_id;
+    if saved_id is null then raise exception using errcode = 'P0002', message = 'vehicle_not_found'; end if;
+  end if;
+
+  delete from public.vehicle_media where vehicle_id = saved_id;
+  insert into public.vehicle_media(vehicle_id, media_id, position, is_cover)
+  select saved_id, media_id, (ordinality - 1)::smallint, ordinality = 1
+  from unnest(media_ids) with ordinality as links(media_id, ordinality);
+  return saved_id;
+end;
+$$;
+
 alter table public.media enable row level security;
 alter table public.media_variants enable row level security;
 alter table public.vehicles enable row level security;
@@ -213,7 +349,8 @@ alter table public.market_products enable row level security;
 revoke all on table public.media, public.media_variants, public.vehicles, public.vehicle_media,
   public.comments, public.post_marker_tags, public.market_products from public, anon, authenticated;
 grant select on table public.vehicles, public.vehicle_media, public.comments, public.post_marker_tags, public.market_products to anon;
-grant select, insert, update, delete on table public.media, public.vehicle_media, public.post_marker_tags to authenticated;
+grant select, insert on table public.media to authenticated;
+grant select, insert, update, delete on table public.vehicle_media, public.post_marker_tags to authenticated;
 grant select, insert, update on table public.vehicles, public.comments, public.market_products to authenticated;
 grant select on table public.media_variants to authenticated;
 grant all on table public.media, public.media_variants, public.vehicles, public.vehicle_media,
@@ -223,6 +360,10 @@ revoke all on function public.complete_media_upload(uuid, uuid, jsonb) from publ
 grant execute on function public.complete_media_upload(uuid, uuid, jsonb) to service_role;
 revoke all on function public.finish_media_processing(uuid, integer, integer, jsonb) from public, anon, authenticated;
 grant execute on function public.finish_media_processing(uuid, integer, integer, jsonb) to service_role;
+revoke all on function public.save_post_with_markers(uuid, text, jsonb) from public, anon;
+grant execute on function public.save_post_with_markers(uuid, text, jsonb) to authenticated, service_role;
+revoke all on function public.save_vehicle_with_media(uuid, jsonb, uuid[]) from public, anon;
+grant execute on function public.save_vehicle_with_media(uuid, jsonb, uuid[]) to authenticated, service_role;
 
 create policy media_owner_select on public.media for select to authenticated
 using ((select auth.uid()) = owner_id);
@@ -242,9 +383,15 @@ using (visibility = 'public' and archived_at is null);
 create policy vehicles_visible_select on public.vehicles for select to authenticated
 using ((visibility = 'public' and archived_at is null) or owner_id = (select auth.uid()));
 create policy vehicles_owner_insert on public.vehicles for insert to authenticated
-with check (owner_id = (select auth.uid()));
+with check (owner_id = (select auth.uid()) and exists (
+  select 1 from public.profiles where profiles.id = vehicles.owner_id
+    and profiles.username is not null and profiles.display_name is not null
+));
 create policy vehicles_owner_update on public.vehicles for update to authenticated
-using (owner_id = (select auth.uid())) with check (owner_id = (select auth.uid()));
+using (owner_id = (select auth.uid())) with check (owner_id = (select auth.uid()) and exists (
+  select 1 from public.profiles where profiles.id = vehicles.owner_id
+    and profiles.username is not null and profiles.display_name is not null
+));
 
 create policy vehicle_media_public_select on public.vehicle_media for select to anon
 using (exists (select 1 from public.vehicles where vehicles.id = vehicle_media.vehicle_id and vehicles.visibility = 'public' and vehicles.archived_at is null));
@@ -257,7 +404,12 @@ with check (
 );
 create policy vehicle_media_owner_update on public.vehicle_media for update to authenticated
 using (exists (select 1 from public.vehicles where vehicles.id = vehicle_media.vehicle_id and vehicles.owner_id = (select auth.uid())))
-with check (exists (select 1 from public.vehicles where vehicles.id = vehicle_media.vehicle_id and vehicles.owner_id = (select auth.uid())));
+with check (
+  exists (select 1 from public.vehicles where vehicles.id = vehicle_media.vehicle_id and vehicles.owner_id = (select auth.uid()))
+  and exists (select 1 from public.media where media.id = vehicle_media.media_id
+    and media.owner_id = (select auth.uid()) and media.status = 'ready'
+    and media.purpose = 'vehicle' and media.deleted_at is null)
+);
 create policy vehicle_media_owner_delete on public.vehicle_media for delete to authenticated
 using (exists (select 1 from public.vehicles where vehicles.id = vehicle_media.vehicle_id and vehicles.owner_id = (select auth.uid())));
 
@@ -275,7 +427,13 @@ using (exists (select 1 from public.posts where posts.id = post_marker_tags.post
 create policy post_marker_tags_visible_select on public.post_marker_tags for select to authenticated
 using (exists (select 1 from public.posts where posts.id = post_marker_tags.post_id and (posts.deleted_at is null or posts.author_id = (select auth.uid()))));
 create policy post_marker_tags_owner_insert on public.post_marker_tags for insert to authenticated
-with check (exists (select 1 from public.posts where posts.id = post_marker_tags.post_id and posts.author_id = (select auth.uid()) and posts.deleted_at is null));
+with check (
+  exists (select 1 from public.posts where posts.id = post_marker_tags.post_id and posts.author_id = (select auth.uid()) and posts.deleted_at is null)
+  and (
+    (post_marker_tags.event_id is not null and exists (select 1 from public.events where events.id = post_marker_tags.event_id and events.deleted_at is null))
+    or (post_marker_tags.photographer_spot_id is not null and exists (select 1 from public.photographer_spots where photographer_spots.id = post_marker_tags.photographer_spot_id and photographer_spots.deleted_at is null))
+  )
+);
 create policy post_marker_tags_owner_update on public.post_marker_tags for update to authenticated
 using (exists (select 1 from public.posts where posts.id = post_marker_tags.post_id and posts.author_id = (select auth.uid())))
 with check (exists (select 1 from public.posts where posts.id = post_marker_tags.post_id and posts.author_id = (select auth.uid())));
@@ -287,8 +445,25 @@ using (deleted_at is null);
 create policy market_products_visible_select on public.market_products for select to authenticated
 using (deleted_at is null or owner_id = (select auth.uid()));
 create policy market_products_owner_insert on public.market_products for insert to authenticated
-with check (owner_id = (select auth.uid()));
+with check (
+  owner_id = (select auth.uid())
+  and (cover_media_id is null or exists (
+    select 1 from public.media where media.id = market_products.cover_media_id
+      and media.owner_id = (select auth.uid()) and media.purpose = 'market'
+      and media.status = 'ready' and media.deleted_at is null
+  ))
+);
 create policy market_products_owner_update on public.market_products for update to authenticated
-using (owner_id = (select auth.uid())) with check (owner_id = (select auth.uid()));
+using (owner_id = (select auth.uid()))
+with check (
+  owner_id = (select auth.uid())
+  and (cover_media_id is null or exists (
+    select 1 from public.media where media.id = market_products.cover_media_id
+      and media.owner_id = (select auth.uid()) and media.purpose = 'market'
+      and media.status = 'ready' and media.deleted_at is null
+  ))
+);
 
 revoke all on function private.enforce_comment_thread() from public, anon, authenticated, service_role;
+revoke all on function private.scrub_deleted_comment() from public, anon, authenticated, service_role;
+revoke all on function private.validate_profile_media() from public, anon, authenticated, service_role;

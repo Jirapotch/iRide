@@ -15,10 +15,69 @@ export type Database = {
   public: {
     Tables: {
       comments: {
-        Row: { id:string; post_id:string; author_id:string; parent_id:string|null; reply_to_user_id:string|null; body:string; deleted_at:string|null; created_at:string; updated_at:string };
-        Insert: { id?:string; post_id:string; author_id:string; parent_id?:string|null; reply_to_user_id?:string|null; body:string; deleted_at?:string|null; created_at?:string; updated_at?:string };
-        Update: { id?:string; post_id?:string; author_id?:string; parent_id?:string|null; reply_to_user_id?:string|null; body?:string; deleted_at?:string|null; created_at?:string; updated_at?:string };
-        Relationships: [];
+        Row: {
+          author_id: string;
+          body: string;
+          created_at: string;
+          deleted_at: string | null;
+          id: string;
+          parent_id: string | null;
+          post_id: string;
+          reply_to_user_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          author_id: string;
+          body: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          parent_id?: string | null;
+          post_id: string;
+          reply_to_user_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          author_id?: string;
+          body?: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          parent_id?: string | null;
+          post_id?: string;
+          reply_to_user_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comments_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey";
+            columns: ["parent_id"];
+            isOneToOne: false;
+            referencedRelation: "comments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comments_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comments_reply_to_user_id_fkey";
+            columns: ["reply_to_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       events: {
         Row: {
@@ -97,6 +156,166 @@ export type Database = {
           },
         ];
       };
+      market_products: {
+        Row: {
+          category: string;
+          cover_media_id: string | null;
+          created_at: string;
+          currency: string;
+          deleted_at: string | null;
+          id: string;
+          name: string;
+          owner_id: string;
+          price_satang: number;
+          updated_at: string;
+          vehicle_kinds: Database["public"]["Enums"]["vehicle_kind"][];
+        };
+        Insert: {
+          category: string;
+          cover_media_id?: string | null;
+          created_at?: string;
+          currency?: string;
+          deleted_at?: string | null;
+          id?: string;
+          name: string;
+          owner_id: string;
+          price_satang: number;
+          updated_at?: string;
+          vehicle_kinds: Database["public"]["Enums"]["vehicle_kind"][];
+        };
+        Update: {
+          category?: string;
+          cover_media_id?: string | null;
+          created_at?: string;
+          currency?: string;
+          deleted_at?: string | null;
+          id?: string;
+          name?: string;
+          owner_id?: string;
+          price_satang?: number;
+          updated_at?: string;
+          vehicle_kinds?: Database["public"]["Enums"]["vehicle_kind"][];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "market_products_cover_media_id_fkey";
+            columns: ["cover_media_id"];
+            isOneToOne: false;
+            referencedRelation: "media";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "market_products_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      media: {
+        Row: {
+          bytes: number;
+          created_at: string;
+          deleted_at: string | null;
+          failure_reason: string | null;
+          filename: string;
+          height: number | null;
+          id: string;
+          mime_type: string;
+          original_object_key: string;
+          owner_id: string;
+          purpose: Database["public"]["Enums"]["media_purpose"];
+          status: Database["public"]["Enums"]["media_status"];
+          updated_at: string;
+          width: number | null;
+        };
+        Insert: {
+          bytes: number;
+          created_at?: string;
+          deleted_at?: string | null;
+          failure_reason?: string | null;
+          filename: string;
+          height?: number | null;
+          id?: string;
+          mime_type: string;
+          original_object_key: string;
+          owner_id: string;
+          purpose: Database["public"]["Enums"]["media_purpose"];
+          status?: Database["public"]["Enums"]["media_status"];
+          updated_at?: string;
+          width?: number | null;
+        };
+        Update: {
+          bytes?: number;
+          created_at?: string;
+          deleted_at?: string | null;
+          failure_reason?: string | null;
+          filename?: string;
+          height?: number | null;
+          id?: string;
+          mime_type?: string;
+          original_object_key?: string;
+          owner_id?: string;
+          purpose?: Database["public"]["Enums"]["media_purpose"];
+          status?: Database["public"]["Enums"]["media_status"];
+          updated_at?: string;
+          width?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "media_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      media_variants: {
+        Row: {
+          bytes: number;
+          created_at: string;
+          height: number;
+          id: string;
+          kind: Database["public"]["Enums"]["media_variant_kind"];
+          media_id: string;
+          mime_type: string;
+          object_key: string;
+          width: number;
+        };
+        Insert: {
+          bytes: number;
+          created_at?: string;
+          height: number;
+          id?: string;
+          kind: Database["public"]["Enums"]["media_variant_kind"];
+          media_id: string;
+          mime_type?: string;
+          object_key: string;
+          width: number;
+        };
+        Update: {
+          bytes?: number;
+          created_at?: string;
+          height?: number;
+          id?: string;
+          kind?: Database["public"]["Enums"]["media_variant_kind"];
+          media_id?: string;
+          mime_type?: string;
+          object_key?: string;
+          width?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "media_variants_media_id_fkey";
+            columns: ["media_id"];
+            isOneToOne: false;
+            referencedRelation: "media";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       photographer_spots: {
         Row: {
           created_at: string;
@@ -156,29 +375,51 @@ export type Database = {
           },
         ];
       };
-      market_products: {
-        Row: { id:string; owner_id:string; name:string; price_satang:number; currency:string; category:string; vehicle_kinds:Database["public"]["Enums"]["vehicle_kind"][]; cover_media_id:string|null; deleted_at:string|null; created_at:string; updated_at:string };
-        Insert: { id?:string; owner_id:string; name:string; price_satang:number; currency?:string; category:string; vehicle_kinds:Database["public"]["Enums"]["vehicle_kind"][]; cover_media_id?:string|null; deleted_at?:string|null; created_at?:string; updated_at?:string };
-        Update: { id?:string; owner_id?:string; name?:string; price_satang?:number; currency?:string; category?:string; vehicle_kinds?:Database["public"]["Enums"]["vehicle_kind"][]; cover_media_id?:string|null; deleted_at?:string|null; created_at?:string; updated_at?:string };
-        Relationships: [];
-      };
-      media: {
-        Row: { id:string; owner_id:string; purpose:Database["public"]["Enums"]["media_purpose"]; status:Database["public"]["Enums"]["media_status"]; original_object_key:string; filename:string; mime_type:string; bytes:number; width:number|null; height:number|null; failure_reason:string|null; deleted_at:string|null; created_at:string; updated_at:string };
-        Insert: { id?:string; owner_id:string; purpose:Database["public"]["Enums"]["media_purpose"]; status?:Database["public"]["Enums"]["media_status"]; original_object_key:string; filename:string; mime_type:string; bytes:number; width?:number|null; height?:number|null; failure_reason?:string|null; deleted_at?:string|null; created_at?:string; updated_at?:string };
-        Update: { id?:string; owner_id?:string; purpose?:Database["public"]["Enums"]["media_purpose"]; status?:Database["public"]["Enums"]["media_status"]; original_object_key?:string; filename?:string; mime_type?:string; bytes?:number; width?:number|null; height?:number|null; failure_reason?:string|null; deleted_at?:string|null; created_at?:string; updated_at?:string };
-        Relationships: [];
-      };
-      media_variants: {
-        Row: { id:string; media_id:string; kind:Database["public"]["Enums"]["media_variant_kind"]; object_key:string; mime_type:string; bytes:number; width:number; height:number; created_at:string };
-        Insert: { id?:string; media_id:string; kind:Database["public"]["Enums"]["media_variant_kind"]; object_key:string; mime_type?:string; bytes:number; width:number; height:number; created_at?:string };
-        Update: { id?:string; media_id?:string; kind?:Database["public"]["Enums"]["media_variant_kind"]; object_key?:string; mime_type?:string; bytes?:number; width?:number; height?:number; created_at?:string };
-        Relationships: [];
-      };
       post_marker_tags: {
-        Row: { post_id:string; position:number; event_id:string|null; photographer_spot_id:string|null; created_at:string };
-        Insert: { post_id:string; position:number; event_id?:string|null; photographer_spot_id?:string|null; created_at?:string };
-        Update: { post_id?:string; position?:number; event_id?:string|null; photographer_spot_id?:string|null; created_at?:string };
-        Relationships: [];
+        Row: {
+          created_at: string;
+          event_id: string | null;
+          photographer_spot_id: string | null;
+          position: number;
+          post_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          event_id?: string | null;
+          photographer_spot_id?: string | null;
+          position: number;
+          post_id: string;
+        };
+        Update: {
+          created_at?: string;
+          event_id?: string | null;
+          photographer_spot_id?: string | null;
+          position?: number;
+          post_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "post_marker_tags_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "post_marker_tags_photographer_spot_id_fkey";
+            columns: ["photographer_spot_id"];
+            isOneToOne: false;
+            referencedRelation: "photographer_spots";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "post_marker_tags_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       posts: {
         Row: {
@@ -261,19 +502,111 @@ export type Database = {
           username_changed_at?: string | null;
           visibility?: Database["public"]["Enums"]["profile_visibility"];
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "profiles_avatar_media_fk";
+            columns: ["avatar_media_id"];
+            isOneToOne: false;
+            referencedRelation: "media";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profiles_cover_media_fk";
+            columns: ["cover_media_id"];
+            isOneToOne: false;
+            referencedRelation: "media";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       vehicle_media: {
-        Row: { vehicle_id:string; media_id:string; position:number; is_cover:boolean };
-        Insert: { vehicle_id:string; media_id:string; position:number; is_cover?:boolean };
-        Update: { vehicle_id?:string; media_id?:string; position?:number; is_cover?:boolean };
-        Relationships: [];
+        Row: {
+          is_cover: boolean;
+          media_id: string;
+          position: number;
+          vehicle_id: string;
+        };
+        Insert: {
+          is_cover?: boolean;
+          media_id: string;
+          position: number;
+          vehicle_id: string;
+        };
+        Update: {
+          is_cover?: boolean;
+          media_id?: string;
+          position?: number;
+          vehicle_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_media_media_id_fkey";
+            columns: ["media_id"];
+            isOneToOne: false;
+            referencedRelation: "media";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vehicle_media_vehicle_id_fkey";
+            columns: ["vehicle_id"];
+            isOneToOne: false;
+            referencedRelation: "vehicles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       vehicles: {
-        Row: { id:string; owner_id:string; kind:Database["public"]["Enums"]["vehicle_kind"]; brand:string; model:string; year:number|null; nickname:string|null; description:string|null; visibility:Database["public"]["Enums"]["vehicle_visibility"]; archived_at:string|null; created_at:string; updated_at:string };
-        Insert: { id?:string; owner_id:string; kind:Database["public"]["Enums"]["vehicle_kind"]; brand:string; model:string; year?:number|null; nickname?:string|null; description?:string|null; visibility?:Database["public"]["Enums"]["vehicle_visibility"]; archived_at?:string|null; created_at?:string; updated_at?:string };
-        Update: { id?:string; owner_id?:string; kind?:Database["public"]["Enums"]["vehicle_kind"]; brand?:string; model?:string; year?:number|null; nickname?:string|null; description?:string|null; visibility?:Database["public"]["Enums"]["vehicle_visibility"]; archived_at?:string|null; created_at?:string; updated_at?:string };
-        Relationships: [];
+        Row: {
+          archived_at: string | null;
+          brand: string;
+          created_at: string;
+          description: string | null;
+          id: string;
+          kind: Database["public"]["Enums"]["vehicle_kind"];
+          model: string;
+          nickname: string | null;
+          owner_id: string;
+          updated_at: string;
+          visibility: Database["public"]["Enums"]["vehicle_visibility"];
+          year: number | null;
+        };
+        Insert: {
+          archived_at?: string | null;
+          brand: string;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          kind: Database["public"]["Enums"]["vehicle_kind"];
+          model: string;
+          nickname?: string | null;
+          owner_id: string;
+          updated_at?: string;
+          visibility?: Database["public"]["Enums"]["vehicle_visibility"];
+          year?: number | null;
+        };
+        Update: {
+          archived_at?: string | null;
+          brand?: string;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          kind?: Database["public"]["Enums"]["vehicle_kind"];
+          model?: string;
+          nickname?: string | null;
+          owner_id?: string;
+          updated_at?: string;
+          visibility?: Database["public"]["Enums"]["vehicle_visibility"];
+          year?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: {
@@ -285,7 +618,11 @@ export type Database = {
         Returns: boolean;
       };
       complete_media_upload: {
-        Args: { target_media_id:string; expected_owner_id:string; message:Json };
+        Args: {
+          expected_owner_id: string;
+          message: Json;
+          target_media_id: string;
+        };
         Returns: number;
       };
       enqueue_job: {
@@ -315,7 +652,12 @@ export type Database = {
         }[];
       };
       finish_media_processing: {
-        Args: { target_media_id:string; source_width:number; source_height:number; variants:Json };
+        Args: {
+          source_height: number;
+          source_width: number;
+          target_media_id: string;
+          variants: Json;
+        };
         Returns: undefined;
       };
       read_jobs: {
@@ -332,6 +674,18 @@ export type Database = {
           read_ct: number;
           vt: string;
         }[];
+      };
+      save_post_with_markers: {
+        Args: { marker_tags: Json; post_body: string; target_post_id: string };
+        Returns: string;
+      };
+      save_vehicle_with_media: {
+        Args: {
+          media_ids: string[];
+          target_vehicle_id: string;
+          vehicle_input: Json;
+        };
+        Returns: string;
       };
     };
     Enums: {
@@ -470,8 +824,12 @@ export const Constants = {
   public: {
     Enums: {
       event_kind: ["meeting", "event", "trip"],
+      media_purpose: ["avatar", "cover", "vehicle", "market"],
+      media_status: ["uploading", "processing", "ready", "failed", "deleted"],
+      media_variant_kind: ["thumbnail", "preview"],
       profile_visibility: ["public", "followers", "private"],
       vehicle_kind: ["car", "motorcycle", "bicycle"],
+      vehicle_visibility: ["public", "private"],
     },
   },
 } as const;

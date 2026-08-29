@@ -164,7 +164,7 @@ const vehicleFields = {
   nickname: nullableText(80),
   description: nullableText(1_000),
   visibility: z.enum(vehicleVisibilities),
-  mediaIds: z.array(z.uuid()).max(8),
+  mediaIds: z.array(z.uuid()).max(8).refine((ids) => new Set(ids).size === ids.length, "duplicate_media"),
 } as const;
 
 export const createVehicleSchema = z.object(vehicleFields).strict();

@@ -80,6 +80,12 @@ export function startMockSupabaseAuth() {
       return postgrestJson(response, matches ? [profile] : []);
     }
 
+    if (request.method === "GET" && url.pathname === "/rest/v1/market_products") {
+      const id = filterValue(url.searchParams.get("id"));
+      const product = marketProduct();
+      return postgrestJson(response, !id || id === product.id ? [product] : []);
+    }
+
     if (request.method === "PATCH" && url.pathname === "/rest/v1/profiles") {
       const id = filterValue(url.searchParams.get("id"));
       const body = await readJsonBody(request);
@@ -242,6 +248,23 @@ function incompleteProfile() {
     latitude: null,
     longitude: null,
     username_changed_at: null,
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+}
+
+function marketProduct() {
+  const timestamp = "2026-08-29T00:00:00.000Z";
+  return {
+    id: "00000000-0000-4000-8000-000000000001",
+    owner_id: MOCK_USER_ID,
+    name: "Touring helmet",
+    price_satang: 490000,
+    currency: "THB",
+    category: "Protection",
+    vehicle_kinds: ["motorcycle"],
+    cover_media_id: null,
+    deleted_at: null,
     created_at: timestamp,
     updated_at: timestamp,
   };

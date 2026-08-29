@@ -54,6 +54,19 @@ describe("content validation", () => {
       visibility: "public",
       mediaIds: [],
     })).toMatchObject({ brand: "Honda", visibility: "public" });
+    expect(() => createVehicleSchema.parse({
+      kind: "motorcycle",
+      brand: "Honda",
+      model: "Africa Twin",
+      year: 2025,
+      nickname: null,
+      description: null,
+      visibility: "public",
+      mediaIds: [
+        "10000000-0000-4000-8000-000000000001",
+        "10000000-0000-4000-8000-000000000001",
+      ],
+    })).toThrow();
     expect(createMarketProductSchema.parse({
       name: "Touring helmet",
       priceSatang: 1450000,

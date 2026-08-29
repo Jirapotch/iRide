@@ -18,7 +18,7 @@ const center: [number, number] = [100.5018, 13.7563];
 const kinds: ExploreFeatureKind[] = ["meeting", "event", "trip", "photographerSpot"];
 const colors: Record<ExploreFeatureKind, string> = { meeting: "#168cff", event: "#9b7cff", trip: "#22c99a", photographerSpot: "#ff9d2e" };
 
-export function ActivityHub({ locale,initialEdit=null }: { readonly locale: Locale;readonly initialEdit?:EventDto|PhotographerSpotDto|null }) {
+export function ActivityHub({ locale,initialEdit=null,editDenied=false }: { readonly locale: Locale;readonly initialEdit?:EventDto|PhotographerSpotDto|null;readonly editDenied?:boolean }) {
   const params = useSearchParams();
   const [features, setFeatures] = useState<ExploreFeatureDto[]>([]);
   const [enabled, setEnabled] = useState<ExploreFeatureKind[]>(kinds);
@@ -86,6 +86,7 @@ export function ActivityHub({ locale,initialEdit=null }: { readonly locale: Loca
     {filtersOpen ? <div className="map-filter-menu">{kinds.map((kind) => { const Icon = kind === "meeting" ? UsersThree : kind === "event" ? CalendarBlank : kind === "trip" ? Path : Camera; return <label key={kind}><input checked={enabled.includes(kind)} onChange={() => toggle(kind)} type="checkbox"/><Icon size={17}/>{label(kind, locale)}</label>; })}</div> : null}
     {selected ? <FeatureSheet feature={selected} locale={locale} onClose={() => setSelectedId(null)}/> : null}
     {initialEdit?<EditModal closeUrl={`/?marker=${initialEdit.id}`} title={locale==="th"?"แก้ไขข้อมูล":"Edit details"}><BackendForm initial={initialEdit} locale={locale} type={"photographer" in initialEdit?"photographer-spot":initialEdit.kind==="trip"?"trip":"activity"}/></EditModal>:null}
+    {editDenied?<div className="permission-toast" role="alert">{locale==="th"?"คุณไม่มีสิทธิ์แก้ไข marker นี้":"You do not have permission to edit this marker."}</div>:null}
   </section>;
 }
 

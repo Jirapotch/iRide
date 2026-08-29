@@ -1,6 +1,6 @@
 import { createAdminDatabaseClient } from "@iride/database/admin";
 import { createServerDatabaseClient } from "@iride/database/server";
-import type { Tables } from "@iride/database/types";
+import type { Json, Tables } from "@iride/database/types";
 import type {
   CommentDto,
   ContentAuthorDto,
@@ -20,6 +20,8 @@ export function createSocialRepository(config: Config): SocialRepository {
   const owner = (token: string) => createServerDatabaseClient({ url:config.url, publishableKey:config.publishableKey, accessToken:token });
   return {
     async listComments(postId, viewerId) {
+      const {data:post,error:postError}=await admin.from("posts").select("id").eq("id",postId).is("deleted_at",null).maybeSingle();ensure(postError);
+      if(!post)throw failure("CONTENT_NOT_FOUND",404);
       const { data, error } = await admin.from("comments").select("*").eq("post_id", postId).order("created_at");
       ensure(error);
       return commentDtos(admin, data ?? [], viewerId);
@@ -67,19 +69,21 @@ export function createSocialRepository(config: Config): SocialRepository {
     },
     async createVehicle(userId, token, input) {
       await assertReadyMedia(admin, userId, input.mediaIds, "vehicle");
-      const { data, error } = await owner(token).from("vehicles").insert(vehicleWrite(userId, input)).select("*").single();
-      ensureWrite(error, data);
-      await replaceVehicleMedia(owner(token), data!.id, input.mediaIds);
+      const {data:id,error}=await owner(token).rpc("save_vehicle_with_media",{target_vehicle_id:null as unknown as string,vehicle_input:vehicleRpcInput(input) as unknown as Json,media_ids:[...input.mediaIds]});ensureWrite(error,id);
+      const data=await findVehicle(admin,id!);ensureWrite(null,data);
       return (await vehicleDtos(admin, [data!], userId))[0]!;
     },
     async updateVehicle(userId, token, id, input) {
       const current = await findVehicle(admin, id);
       await assertOwner(current, "owner_id", userId, "archived_at");
       if (input.mediaIds) await assertReadyMedia(admin, userId, input.mediaIds, "vehicle");
-      const update = vehiclePatch(input);
-      const { data, error } = await owner(token).from("vehicles").update(update).eq("id", id).is("archived_at", null).select("*").maybeSingle();
-      ensureWrite(error, data);
-      if (input.mediaIds) await replaceVehicleMedia(owner(token), id, input.mediaIds);
+      let data;
+      if(input.mediaIds){
+        const merged={kind:input.kind??current!.kind,brand:input.brand??current!.brand,model:input.model??current!.model,year:input.year===undefined?current!.year:input.year,nickname:input.nickname===undefined?current!.nickname:input.nickname,description:input.description===undefined?current!.description:input.description,visibility:input.visibility??current!.visibility,mediaIds:input.mediaIds};
+        const result=await owner(token).rpc("save_vehicle_with_media",{target_vehicle_id:id,vehicle_input:vehicleRpcInput(merged) as unknown as Json,media_ids:[...input.mediaIds]});ensureWrite(result.error,result.data);data=await findVehicle(admin,result.data!);ensureWrite(null,data);
+      }else{
+        const result=await owner(token).from("vehicles").update(vehiclePatch(input)).eq("id", id).is("archived_at", null).select("*").maybeSingle();ensureWrite(result.error,result.data);data=result.data;
+      }
       return (await vehicleDtos(admin, [data!], userId))[0]!;
     },
     async deleteVehicle(userId, token, id) {
@@ -152,17 +156,13 @@ async function productDtos(admin:Admin, rows:Tables<"market_products">[], viewer
   return rows.flatMap((row)=>{const owner=people.get(row.owner_id);if(!owner)return[];return[{id:row.id,owner,name:row.name,priceSatang:row.price_satang,currency:"THB" as const,category:row.category,vehicleKinds:row.vehicle_kinds,coverMediaId:row.cover_media_id,canEdit:row.owner_id===viewerId,createdAt:row.created_at,updatedAt:row.updated_at}]});
 }
 
-function vehicleWrite(ownerId:string,input:CreateVehicleInput){return{owner_id:ownerId,kind:input.kind,brand:input.brand,model:input.model,year:input.year,nickname:input.nickname,description:input.description,visibility:input.visibility}}
+function vehicleRpcInput(input:Omit<CreateVehicleInput,"mediaIds">){return{kind:input.kind,brand:input.brand,model:input.model,year:input.year,nickname:input.nickname,description:input.description,visibility:input.visibility}}
 function vehiclePatch(input:Partial<CreateVehicleInput>){return{
   ...(input.kind===undefined?{}:{kind:input.kind}),...(input.brand===undefined?{}:{brand:input.brand}),...(input.model===undefined?{}:{model:input.model}),
   ...(input.year===undefined?{}:{year:input.year}),...(input.nickname===undefined?{}:{nickname:input.nickname}),...(input.description===undefined?{}:{description:input.description}),...(input.visibility===undefined?{}:{visibility:input.visibility}),
 }}
 function productWrite(ownerId:string,input:CreateMarketProductInput){return{owner_id:ownerId,name:input.name,price_satang:input.priceSatang,currency:"THB",category:input.category,vehicle_kinds:[...input.vehicleKinds],cover_media_id:input.coverMediaId}}
 
-async function replaceVehicleMedia(client:ReturnType<typeof createServerDatabaseClient>,vehicleId:string,ids:readonly string[]){
-  const removed=await client.from("vehicle_media").delete().eq("vehicle_id",vehicleId);ensure(removed.error);
-  if(ids.length){const inserted=await client.from("vehicle_media").insert(ids.map((mediaId,position)=>({vehicle_id:vehicleId,media_id:mediaId,position,is_cover:position===0})));ensure(inserted.error);}
-}
 async function assertReadyMedia(admin:Admin,userId:string,ids:readonly string[],purpose:"vehicle"|"market"){
   if(!ids.length)return;const {data,error}=await admin.from("media").select("id,owner_id,status,purpose").in("id",[...new Set(ids)]);ensure(error);
   if((data??[]).length!==new Set(ids).size||(data??[]).some((row)=>row.owner_id!==userId||row.status!=="ready"||row.purpose!==purpose))throw failure("CONTENT_FORBIDDEN",403);

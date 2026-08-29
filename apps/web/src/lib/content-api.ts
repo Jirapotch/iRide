@@ -61,7 +61,7 @@ export function updateMarketProduct(accessToken:string,id:string,input:UpdateMar
 export function deleteMarketProduct(accessToken:string,id:string){return contentDelete(`/api/v1/market-products/${encodeURIComponent(id)}`,accessToken)}
 export function authorizeMediaUpload(accessToken:string,input:MediaUploadRequest){return contentMutation<MediaUploadAuthorizationDto>("/api/v1/media/uploads",accessToken,"POST",input)}
 export function completeMediaUpload(accessToken:string,id:string){return contentMutation<{mediaId:string;status:string}>(`/api/v1/media/${encodeURIComponent(id)}/complete`,accessToken,"POST",{})}
-export function mediaVariantUrl(id:string,kind:"thumbnail"|"preview"="preview"){return apiUrl(`/api/v1/media/${encodeURIComponent(id)}/variants/${kind}`).toString()}
+export function mediaVariantUrl(id:string,kind:"thumbnail"|"preview"="preview"){return `/api/media/${encodeURIComponent(id)}/${kind}`}
 
 export function getPost(id: string, accessToken?: string) {
   return contentGet<PostDto>(`/api/v1/posts/${encodeURIComponent(id)}`, accessToken);

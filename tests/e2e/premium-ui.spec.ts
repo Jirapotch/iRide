@@ -9,7 +9,7 @@ test("discover renders the full map and marker filter FAB without list mode", as
 
 test("community exposes rooms and market deep links", async ({ page }) => {
   await page.goto("/community"); for (const room of ["Talk", "Market", "Photographers", "Groups"]) await expect(page.getByRole("link", { name: room, exact: true })).toBeVisible();
-  await page.goto("/community?room=market&product=helmet"); await expect(page.locator("#product-helmet")).toHaveClass(/is-selected/);
+  await page.goto("/community?room=market&product=00000000-0000-4000-8000-000000000001"); await expect(page.locator("#product-00000000-0000-4000-8000-000000000001")).toHaveClass(/is-selected/);
 });
 
 test("theme selection survives reload", async ({ page }) => {
