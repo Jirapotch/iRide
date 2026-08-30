@@ -939,7 +939,8 @@ a {
     height: 95px;
   }
   .activity-sheet {
-    inset: auto 1.5rem 0 auto;
+    inset: auto 1.5rem
+      calc(var(--mobile-nav-height) + env(safe-area-inset-bottom)) auto;
     width: 390px;
     max-height: 50dvh;
     border-radius: 1.2rem 1.2rem 0 0;

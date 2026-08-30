@@ -258,6 +258,48 @@ test("desktop marker detail is pinned to the viewport bottom without document gr
   );
 });
 
+test("tablet marker detail clears the visible bottom navigation", async ({
+  page,
+}) => {
+  await openMarkerSheet(page, { width: 768, height: 900 });
+  const sheet = page.getByRole("dialog", { name: "Test meeting" });
+  const bottomNavigation = page.locator(".mobile-nav-shell");
+
+  await expect(bottomNavigation).toBeVisible();
+  expect(
+    await sheet.evaluate(
+      (element, navigation) => {
+        const sheetRect = element.getBoundingClientRect();
+        const navigationRect = (
+          navigation as HTMLElement
+        ).getBoundingClientRect();
+        return sheetRect.bottom <= navigationRect.top + 1;
+      },
+      await bottomNavigation.elementHandle(),
+    ),
+  ).toBe(true);
+});
+
+test("marker detail moves keyboard focus inside the dialog and traps it", async ({
+  page,
+}) => {
+  const { marker } = await openMarkerSheet(page, { width: 390, height: 844 });
+  const dialog = page.getByRole("dialog", { name: "Test meeting" });
+  const close = dialog.getByRole("button", { name: "Close" });
+  const author = dialog.getByRole("link", { name: "Rider" });
+
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(author).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(author).toBeFocused();
+
+  await close.click();
+  await expect(marker).toBeFocused();
+});
+
 test("Google Maps import updates the form and the rendered map location", async ({
   page,
 }) => {

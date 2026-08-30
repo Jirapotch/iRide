@@ -406,16 +406,50 @@ function FeatureSheet({
 }) {
   const domain =
     feature.kind === "photographerSpot" ? "photographer-spots" : "events";
+  const sheetRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
+    const focusableElements = () =>
+      Array.from(
+        sheetRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.getClientRects().length > 0);
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = focusableElements();
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      const active = document.activeElement;
+      if (
+        event.shiftKey &&
+        (active === first || !sheetRef.current?.contains(active))
+      ) {
+        event.preventDefault();
+        last.focus();
+      } else if (
+        !event.shiftKey &&
+        (active === last || !sheetRef.current?.contains(active))
+      ) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", handleKeyDown);
+    const frame = window.requestAnimationFrame(() =>
+      closeButtonRef.current?.focus(),
+    );
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
+      window.cancelAnimationFrame(frame);
     };
   }, [onClose]);
   if (typeof document === "undefined") return null;
@@ -430,12 +464,14 @@ function FeatureSheet({
         aria-label={feature.title}
         aria-modal="true"
         className="activity-sheet"
+        ref={sheetRef}
         role="dialog"
       >
         <button
           aria-label="Close"
           className="sheet-close"
           onClick={onClose}
+          ref={closeButtonRef}
           type="button"
         >
           <X size={18} />
