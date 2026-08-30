@@ -385,16 +385,19 @@ test("owner edit opens only the edit dialog with contained datetime controls", a
     const input = editDialog.locator(`input[name="${name}"]`);
     expect(
       await input.evaluate((element) => {
-        const inputRect = element.getBoundingClientRect();
+        const shell = element.parentElement!;
+        const shellRect = shell.getBoundingClientRect();
         const dialogRect = element
           .closest(".edit-modal")!
           .getBoundingClientRect();
-        return (
-          inputRect.left >= dialogRect.left &&
-          inputRect.right <= dialogRect.right
-        );
+        return {
+          contained:
+            shellRect.left >= dialogRect.left &&
+            shellRect.right <= dialogRect.right,
+          clipsNativeOverflow: getComputedStyle(shell).overflowX === "hidden",
+        };
       }),
-    ).toBe(true);
+    ).toEqual({ contained: true, clipsNativeOverflow: true });
   }
 });
 
@@ -451,15 +454,19 @@ test("activity datetime fields stay within their grid at target viewport widths"
       const input = page.locator(`input[name="${name}"]`);
       expect(
         await input.evaluate((element) => {
-          const inputRect = element.getBoundingClientRect();
+          const shell = element.parentElement!;
+          const shellRect = shell.getBoundingClientRect();
           const gridRect = element
             .closest(".form-stack")!
             .getBoundingClientRect();
-          return (
-            inputRect.left >= gridRect.left && inputRect.right <= gridRect.right
-          );
+          return {
+            contained:
+              shellRect.left >= gridRect.left &&
+              shellRect.right <= gridRect.right,
+            clipsNativeOverflow: getComputedStyle(shell).overflowX === "hidden",
+          };
         }),
-      ).toBe(true);
+      ).toEqual({ contained: true, clipsNativeOverflow: true });
     }
     expect(
       await page.evaluate(

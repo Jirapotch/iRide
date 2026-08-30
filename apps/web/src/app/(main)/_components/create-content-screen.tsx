@@ -181,20 +181,24 @@ export function BackendForm({
           <input name="latitude" type="hidden" value={coordinates.latitude} />
           <input name="longitude" type="hidden" value={coordinates.longitude} />
           <Field label={locale === "th" ? "เริ่ม" : "Starts"}>
-            <input
-              defaultValue={dateInput(event?.startsAt ?? spot?.startsAt)}
-              name="startsAt"
-              required
-              type="datetime-local"
-            />
+            <div className="datetime-input-shell">
+              <input
+                defaultValue={dateInput(event?.startsAt ?? spot?.startsAt)}
+                name="startsAt"
+                required
+                type="datetime-local"
+              />
+            </div>
           </Field>
           <Field label={locale === "th" ? "สิ้นสุด" : "Ends"}>
-            <input
-              defaultValue={dateInput(event?.endsAt ?? spot?.endsAt)}
-              name="endsAt"
-              required={type === "photographer-spot"}
-              type="datetime-local"
-            />
+            <div className="datetime-input-shell">
+              <input
+                defaultValue={dateInput(event?.endsAt ?? spot?.endsAt)}
+                name="endsAt"
+                required={type === "photographer-spot"}
+                type="datetime-local"
+              />
+            </div>
           </Field>
         </>
       ) : null}
