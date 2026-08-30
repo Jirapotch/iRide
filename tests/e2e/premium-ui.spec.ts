@@ -190,6 +190,29 @@ test("has no horizontal overflow at target widths", async ({ page }) => {
   }
 });
 
+test("mobile discover map cannot scroll past its visible viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.goto("/");
+  await page.addStyleTag({ content: "body { min-height: 780px; }" });
+
+  await page.evaluate(() => scrollTo(0, 200));
+
+  expect(await page.evaluate(() => scrollY)).toBe(0);
+  expect(
+    await page.evaluate(() => {
+      const mapBottom = document
+        .querySelector(".discover-map")!
+        .getBoundingClientRect().bottom;
+      const navigationTop = document
+        .querySelector(".mobile-nav-shell")!
+        .getBoundingClientRect().top;
+      return Math.abs(mapBottom - navigationTop) <= 1;
+    }),
+  ).toBe(true);
+});
+
 test("mobile marker detail is a scrollable viewport sheet without document growth", async ({
   page,
 }) => {
