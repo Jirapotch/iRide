@@ -19,7 +19,7 @@ import type {
   VehicleKind,
 } from "@iride/types";
 import * as maplibregl from "maplibre-gl";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useTheme } from "@/app/_components/theme-provider";
 import { mapStyle } from "@/lib/app-navigation-domain";
@@ -495,6 +495,7 @@ function CoordinatePicker({
         return;
       }
       onChange(parsed);
+      setMapsUrl("");
       setMessage(
         locale === "th"
           ? "นำเข้าตำแหน่งแล้ว คุณยังลาก Marker เพื่อปรับได้"
@@ -605,8 +606,21 @@ function MiniMap({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const onChangeRef = useRef(onChange);
-  const initialCoordinatesRef = useRef(coordinates);
+  const coordinatesRef = useRef(coordinates);
   const themeRef = useRef(theme);
+  const synchronizeLocation = useCallback(() => {
+    const map = mapRef.current;
+    const marker = markerRef.current;
+    const container = containerRef.current;
+    if (!map || !marker || !container) return;
+
+    const { latitude, longitude } = coordinatesRef.current;
+    const location = `${longitude},${latitude}`;
+    marker.setLngLat([longitude, latitude]);
+    marker.getElement().dataset.location = location;
+    container.dataset.cameraCenter = location;
+    map.flyTo({ center: [longitude, latitude], essential: false });
+  }, []);
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
@@ -617,7 +631,7 @@ function MiniMap({
   }, [theme]);
   useEffect(() => {
     if (!containerRef.current) return;
-    const initialCoordinates = initialCoordinatesRef.current;
+    const initialCoordinates = coordinatesRef.current;
     try {
       const map = new maplibregl.Map({
         container: containerRef.current,
@@ -649,7 +663,10 @@ function MiniMap({
           longitude: event.lngLat.lng,
         }),
       );
-      map.once("load", () => applyMapPalette(map, themeRef.current));
+      map.once("load", () => {
+        applyMapPalette(map, themeRef.current);
+        synchronizeLocation();
+      });
       const observer = new ResizeObserver(() => map.resize());
       observer.observe(containerRef.current);
       mapRef.current = map;
@@ -664,14 +681,11 @@ function MiniMap({
     } catch {
       return;
     }
-  }, [locale]);
+  }, [locale, synchronizeLocation]);
   useEffect(() => {
-    markerRef.current?.setLngLat([coordinates.longitude, coordinates.latitude]);
-    mapRef.current?.flyTo({
-      center: [coordinates.longitude, coordinates.latitude],
-      essential: false,
-    });
-  }, [coordinates]);
+    coordinatesRef.current = coordinates;
+    synchronizeLocation();
+  }, [coordinates, synchronizeLocation]);
   return (
     <div
       className="mini-map-preview on-map"

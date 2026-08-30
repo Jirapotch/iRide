@@ -1,4 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function openActivityCreateForm(page: Page) {
+  await page.goto("/login?next=%2Fcreate%3Ftype%3Dactivity");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await expect(page).toHaveURL(/\/create\?type=activity$/);
+  await expect(page.locator("form.form-stack")).toBeVisible();
+}
 
 test.beforeEach(async ({ context, page }) => { await context.addCookies([{ name: "iride-locale", value: "en", domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Lax" }]); await page.setViewportSize({ width: 390, height: 844 }); });
 
@@ -48,4 +55,72 @@ test("legacy routes return 404", async ({ page }) => {
 
 test("has no horizontal overflow at target widths", async ({ page }) => {
   for (const width of [360, 390, 768, 1280]) { await page.setViewportSize({ width, height: width < 768 ? 844 : 900 }); await page.goto("/"); expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false); }
+});
+
+test("Google Maps import updates the form and the rendered map location", async ({
+  page,
+}) => {
+  await openActivityCreateForm(page);
+
+  const map = page.locator(".mini-map-preview");
+  await page
+    .getByRole("button", { name: "Import from Google Maps" })
+    .click();
+  await page
+    .getByLabel("Paste a Google Maps link")
+    .fill("https://www.google.com/maps/search/?api=1&query=18.788343,98.9853");
+  await page.getByRole("button", { name: "Use this location" }).click();
+
+  await expect(page.locator('input[name="latitude"]')).toHaveValue("18.788343");
+  await expect(page.locator('input[name="longitude"]')).toHaveValue("98.9853");
+  await expect(page.getByLabel("Latitude")).toHaveValue("18.788343");
+  await expect(page.getByLabel("Longitude")).toHaveValue("98.9853");
+  await expect(map).toHaveAttribute("data-camera-center", "98.9853,18.788343");
+  await expect(map.getByRole("img", { name: "Selected location" })).toHaveAttribute(
+    "data-location",
+    "98.9853,18.788343",
+  );
+  await expect(page.getByLabel("Paste a Google Maps link")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Import from Google Maps" })
+    .click();
+  await expect(page.getByLabel("Paste a Google Maps link")).toHaveValue("");
+});
+
+test("an invalid map URL leaves its import panel open with an error", async ({
+  page,
+}) => {
+  await openActivityCreateForm(page);
+
+  await page
+    .getByRole("button", { name: "Import from Google Maps" })
+    .click();
+  await page
+    .getByLabel("Paste a Google Maps link")
+    .fill("https://example.com/not-a-map");
+  await page.getByRole("button", { name: "Use this location" }).click();
+
+  await expect(page.getByLabel("Paste a Google Maps link")).toBeVisible();
+  await expect(page.getByText("This link does not contain a supported location")).toBeVisible();
+});
+
+test("activity datetime fields stay within their grid at target viewport widths", async ({
+  page,
+}) => {
+  await openActivityCreateForm(page);
+
+  for (const width of [360, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+    for (const name of ["startsAt", "endsAt"]) {
+      const input = page.locator(`input[name="${name}"]`);
+      expect(
+        await input.evaluate((element) => {
+          const inputRect = element.getBoundingClientRect();
+          const gridRect = element.closest(".form-stack")!.getBoundingClientRect();
+          return inputRect.left >= gridRect.left && inputRect.right <= gridRect.right;
+        }),
+      ).toBe(true);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  }
 });
