@@ -15,8 +15,10 @@ const { privateKey, publicKey } = generateKeyPairSync("ec", {
 });
 const publicJwk = publicKey.export({ format: "jwk" });
 let profile = completeProfile();
+let events = new Map();
 
 export function startMockSupabaseAuth() {
+  events = new Map();
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", MOCK_SUPABASE_URL);
 
@@ -72,15 +74,50 @@ export function startMockSupabaseAuth() {
     }
 
     if (request.method === "GET" && url.pathname === "/rest/v1/profiles") {
-      const id = filterValue(url.searchParams.get("id"));
+      const ids = filterValues(url.searchParams.get("id"));
       const username = filterValue(url.searchParams.get("username"));
       const matches =
-        (!id || id === profile.id) &&
+        (!ids || ids.includes(profile.id)) &&
         (!username || username === profile.username);
       return postgrestJson(response, matches ? [profile] : []);
     }
 
-    if (request.method === "GET" && url.pathname === "/rest/v1/market_products") {
+    if (url.pathname === "/rest/v1/events") {
+      if (request.method === "POST") {
+        const input = await readJsonBody(request);
+        if (!input || typeof input !== "object") {
+          return postgrestError(response, 400, "PGRST102", "invalid event");
+        }
+        const timestamp = new Date().toISOString();
+        const event = {
+          ...input,
+          id: randomUUID(),
+          created_at: timestamp,
+          updated_at: timestamp,
+        };
+        events.set(event.id, event);
+        return postgrestJson(
+          response,
+          postgrestBody(request, [event], event),
+          201,
+        );
+      }
+      if (request.method === "GET") {
+        const ids = filterValues(url.searchParams.get("id"));
+        const rows = Array.from(events.values()).filter(
+          (event) => !ids || ids.includes(event.id),
+        );
+        return postgrestJson(
+          response,
+          postgrestBody(request, rows, rows[0] ?? null),
+        );
+      }
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/rest/v1/market_products"
+    ) {
       const id = filterValue(url.searchParams.get("id"));
       const product = marketProduct();
       return postgrestJson(response, !id || id === product.id ? [product] : []);
@@ -218,6 +255,19 @@ function filterValue(value) {
   return value?.startsWith("eq.") ? value.slice(3) : null;
 }
 
+function filterValues(value) {
+  const exact = filterValue(value);
+  if (exact) return [exact];
+  if (!value?.startsWith("in.(") || !value.endsWith(")")) return null;
+  return value.slice(4, -1).split(",");
+}
+
+function postgrestBody(request, rows, single = rows) {
+  return request.headers.accept?.includes("application/vnd.pgrst.object+json")
+    ? single
+    : rows;
+}
+
 function completeProfile() {
   const timestamp = "2026-08-27T00:00:00.000Z";
   return {
@@ -270,14 +320,15 @@ function marketProduct() {
   };
 }
 
-function postgrestJson(response, body) {
+function postgrestJson(response, body, status = 200) {
   const value = JSON.stringify(body);
-  response.writeHead(200, {
+  const rows = Array.isArray(body) ? body : body ? [body] : [];
+  response.writeHead(status, {
     "Cache-Control": "no-store",
     "Content-Length": Buffer.byteLength(value),
     "Content-Type": "application/json",
-    "Content-Range": body.length
-      ? `0-${body.length - 1}/${body.length}`
+    "Content-Range": rows.length
+      ? `0-${rows.length - 1}/${rows.length}`
       : "*/0",
   });
   response.end(value);

@@ -7,6 +7,15 @@ async function openActivityCreateForm(page: Page) {
   await expect(page.locator("form.form-stack")).toBeVisible();
 }
 
+async function createOwnerActivity(page: Page) {
+  await openActivityCreateForm(page);
+  await page.getByLabel("Title").fill("Owner meeting");
+  await page.getByLabel("Location name").fill("Bangkok");
+  await page.getByLabel("Starts").fill("2026-09-01T06:00");
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page).toHaveURL(/\?marker=/);
+}
+
 async function openMarkerSheet(
   page: Page,
   viewport: { width: number; height: number },
@@ -298,6 +307,95 @@ test("marker detail moves keyboard focus inside the dialog and traps it", async 
 
   await close.click();
   await expect(marker).toBeFocused();
+});
+
+test("portaled marker detail resolves map theme tokens in light and dark themes", async ({
+  page,
+}) => {
+  const { marker } = await openMarkerSheet(page, { width: 390, height: 844 });
+  const sheet = page.getByRole("dialog", { name: "Test meeting" });
+  const close = sheet.getByRole("button", { name: "Close" });
+
+  await close.click();
+  await page.getByRole("button", { name: "Settings" }).click();
+  const lightSettings = page.getByRole("dialog", { name: "Settings" });
+  await lightSettings
+    .getByRole("button", { name: "Light", exact: true })
+    .click();
+  await lightSettings.getByRole("button", { name: "Close" }).click();
+  await marker.click();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  const light = await sheet.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const closeStyle = getComputedStyle(
+      element.querySelector<HTMLButtonElement>(".sheet-close")!,
+    );
+    return {
+      surface: style.getPropertyValue("--map-paper-raised").trim(),
+      text: style.getPropertyValue("--map-ink").trim(),
+      focus: style.getPropertyValue("--map-focus").trim(),
+      background: style.backgroundColor,
+      outline: closeStyle.outlineStyle,
+    };
+  });
+
+  await close.click();
+  await page.getByRole("button", { name: "Settings" }).click();
+  const darkSettings = page.getByRole("dialog", { name: "Settings" });
+  await darkSettings.getByRole("button", { name: "Dark", exact: true }).click();
+  await darkSettings.getByRole("button", { name: "Close" }).click();
+  await marker.click();
+  const dark = await sheet.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      surface: style.getPropertyValue("--map-paper-raised").trim(),
+      text: style.getPropertyValue("--map-ink").trim(),
+      focus: style.getPropertyValue("--map-focus").trim(),
+    };
+  });
+
+  expect(light.surface).not.toBe("");
+  expect(light.text).not.toBe("");
+  expect(light.focus).not.toBe("");
+  expect(light.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(light.outline).toBe("solid");
+  expect(dark.surface).not.toBe(light.surface);
+  expect(dark.text).not.toBe(light.text);
+  expect(dark.focus).not.toBe(light.focus);
+});
+
+test("owner edit opens only the edit dialog with contained datetime controls", async ({
+  page,
+}) => {
+  await createOwnerActivity(page);
+  const sheet = page.getByRole("dialog", { name: "Owner meeting" });
+  await expect(sheet.getByRole("link", { name: "Edit" })).toBeVisible();
+  await sheet.getByRole("link", { name: "Edit" }).click();
+
+  const editDialog = page.getByRole("dialog", { name: "Edit details" });
+  await expect(editDialog).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  expect(
+    await editDialog.evaluate((element) =>
+      element.contains(document.activeElement),
+    ),
+  ).toBe(true);
+  for (const name of ["startsAt", "endsAt"]) {
+    const input = editDialog.locator(`input[name="${name}"]`);
+    expect(
+      await input.evaluate((element) => {
+        const inputRect = element.getBoundingClientRect();
+        const dialogRect = element
+          .closest(".edit-modal")!
+          .getBoundingClientRect();
+        return (
+          inputRect.left >= dialogRect.left &&
+          inputRect.right <= dialogRect.right
+        );
+      }),
+    ).toBe(true);
+  }
 });
 
 test("Google Maps import updates the form and the rendered map location", async ({

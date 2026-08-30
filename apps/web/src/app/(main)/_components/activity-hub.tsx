@@ -359,7 +359,7 @@ export function ActivityHub({
           {locationError}
         </div>
       ) : null}
-      {selected ? (
+      {selected && !initialEdit ? (
         <FeatureSheet
           feature={selected}
           locale={locale}
@@ -455,7 +455,7 @@ function FeatureSheet({
   if (typeof document === "undefined") return null;
   return createPortal(
     <div
-      className="activity-sheet-backdrop"
+      className="activity-sheet-backdrop on-map"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
