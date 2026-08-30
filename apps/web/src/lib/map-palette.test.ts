@@ -18,16 +18,16 @@ describe("Natural Mist map palette", () => {
     expect(new Set(Object.values(contentKindColors))).toHaveLength(4);
   });
 
-  it("uses the same Natural Mist vector palette in both app themes", () => {
+  it("uses the approved Soft Mint vector palette in both app themes", () => {
     expect(mapPalettes.light).toEqual({
-      ground: "#e3eae8",
-      block: "#d7e0de",
-      block2: "#ced9d6",
-      road: "#f9fffd",
-      edge: "#c6d0ce",
-      water: "#c0dee3",
-      label: "#45504d",
-      veil: "oklch(15% .016 168 / .94)",
+      ground: "#F2F3ED",
+      block: "#B9DC69",
+      block2: "#E8E9E3",
+      road: "#FFFFFF",
+      edge: "#E4E6E1",
+      water: "#BFE3D8",
+      label: "#89928D",
+      veil: "rgb(242 243 237 / .18)",
     });
     expect(mapPalettes.dark).toBe(mapPalettes.light);
   });
@@ -75,16 +75,22 @@ describe("applyMapPalette", () => {
 
     applyMapPalette(map, "light");
 
-    expect(calls).toContainEqual(["background", "background-color", "#e3eae8"]);
-    expect(calls).toContainEqual(["park", "fill-color", "#d7e0de"]);
-    expect(calls).toContainEqual(["building", "fill-extrusion-color", "#ced9d6"]);
-    expect(calls).toContainEqual(["water", "fill-color", "#c0dee3"]);
-    expect(calls).toContainEqual(["road_primary", "line-color", "#f9fffd"]);
-    expect(calls).toContainEqual(["road-casing", "line-color", "#c6d0ce"]);
-    expect(calls).toContainEqual(["place-label", "text-color", "#45504d"]);
-    expect(calls).toContainEqual(["place-label", "text-halo-color", "#f9fffd"]);
+    expect(calls).toContainEqual(["background", "background-color", "#F2F3ED"]);
+    expect(calls).toContainEqual(["park", "fill-color", "#B9DC69"]);
+    expect(calls).toContainEqual([
+      "building",
+      "fill-extrusion-color",
+      "#E8E9E3",
+    ]);
+    expect(calls).toContainEqual(["water", "fill-color", "#BFE3D8"]);
+    expect(calls).toContainEqual(["road_primary", "line-color", "#FFFFFF"]);
+    expect(calls).toContainEqual(["road-casing", "line-color", "#E4E6E1"]);
+    expect(calls).toContainEqual(["place-label", "text-color", "#89928D"]);
+    expect(calls).toContainEqual(["place-label", "text-halo-color", "#FFFFFF"]);
     expect(calls).toContainEqual(["place-label", "text-halo-width", 1.1]);
-    expect(calls.every(([, property]) => /(?:-color|-halo-width)$/.test(property))).toBe(true);
+    expect(
+      calls.every(([, property]) => /(?:-color|-halo-width)$/.test(property)),
+    ).toBe(true);
   });
 
   it("continues styling after an unsupported property throws", () => {

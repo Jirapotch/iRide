@@ -30,8 +30,9 @@ export function resolveTheme(
   stored: string | null | undefined,
   systemPrefersDark: boolean,
 ): AppTheme {
+  void systemPrefersDark;
   if (stored === "light" || stored === "dark") return stored;
-  return systemPrefersDark ? "dark" : "light";
+  return "light";
 }
 
 export function mapStyle(mapTilerKey: string | undefined) {

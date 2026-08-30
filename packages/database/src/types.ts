@@ -625,6 +625,10 @@ export type Database = {
         };
         Returns: number;
       };
+      delete_vehicle_permanently: {
+        Args: { target_vehicle_id: string };
+        Returns: string;
+      };
       enqueue_job: {
         Args: { delay_seconds?: number; message: Json; queue_name: string };
         Returns: number;

@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 import { resolveTheme, type AppTheme } from "@/lib/app-navigation-domain";
 
@@ -13,7 +19,7 @@ const ThemeContext = createContext<{
 export function ThemeProvider({ children }: { readonly children: ReactNode }) {
   const [theme, setThemeState] = useState<AppTheme>(() =>
     typeof document === "undefined"
-      ? "dark"
+      ? "light"
       : resolveTheme(document.documentElement.dataset.theme, false),
   );
 

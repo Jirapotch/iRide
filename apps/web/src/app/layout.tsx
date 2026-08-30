@@ -45,7 +45,7 @@ export default async function RootLayout({
             var stored = localStorage.getItem('iride-theme');
             var theme = stored === 'light' || stored === 'dark'
               ? stored
-              : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+              : 'light';
             document.documentElement.dataset.theme = theme;
             document.documentElement.style.colorScheme = theme;
           } catch (_) {}

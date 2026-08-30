@@ -2,6 +2,7 @@ import type { Json } from "./types";
 
 export const QUEUE_NAMES = {
   MEDIA_PROCESSING: "media_processing",
+  MEDIA_CLEANUP: "media_cleanup",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -15,6 +16,12 @@ export interface QueuePolicy {
 
 export const QUEUE_POLICIES = {
   MEDIA_PROCESSING: {
+    archiveTerminalMessages: true,
+    maxAttempts: 5,
+    maxBatchSize: 10,
+    visibilityTimeoutSeconds: 300,
+  },
+  MEDIA_CLEANUP: {
     archiveTerminalMessages: true,
     maxAttempts: 5,
     maxBatchSize: 10,

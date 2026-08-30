@@ -27,7 +27,7 @@ test("map chrome follows theme without replacing the map canvas", async ({ page 
   const map = page.getByRole("region", { name: "Discover map" });
   const canvas = page.locator(".maplibregl-canvas");
   await canvas.evaluate((element) => { element.dataset.mapIdentity = "initial"; });
-  await expect(map).toHaveCSS("background-color", "rgb(227, 234, 232)");
+  await expect(map).toHaveCSS("background-color", "rgb(242, 243, 237)");
   const initialTheme = await page.locator("html").getAttribute("data-theme");
   const initialPaper = await map.evaluate((element) => getComputedStyle(element).getPropertyValue("--map-paper"));
   await page.getByRole("button", { name: "Settings" }).click();
@@ -37,7 +37,7 @@ test("map chrome follows theme without replacing the map canvas", async ({ page 
   await expect(page.locator("html")).toHaveAttribute("data-theme", nextTheme);
   const nextPaper = await map.evaluate((element) => getComputedStyle(element).getPropertyValue("--map-paper"));
   expect(nextPaper).not.toBe(initialPaper);
-  await expect(map).toHaveCSS("background-color", "rgb(227, 234, 232)");
+  await expect(map).toHaveCSS("background-color", "rgb(242, 243, 237)");
   await expect(canvas).toHaveAttribute("data-map-identity", "initial");
   await expect(canvas).toHaveCSS("filter", "none");
 });

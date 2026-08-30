@@ -24,14 +24,14 @@ export interface MapPalette {
 }
 
 export const naturalMistPalette: MapPalette = {
-  ground: "#e3eae8",
-  block: "#d7e0de",
-  block2: "#ced9d6",
-  road: "#f9fffd",
-  edge: "#c6d0ce",
-  water: "#c0dee3",
-  label: "#45504d",
-  veil: "oklch(15% .016 168 / .94)",
+  ground: "#F2F3ED",
+  block: "#B9DC69",
+  block2: "#E8E9E3",
+  road: "#FFFFFF",
+  edge: "#E4E6E1",
+  water: "#BFE3D8",
+  label: "#89928D",
+  veil: "rgb(242 243 237 / .18)",
 };
 
 export const mapPalettes: Record<AppTheme, MapPalette> = {
