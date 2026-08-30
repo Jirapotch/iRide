@@ -239,7 +239,6 @@ a {
 }
 .create-nav {
   color: #fff;
-  transform: translateY(-16px);
 }
 .create-orb {
   display: grid;
@@ -791,12 +790,19 @@ a {
   font-size: 0.78rem;
   font-weight: 850;
 }
+.activity-sheet-backdrop {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  background: rgb(0 4 8 / 0.48);
+  backdrop-filter: blur(3px);
+}
 .activity-sheet {
   position: fixed;
-  z-index: 58;
   inset: auto 0 calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
-  max-height: 72dvh;
-  overflow: auto;
+  max-height: 50dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--map-rule);
   border-radius: 1.25rem 1.25rem 0 0;
   background: var(--map-paper-raised);
@@ -933,10 +939,10 @@ a {
     height: 95px;
   }
   .activity-sheet {
-    inset: calc(var(--header-height) + 1rem) 1.5rem auto auto;
+    inset: auto 1.5rem 0 auto;
     width: 390px;
-    max-height: calc(100dvh - var(--header-height) - 2rem);
-    border-radius: 1.2rem;
+    max-height: 50dvh;
+    border-radius: 1.2rem 1.2rem 0 0;
   }
 }
 
@@ -1920,7 +1926,7 @@ a {
     height: calc(100dvh - var(--header-height));
   }
   .activity-sheet {
-    bottom: 1rem;
+    bottom: 0;
   }
   .community-page,
   .search-page {

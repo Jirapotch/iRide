@@ -20,6 +20,7 @@ import type {
 } from "@iride/types";
 import * as maplibregl from "maplibre-gl";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import {
   type CSSProperties,
@@ -81,6 +82,7 @@ export function ActivityHub({
   const timerRef = useRef<number | null>(null);
   const enabledRef = useRef(enabled);
   const themeRef = useRef(theme);
+  const markerTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     enabledRef.current = enabled;
@@ -211,7 +213,11 @@ export function ActivityHub({
               : feature.kind === "trip"
                 ? "T"
                 : "C";
-        button.addEventListener("click", () => setSelectedId(feature.id));
+        button.dataset.featureId = feature.id;
+        button.addEventListener("click", () => {
+          markerTriggerRef.current = button;
+          setSelectedId(feature.id);
+        });
         return new maplibregl.Marker({ element: button, anchor: "bottom" })
           .setLngLat([feature.longitude, feature.latitude])
           .addTo(map);
@@ -222,6 +228,16 @@ export function ActivityHub({
     () => features.find((feature) => feature.id === selectedId) ?? null,
     [features, selectedId],
   );
+  const closeFeatureSheet = useCallback(() => {
+    const markerId = selectedId;
+    setSelectedId(null);
+    window.requestAnimationFrame(() => {
+      const marker = Array.from(
+        document.querySelectorAll<HTMLButtonElement>(".activity-marker"),
+      ).find((button) => button.dataset.featureId === markerId);
+      (marker ?? markerTriggerRef.current)?.focus();
+    });
+  }, [selectedId]);
   function toggle(kind: ExploreFeatureKind) {
     setEnabled((current) =>
       current.includes(kind)
@@ -347,7 +363,7 @@ export function ActivityHub({
         <FeatureSheet
           feature={selected}
           locale={locale}
-          onClose={() => setSelectedId(null)}
+          onClose={closeFeatureSheet}
         />
       ) : null}
       {initialEdit ? (
@@ -390,72 +406,100 @@ function FeatureSheet({
 }) {
   const domain =
     feature.kind === "photographerSpot" ? "photographer-spots" : "events";
-  return (
-    <aside className="activity-sheet" aria-label={feature.title} role="dialog">
-      <button
-        aria-label="Close"
-        className="sheet-close"
-        onClick={onClose}
-        type="button"
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      className="activity-sheet-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <aside
+        aria-label={feature.title}
+        aria-modal="true"
+        className="activity-sheet"
+        role="dialog"
       >
-        <X size={18} />
-      </button>
-      <div className="activity-sheet-body">
-        <span
-          className="kind-badge"
-          style={
-            {
-              "--marker-color": contentKindColors[feature.kind],
-            } as CSSProperties
-          }
+        <button
+          aria-label="Close"
+          className="sheet-close"
+          onClick={onClose}
+          type="button"
         >
-          {label(feature.kind, locale)}
-        </span>
-        <h2>{feature.title}</h2>
-        <p>{feature.subtitle}</p>
-        <p>
-          <Link href={`/users/${feature.author.username}`}>
-            {feature.author.displayName}
-          </Link>{" "}
-          ·{" "}
-          <time dateTime={feature.startsAt}>
-            {new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            }).format(new Date(feature.startsAt))}
-          </time>
-        </p>
-        {feature.kind === "photographerSpot" ? (
-          <a
-            className="google-maps-action"
-            href={googleMapsSearchUrl({
-              latitude: feature.latitude,
-              longitude: feature.longitude,
-            })}
-            rel="noopener noreferrer"
-            target="_blank"
+          <X size={18} />
+        </button>
+        <div className="activity-sheet-body">
+          <span
+            className="kind-badge"
+            style={
+              {
+                "--marker-color": contentKindColors[feature.kind],
+              } as CSSProperties
+            }
           >
-            <ArrowSquareOut size={17} />
-            {locale === "th" ? "นำทางด้วย Google Maps" : "Open in Google Maps"}
-          </a>
-        ) : null}
-        {feature.canEdit ? (
-          <div className="owner-actions">
-            <Link href={`/?marker=${feature.id}&modal=edit`}>
-              {locale === "th" ? "แก้ไข" : "Edit"}
-            </Link>
-            <form action={removeContent}>
-              <input name="domain" type="hidden" value={domain} />
-              <input name="id" type="hidden" value={feature.id} />
-              <button type="submit">
-                <Trash size={16} />
-                {locale === "th" ? "ลบ" : "Delete"}
-              </button>
-            </form>
-          </div>
-        ) : null}
-      </div>
-    </aside>
+            {label(feature.kind, locale)}
+          </span>
+          <h2>{feature.title}</h2>
+          <p>{feature.subtitle}</p>
+          <p>
+            <Link href={`/users/${feature.author.username}`}>
+              {feature.author.displayName}
+            </Link>{" "}
+            ·{" "}
+            <time dateTime={feature.startsAt}>
+              {new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              }).format(new Date(feature.startsAt))}
+            </time>
+          </p>
+          {feature.kind === "photographerSpot" ? (
+            <a
+              className="google-maps-action"
+              href={googleMapsSearchUrl({
+                latitude: feature.latitude,
+                longitude: feature.longitude,
+              })}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <ArrowSquareOut size={17} />
+              {locale === "th"
+                ? "นำทางด้วย Google Maps"
+                : "Open in Google Maps"}
+            </a>
+          ) : null}
+          {feature.canEdit ? (
+            <div className="owner-actions">
+              <Link href={`/?marker=${feature.id}&modal=edit`}>
+                {locale === "th" ? "แก้ไข" : "Edit"}
+              </Link>
+              <form action={removeContent}>
+                <input name="domain" type="hidden" value={domain} />
+                <input name="id" type="hidden" value={feature.id} />
+                <button type="submit">
+                  <Trash size={16} />
+                  {locale === "th" ? "ลบ" : "Delete"}
+                </button>
+              </form>
+            </div>
+          ) : null}
+        </div>
+      </aside>
+    </div>,
+    document.body,
   );
 }
 
