@@ -20,12 +20,14 @@ import type {
 } from "@iride/types";
 import * as maplibregl from "maplibre-gl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useTheme } from "@/app/_components/theme-provider";
 import { mapStyle } from "@/lib/app-navigation-domain";
 import type { Locale } from "@/lib/locale";
 import { applyMapPalette } from "@/lib/map-palette";
 import { parseGoogleMapsCoordinates } from "@/lib/google-maps-domain";
+import { synchronizeMapLocation } from "@/lib/map-location-sync";
 import {
   applyMarkerMention,
   findMarkerMentionQuery,
@@ -460,8 +462,16 @@ function CoordinatePicker({
 }) {
   const [importOpen, setImportOpen] = useState(false),
     [mapsUrl, setMapsUrl] = useState(""),
+    [importError, setImportError] = useState<string | null>(null),
     [message, setMessage] = useState<string | null>(null),
     [pending, setPending] = useState(false);
+  const importButtonRef = useRef<HTMLButtonElement>(null);
+  const closeImport = useCallback(() => {
+    setImportOpen(false);
+    setMapsUrl("");
+    setImportError(null);
+    window.requestAnimationFrame(() => importButtonRef.current?.focus());
+  }, []);
   function locate() {
     if (!navigator.geolocation) {
       setMessage(
@@ -491,7 +501,7 @@ function CoordinatePicker({
         parseGoogleMapsCoordinates(mapsUrl) ??
         (await resolveGoogleMapsLocation(mapsUrl));
       if (!parsed) {
-        setMessage(
+        setImportError(
           locale === "th"
             ? "ลิงก์นี้ไม่มีพิกัดที่รองรับ"
             : "This link does not contain a supported location",
@@ -499,13 +509,12 @@ function CoordinatePicker({
         return;
       }
       onChange(parsed);
-      setMapsUrl("");
       setMessage(
         locale === "th"
           ? "นำเข้าตำแหน่งแล้ว คุณยังลาก Marker เพื่อปรับได้"
           : "Location imported. You can still drag the marker.",
       );
-      setImportOpen(false);
+      closeImport();
     } finally {
       setPending(false);
     }
@@ -544,9 +553,14 @@ function CoordinatePicker({
           {locale === "th" ? "ใช้ตำแหน่งฉัน" : "Locate me"}
         </button>
         <button
+          aria-haspopup="dialog"
           aria-expanded={importOpen}
           className="secondary-action"
-          onClick={() => setImportOpen((value) => !value)}
+          onClick={() => {
+            setImportError(null);
+            setImportOpen(true);
+          }}
+          ref={importButtonRef}
           type="button"
         >
           <LinkSimple size={17} />
@@ -556,36 +570,17 @@ function CoordinatePicker({
         </button>
       </div>
       {importOpen ? (
-        <div className="maps-import-panel">
-          <label className="form-field">
-            <span>
-              {locale === "th"
-                ? "วางลิงก์ Google Maps"
-                : "Paste a Google Maps link"}
-            </span>
-            <input
-              inputMode="url"
-              onChange={(event) => setMapsUrl(event.target.value)}
-              placeholder="https://maps.app.goo.gl/…"
-              type="url"
-              value={mapsUrl}
-            />
-          </label>
-          <button
-            className="primary-action"
-            disabled={pending || !mapsUrl.trim()}
-            onClick={() => void importLocation()}
-            type="button"
-          >
-            {pending
-              ? locale === "th"
-                ? "กำลังตรวจสอบ…"
-                : "Checking…"
-              : locale === "th"
-                ? "ใช้ตำแหน่งนี้"
-                : "Use this location"}
-          </button>
-        </div>
+        <GoogleMapsImportModal
+          error={importError}
+          locale={locale}
+          mapsUrl={mapsUrl}
+          onChange={setMapsUrl}
+          onClose={() => {
+            if (!pending) closeImport();
+          }}
+          onConfirm={() => void importLocation()}
+          pending={pending}
+        />
       ) : null}
       {message ? (
         <p aria-live="polite" className="form-hint">
@@ -593,6 +588,154 @@ function CoordinatePicker({
         </p>
       ) : null}
     </div>
+  );
+}
+
+function GoogleMapsImportModal({
+  error,
+  locale,
+  mapsUrl,
+  onChange,
+  onClose,
+  onConfirm,
+  pending,
+}: {
+  readonly error: string | null;
+  readonly locale: Locale;
+  readonly mapsUrl: string;
+  readonly onChange: (value: string) => void;
+  readonly onClose: () => void;
+  readonly onConfirm: () => void;
+  readonly pending: boolean;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.getClientRects().length > 0);
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    const frame = window.requestAnimationFrame(() => inputRef.current?.focus());
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      window.cancelAnimationFrame(frame);
+    };
+  }, []);
+  if (typeof document === "undefined") return null;
+  const title =
+    locale === "th" ? "นำเข้าจาก Google Maps" : "Import from Google Maps";
+  return createPortal(
+    <div
+      className="maps-import-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        aria-labelledby="google-maps-import-title"
+        aria-modal="true"
+        className="maps-import-modal"
+        ref={dialogRef}
+        role="dialog"
+      >
+        <header>
+          <h2 id="google-maps-import-title">{title}</h2>
+          <button
+            aria-label={locale === "th" ? "ปิด" : "Close"}
+            disabled={pending}
+            onClick={onClose}
+            type="button"
+          >
+            <X size={20} />
+          </button>
+        </header>
+        <div className="maps-import-modal-body">
+          <label className="form-field">
+            <span>
+              {locale === "th"
+                ? "วางลิงก์ Google Maps"
+                : "Paste a Google Maps link"}
+            </span>
+            <input
+              aria-describedby={error ? "google-maps-import-error" : undefined}
+              aria-invalid={error ? true : undefined}
+              inputMode="url"
+              onChange={(event) => onChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && mapsUrl.trim() && !pending) {
+                  event.preventDefault();
+                  onConfirm();
+                }
+              }}
+              placeholder="https://maps.app.goo.gl/…"
+              ref={inputRef}
+              type="url"
+              value={mapsUrl}
+            />
+          </label>
+          {error ? (
+            <p
+              className="field-error"
+              id="google-maps-import-error"
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
+        </div>
+        <footer>
+          <button
+            className="secondary-action"
+            disabled={pending}
+            onClick={onClose}
+            type="button"
+          >
+            {locale === "th" ? "ยกเลิก" : "Cancel"}
+          </button>
+          <button
+            className="primary-action"
+            disabled={pending || !mapsUrl.trim()}
+            onClick={onConfirm}
+            type="button"
+          >
+            {pending
+              ? locale === "th"
+                ? "กำลังตรวจสอบ…"
+                : "Checking…"
+              : locale === "th"
+                ? "ตกลง"
+                : "Use this location"}
+          </button>
+        </footer>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -620,10 +763,9 @@ function MiniMap({
 
     const { latitude, longitude } = coordinatesRef.current;
     const location = `${longitude},${latitude}`;
-    marker.setLngLat([longitude, latitude]);
+    synchronizeMapLocation(map, marker, { latitude, longitude });
     marker.getElement().dataset.location = location;
     container.dataset.cameraCenter = location;
-    map.flyTo({ center: [longitude, latitude], essential: false });
   }, []);
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -667,14 +809,14 @@ function MiniMap({
           longitude: event.lngLat.lng,
         }),
       );
+      mapRef.current = map;
+      markerRef.current = marker;
       map.once("load", () => {
         applyMapPalette(map, themeRef.current);
         synchronizeLocation();
       });
       const observer = new ResizeObserver(() => map.resize());
       observer.observe(containerRef.current);
-      mapRef.current = map;
-      markerRef.current = marker;
       return () => {
         observer.disconnect();
         marker.remove();

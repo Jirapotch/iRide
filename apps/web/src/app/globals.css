@@ -2421,24 +2421,58 @@ input[type="datetime-local"] {
 .location-action-row > * {
   flex: 1 1 13rem;
 }
-.maps-import-panel {
+.maps-import-backdrop {
+  position: fixed;
+  z-index: 110;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(1 6 10/0.68);
+  backdrop-filter: blur(6px);
+}
+.maps-import-modal {
+  width: min(100%, 480px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--surface);
+  box-shadow: 0 24px 80px rgb(0 0 0/0.5);
+}
+.maps-import-modal > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+.maps-import-modal > header h2 {
+  font-size: 1rem;
+  font-weight: 900;
+}
+.maps-import-modal > header button {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.maps-import-modal-body {
   display: grid;
   gap: 0.55rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 0.9rem;
-  background: var(--surface-elevated);
+  padding: 1rem 1.1rem;
 }
-.maps-import-panel > div {
-  display: flex;
-  gap: 0.5rem;
-}
-.maps-import-panel input {
-  flex: 1;
+.maps-import-modal-body input {
   min-width: 0;
 }
-.maps-import-panel button {
-  flex: none;
+.maps-import-modal > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding: 0 1.1rem 1.1rem;
 }
 .map-actions-stack {
   position: absolute;
@@ -2697,11 +2731,12 @@ input[type="datetime-local"] {
   .coordinate-grid {
     grid-template-columns: 1fr;
   }
-  .maps-import-panel > div {
-    display: grid;
+  .maps-import-backdrop {
+    place-items: end center;
+    padding: 0.75rem;
   }
-  .maps-import-panel button {
-    width: 100%;
+  .maps-import-modal > footer > * {
+    flex: 1;
   }
   .form-actions {
     align-items: stretch;

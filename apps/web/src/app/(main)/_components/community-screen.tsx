@@ -18,8 +18,8 @@ import type {
   PostDto,
 } from "@iride/types";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import {
@@ -30,44 +30,40 @@ import { getComments, mediaVariantUrl } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
 import { commentAction } from "../community/actions";
 import { removeContent, removeMarketAction } from "../create/actions";
-import {
-  BackendForm,
-  MarketForm,
-  type MarkerOption,
-} from "./create-content-screen";
+import type { MarkerOption } from "./create-content-screen";
 import { EditModal } from "./edit-modal";
+
+const BackendForm = dynamic(() =>
+  import("./create-content-screen").then((module) => module.BackendForm),
+);
+const MarketForm = dynamic(() =>
+  import("./create-content-screen").then((module) => module.MarketForm),
+);
 
 interface Props {
   readonly authenticated: boolean;
+  readonly editId: string | undefined;
   readonly locale: Locale;
   readonly markerOptions: readonly MarkerOption[];
   readonly posts: readonly PostDto[];
   readonly products: readonly MarketProductDto[];
+  readonly room: CommunityRoomId;
+  readonly selectedProductId: string | undefined;
   readonly spots: readonly PhotographerSpotDto[];
   readonly viewer: ContentAuthorDto | null;
 }
 export function CommunityScreen({
   authenticated,
+  editId,
   locale,
   markerOptions,
   posts,
   products,
+  room,
+  selectedProductId,
   spots,
   viewer,
 }: Props) {
-  const params = useSearchParams(),
-    requested = params.get("room"),
-    room: CommunityRoomId = communityRooms.some((item) => item.id === requested)
-      ? (requested as CommunityRoomId)
-      : "talk";
-  const editId =
-    params.get("modal") === "edit"
-      ? room === "talk"
-        ? params.get("post")
-        : room === "market"
-          ? params.get("product")
-          : null
-      : null;
   const editPost = editId
     ? (posts.find((item) => item.id === editId && item.canEdit) ?? null)
     : null;
@@ -103,7 +99,11 @@ export function CommunityScreen({
         />
       ) : null}
       {room === "market" ? (
-        <MarketRoom locale={locale} products={products} />
+        <MarketRoom
+          locale={locale}
+          products={products}
+          selectedProductId={selectedProductId}
+        />
       ) : null}
       {room === "photographers" ? (
         <PhotographerRoom locale={locale} spots={spots} />
@@ -581,11 +581,12 @@ function CommentBody({
 function MarketRoom({
   locale,
   products,
+  selectedProductId,
 }: {
   readonly locale: Locale;
   readonly products: readonly MarketProductDto[];
+  readonly selectedProductId: string | undefined;
 }) {
-  const params = useSearchParams();
   return (
     <section>
       <div className="room-action-row">
@@ -600,7 +601,7 @@ function MarketRoom({
       </div>
       <div className="product-grid">
         {products.map((product) => {
-          const selected = params.get("product") === product.id;
+          const selected = selectedProductId === product.id;
           return (
             <article
               className={`product-card ${selected ? "is-selected" : ""}`}

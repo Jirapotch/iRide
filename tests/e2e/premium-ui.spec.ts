@@ -431,10 +431,14 @@ test("Google Maps import updates the form and the rendered map location", async 
 
   const map = page.locator(".mini-map-preview");
   await page.getByRole("button", { name: "Import from Google Maps" }).click();
+  const importDialog = page.getByRole("dialog", {
+    name: "Import from Google Maps",
+  });
+  await expect(importDialog).toBeVisible();
   await page
     .getByLabel("Paste a Google Maps link")
     .fill("https://www.google.com/maps/search/?api=1&query=18.788343,98.9853");
-  await page.getByRole("button", { name: "Use this location" }).click();
+  await importDialog.getByRole("button", { name: "Use this location" }).click();
 
   await expect(page.locator('input[name="latitude"]')).toHaveValue("18.788343");
   await expect(page.locator('input[name="longitude"]')).toHaveValue("98.9853");
@@ -444,7 +448,7 @@ test("Google Maps import updates the form and the rendered map location", async 
   await expect(
     map.getByRole("img", { name: "Selected location" }),
   ).toHaveAttribute("data-location", "98.9853,18.788343");
-  await expect(page.getByLabel("Paste a Google Maps link")).toHaveCount(0);
+  await expect(importDialog).toHaveCount(0);
   await page.getByRole("button", { name: "Import from Google Maps" }).click();
   await expect(page.getByLabel("Paste a Google Maps link")).toHaveValue("");
 });
@@ -455,12 +459,16 @@ test("an invalid map URL leaves its import panel open with an error", async ({
   await openActivityCreateForm(page);
 
   await page.getByRole("button", { name: "Import from Google Maps" }).click();
+  const importDialog = page.getByRole("dialog", {
+    name: "Import from Google Maps",
+  });
+  await expect(importDialog).toBeVisible();
   await page
     .getByLabel("Paste a Google Maps link")
     .fill("https://example.com/not-a-map");
-  await page.getByRole("button", { name: "Use this location" }).click();
+  await importDialog.getByRole("button", { name: "Use this location" }).click();
 
-  await expect(page.getByLabel("Paste a Google Maps link")).toBeVisible();
+  await expect(importDialog).toBeVisible();
   await expect(
     page.getByText("This link does not contain a supported location"),
   ).toBeVisible();

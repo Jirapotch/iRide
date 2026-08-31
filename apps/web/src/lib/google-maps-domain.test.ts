@@ -27,6 +27,14 @@ describe("Google Maps coordinates", () => {
     expect(parseGoogleMapsCoordinates(input)).toEqual(expected);
   });
 
+  it("prefers the place marker over the map viewport center", () => {
+    expect(
+      parseGoogleMapsCoordinates(
+        "https://www.google.com/maps/place/Test/@13.7,100.5,15z/data=!3d13.7563!4d100.5018",
+      ),
+    ).toEqual({ latitude: 13.7563, longitude: 100.5018 });
+  });
+
   it.each([
     "https://example.com/maps/@13.7,100.5",
     "https://www.google.com/maps/@91,100,15z",

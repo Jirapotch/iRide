@@ -27,12 +27,12 @@ export function parseGoogleMapsCoordinates(input: string): Coordinates | null {
     url.searchParams.get("q"),
     url.searchParams.get("center"),
   ];
-  const at = url.pathname.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,|$)/);
-  if (at) candidates.push(`${at[1]},${at[2]}`);
   const data = `${url.pathname}${url.search}${url.hash}`.match(
     /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
   );
   if (data) candidates.push(`${data[1]},${data[2]}`);
+  const at = url.pathname.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,|$)/);
+  if (at) candidates.push(`${at[1]},${at[2]}`);
 
   for (const candidate of candidates) {
     const coordinates = parseCoordinatePair(candidate);

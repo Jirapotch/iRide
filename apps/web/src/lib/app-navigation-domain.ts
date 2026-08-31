@@ -13,6 +13,34 @@ export const communityRooms = [
   readonly label: { readonly th: string; readonly en: string };
 }[];
 
+export interface CommunityDataNeeds {
+  readonly posts: boolean;
+  readonly products: boolean;
+  readonly spots: boolean;
+  readonly events: boolean;
+}
+
+export function communityDataNeeds(
+  requestedRoom: string | undefined,
+): CommunityDataNeeds {
+  const room = resolveCommunityRoom(requestedRoom);
+
+  return {
+    posts: room === "talk",
+    products: room === "market",
+    spots: room === "talk" || room === "photographers",
+    events: room === "talk",
+  };
+}
+
+export function resolveCommunityRoom(
+  requestedRoom: string | undefined,
+): CommunityRoomId {
+  return communityRooms.some(({ id }) => id === requestedRoom)
+    ? (requestedRoom as CommunityRoomId)
+    : "talk";
+}
+
 export function searchResultHref(result: SearchResultDto): string {
   if (result.kind === "profile" && result.username) {
     return `/users/${encodeURIComponent(result.username)}`;

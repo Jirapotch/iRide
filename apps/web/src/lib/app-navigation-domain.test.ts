@@ -2,8 +2,10 @@ import type { SearchResultDto } from "@iride/types";
 import { describe, expect, it } from "vitest";
 
 import {
+  communityDataNeeds,
   communityRooms,
   mapStyle,
+  resolveCommunityRoom,
   resolveTheme,
   searchResultHref,
 } from "./app-navigation-domain";
@@ -16,6 +18,28 @@ describe("application navigation domain", () => {
       "photographers",
       "groups",
     ]);
+  });
+
+  it.each([
+    [undefined, { posts: true, products: false, spots: true, events: true }],
+    ["talk", { posts: true, products: false, spots: true, events: true }],
+    ["market", { posts: false, products: true, spots: false, events: false }],
+    [
+      "photographers",
+      { posts: false, products: false, spots: true, events: false },
+    ],
+    ["groups", { posts: false, products: false, spots: false, events: false }],
+    ["unknown", { posts: true, products: false, spots: true, events: true }],
+  ] as const)("loads only the data needed by room %s", (room, expected) => {
+    expect(communityDataNeeds(room)).toEqual(expected);
+  });
+
+  it.each([
+    [undefined, "talk"],
+    ["market", "market"],
+    ["unknown", "talk"],
+  ] as const)("resolves room %s to %s", (requested, expected) => {
+    expect(resolveCommunityRoom(requested)).toBe(expected);
   });
 
   it.each([
