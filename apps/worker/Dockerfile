@@ -21,6 +21,8 @@ RUN pnpm install --frozen-lockfile
 COPY apps/worker apps/worker
 COPY packages packages
 RUN pnpm --filter @iride/worker build
+RUN pnpm --filter @iride/worker --prod deploy --legacy /prod/worker \
+  && cp -R /app/apps/worker/dist /prod/worker/dist
 
 FROM node:22-alpine AS runtime
 
@@ -28,7 +30,7 @@ ENV NODE_ENV=production
 ENV WORKER_PORT=3002
 WORKDIR /app
 
-COPY --from=build /app/apps/worker/dist ./dist
+COPY --from=build /prod/worker ./
 
 EXPOSE 3002
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
