@@ -12,4 +12,4 @@ After bootstrap, production database changes are forward-only migrations run by 
 
 ## Consequences
 
-Local and CI database tests are the migration gate, but they do not replace staging validation. Production carries additional release risk until staging exists. Provisioning staging should supersede this ADR and remove production test identities before real-user launch.
+Local database tests are the migration gate, but they do not replace staging validation. Production carries additional release risk until staging exists. Provisioning staging should supersede this ADR and remove production test identities before real-user launch.

@@ -28,7 +28,7 @@ iRide is a mobile-first, bilingual community for people who love cars and the st
 - Docker-compatible runtime with at least 7 GB available for the local Supabase stack
 - Docker for the optional local worker container smoke test
 
-The current development machine may use another Node version, but CI and production images use Node 22. Use Node 22 before treating a local verification as release-equivalent.
+The production images use Node 22. Use Node 22 before treating a local verification as release-equivalent.
 
 ## Local setup
 
@@ -65,7 +65,7 @@ pnpm test:e2e
 pnpm check
 ```
 
-`pnpm check` runs lint, typecheck, unit tests, and production builds. Playwright is separate because it starts local web/API servers and requires a browser installed with `pnpm exec playwright install chromium`. CI runs both suites.
+`pnpm check` runs lint, typecheck, unit tests, and production builds. Playwright is separate because it starts local web/API servers and requires a browser installed with `pnpm exec playwright install chromium`. Run both suites locally before merging changes.
 
 ## Supabase development
 
@@ -109,7 +109,7 @@ Build from the repository root:
 docker build -f apps/worker/Dockerfile -t iride-worker .
 ```
 
-Run it with the server-only variables listed in `.env.example`. The image uses Node 22, runs as the unprivileged `node` user, and exposes port 3002. Docker is not installed on every development machine, so the authoritative container smoke test runs in GitHub Actions.
+Run it with the server-only variables listed in `.env.example`. The image uses Node 22, runs as the unprivileged `node` user, and exposes port 3002. When changing the worker or its container configuration, build the image and smoke-test `/health` locally before merging.
 
 ## Deployment targets
 
