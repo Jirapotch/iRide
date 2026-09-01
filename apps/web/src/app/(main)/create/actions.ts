@@ -1,7 +1,6 @@
 "use server";
 
 import {
-  createMarketProductSchema,
   createVehicleSchema,
   createEventSchema,
   createPhotographerSpotSchema,
@@ -18,17 +17,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
+import { createContentTypes, postDestination, type CreateContentType } from "@/lib/create-content-domain";
 import { resolveGoogleMapsCoordinates } from "@/lib/google-maps-resolver";
 import {
   createEvent,
-  createMarketProduct,
   createPhotographerSpot,
   createPost,
   deleteContent,
   updateEvent,
   updatePhotographerSpot,
   updatePost,
-  updateMarketProduct,
   createVehicle,
   updateVehicle,
   deleteVehicle,
@@ -39,12 +37,14 @@ export async function saveContent(formData: FormData) {
   const session = await getVerifiedWebSession();
   if (!session) redirect("/login?next=/create");
   const type = String(formData.get("type") ?? "post");
+  if (!createContentTypes.includes(type as CreateContentType)) throw new Error("CREATE_TYPE_UNAVAILABLE");
   const editId = optional(formData, "editId");
 
   if (type === "post") {
     const tags = markerTags(formData);
     const raw = {
       body: String(formData.get("body") ?? ""),
+      communityCategory: String(formData.get("communityCategory") ?? "groups"),
       ...(tags.length ? { markerTags: tags } : {}),
     };
     const result = editId
@@ -57,21 +57,7 @@ export async function saveContent(formData: FormData) {
           session.accessToken,
           createPostSchema.parse(raw) as CreatePostInput,
         );
-    redirect(`/community?room=talk&post=${result.id}`);
-  }
-
-  if (type === "market") {
-    const input = createMarketProductSchema.parse({
-      name: String(formData.get("name") ?? ""),
-      priceSatang: Math.round(Number(formData.get("price")) * 100),
-      category: String(formData.get("category") ?? ""),
-      vehicleKinds: formData.getAll("vehicleKinds").map(String),
-      coverMediaId: optional(formData, "coverMediaId"),
-    });
-    const result = editId
-      ? await updateMarketProduct(session.accessToken, editId, input)
-      : await createMarketProduct(session.accessToken, input);
-    redirect(`/community?room=market&product=${result.id}`);
+    redirect(postDestination(result.communityCategory, result.id));
   }
 
   if (type === "photographer-spot") {
@@ -89,7 +75,7 @@ export async function saveContent(formData: FormData) {
     const result = editId
       ? await updatePhotographerSpot(session.accessToken, editId, input)
       : await createPhotographerSpot(session.accessToken, input);
-    redirect(`/?marker=${result.id}`);
+    redirect(`/maps?marker=${result.id}`);
   }
 
   const kind =
@@ -113,7 +99,7 @@ export async function saveContent(formData: FormData) {
   const result = editId
     ? await updateEvent(session.accessToken, editId, input)
     : await createEvent(session.accessToken, input);
-  redirect(`/?marker=${result.id}`);
+  redirect(`/maps?marker=${result.id}`);
 }
 
 export async function saveVehicleAction(formData: FormData) {
@@ -154,7 +140,7 @@ export async function removeMarketAction(formData: FormData) {
     session.accessToken,
     String(formData.get("id") ?? ""),
   );
-  redirect("/community?room=market");
+  redirect("/community/motorcycle/market");
 }
 
 export async function removeContent(formData: FormData) {
@@ -166,8 +152,12 @@ export async function removeContent(formData: FormData) {
   if (!id || !["posts", "events", "photographer-spots"].includes(domain))
     throw new Error("INVALID_DELETE");
   await deleteContent(session.accessToken, domain, id);
-  revalidatePath(domain === "posts" ? "/community" : "/");
-  redirect(domain === "posts" ? "/community?room=talk" : "/");
+  revalidatePath(domain === "posts" ? "/community" : "/maps");
+  if (domain === "posts") {
+    const parsed = createPostSchema.shape.communityCategory.safeParse(String(formData.get("communityCategory") ?? "groups"));
+    redirect(postDestination(parsed.success ? parsed.data : "groups", id).split("?")[0]!);
+  }
+  redirect("/maps");
 }
 
 export async function resolveGoogleMapsLocation(input: string) {

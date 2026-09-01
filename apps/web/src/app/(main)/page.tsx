@@ -1,64 +1,34 @@
-import type {
-  EventDto,
-  ExploreFeatureDto,
-  PhotographerSpotDto,
-} from "@iride/types";
+import { Bicycle, Camera, Car, Motorcycle, UsersThree } from "@phosphor-icons/react/dist/ssr";
+import Link from "next/link";
 
-import { getVerifiedWebSession } from "@/lib/auth-session";
-import { getEvent, getPhotographerSpot } from "@/lib/content-api";
 import { getRequestLocale } from "@/lib/request-locale";
-import { ActivityHub } from "./_components/activity-hub";
 
-export default async function HomePage({
-  searchParams,
-}: {
-  readonly searchParams: Promise<{ marker?: string; modal?: string }>;
-}) {
-  const [locale, params, session] = await Promise.all([
-    getRequestLocale(),
-    searchParams,
-    getVerifiedWebSession().catch(() => null),
-  ]);
-  const accessToken = session?.accessToken;
-  const selectedContent = params.marker
-    ? await getEvent(params.marker, accessToken).catch(() =>
-        getPhotographerSpot(params.marker!, accessToken).catch(() => null),
-      )
-    : null;
-  const initialFeature = selectedContent
-    ? toExploreFeature(selectedContent)
-    : null;
-  const initialEdit =
-    params.modal === "edit" && selectedContent?.canEdit
-      ? selectedContent
-      : null;
+const categories = [
+  { href: "/community/car", key: "car", icon: Car },
+  { href: "/community/motorcycle", key: "motorcycle", icon: Motorcycle },
+  { href: "/community/bicycle", key: "bicycle", icon: Bicycle },
+  { href: "/community/photographers", key: "photographers", icon: Camera },
+  { href: "/community/groups", key: "groups", icon: UsersThree },
+] as const;
 
+const labels = {
+  th: { heading: "เลือกพื้นที่ของคุณ", intro: "พบปะ แลกเปลี่ยน และออกเดินทางกับผู้คนที่ชอบสิ่งเดียวกัน", car: "รถยนต์", motorcycle: "มอเตอร์ไซค์", bicycle: "จักรยาน", photographers: "ช่างภาพ", groups: "กลุ่ม" },
+  en: { heading: "Choose your space", intro: "Meet, share, and explore with people who enjoy the same things.", car: "Cars", motorcycle: "Motorcycles", bicycle: "Bicycles", photographers: "Photographers", groups: "Groups" },
+} as const;
+
+export default async function HomePage() {
+  const locale = await getRequestLocale();
+  const text = labels[locale];
   return (
-    <ActivityHub
-      editDenied={
-        params.modal === "edit" && Boolean(params.marker) && !initialEdit
-      }
-      initialEdit={initialEdit}
-      initialFeature={initialFeature}
-      locale={locale}
-    />
+    <main className="community-home">
+      <header className="community-home-heading"><h1>{text.heading}</h1><p>{text.intro}</p></header>
+      <div className="community-category-grid">
+        {categories.map(({ href, icon: Icon, key }) => (
+          <Link className={`community-category-card is-${key}`} href={href} key={key}>
+            <span><Icon aria-hidden size={42} weight="duotone" /></span><strong>{text[key]}</strong>
+          </Link>
+        ))}
+      </div>
+    </main>
   );
-}
-
-function toExploreFeature(
-  content: EventDto | PhotographerSpotDto,
-): ExploreFeatureDto {
-  return {
-    id: content.id,
-    kind: "photographer" in content ? "photographerSpot" : content.kind,
-    title: content.title,
-    subtitle: content.locationLabel,
-    latitude: content.latitude,
-    longitude: content.longitude,
-    startsAt: content.startsAt,
-    endsAt: content.endsAt,
-    author:
-      "photographer" in content ? content.photographer : content.organizer,
-    canEdit: content.canEdit,
-  };
 }

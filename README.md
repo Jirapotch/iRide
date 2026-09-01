@@ -1,5 +1,15 @@
 # iRide
 
+## Bootstrap the first administrator
+
+After applying the account-access migration, promote the intended profile with a server-only service-role environment. The command defaults to `jirapotch`; pass a username to target a different existing profile. It never creates a profile or accepts an invented UUID.
+
+```bash
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... pnpm admin:promote [username]
+```
+
+Administrative state changes are tokenized. If a transition remains pending for at least 15 minutes, an active administrator can safely reconcile it with `PATCH /api/v1/admin/users/:id` and `{ "action": "recover" }`. Recovery first restores the target's Auth ban state to the recorded prior access state, then atomically rolls the database transition back only when its exact token is still current; a newer transition is never overwritten.
+
 iRide is a mobile-first, bilingual community for people who love cars and the stories behind every drive. This repository currently contains the platform foundation only; business features begin in Step 02 of the implementation plans.
 
 ## Repository layout

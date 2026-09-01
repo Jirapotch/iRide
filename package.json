@@ -17,6 +17,7 @@
     "db:test": "supabase test db --local",
     "db:types": "node scripts/generate-database-types.mjs",
     "db:types:check": "node scripts/check-database-types.mjs",
+    "admin:promote": "node scripts/promote-admin.mjs",
     "lint": "turbo run lint && eslint scripts eslint.config.mjs playwright.config.ts vitest.config.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

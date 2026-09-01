@@ -23,6 +23,7 @@ const author = { id: userId, username: "road_rider", displayName: "Road Rider" }
 const post: PostDto = {
   id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   body: "Sunday meetup",
+  communityCategory: "motorcycle",
   author,
   canEdit: true,
   commentCount: 0,
@@ -85,7 +86,7 @@ describe("content API handlers", () => {
           authorization: "Bearer signed.jwt",
           "content-type": "application/json",
         },
-        body: JSON.stringify({ body: "  Sunday meetup  " }),
+        body: JSON.stringify({ body: "  Sunday meetup  ", communityCategory: "motorcycle" }),
       }),
       "posts",
       dependencies,
@@ -95,7 +96,7 @@ describe("content API handlers", () => {
     expect(repository.createPost).toHaveBeenCalledWith(
       userId,
       "signed.jwt",
-      { body: "Sunday meetup" },
+      { body: "Sunday meetup", communityCategory: "motorcycle" },
     );
   });
 
@@ -130,7 +131,7 @@ describe("content API handlers", () => {
           authorization: "Bearer signed.jwt",
           "content-type": "application/json",
         },
-        body: JSON.stringify({ body: "Updated" }),
+        body: JSON.stringify({ body: "Updated", communityCategory: "groups" }),
       }),
       "posts",
       post.id,
@@ -151,7 +152,7 @@ describe("content API handlers", () => {
       userId,
       "signed.jwt",
       post.id,
-      { body: "Updated" },
+      { body: "Updated", communityCategory: "groups" },
     );
     expect(remove.status).toBe(204);
     expect(repository.deletePost).toHaveBeenCalledWith(
@@ -159,6 +160,30 @@ describe("content API handlers", () => {
       "signed.jwt",
       post.id,
     );
+  });
+
+  it("keeps generic post, event, and photographer-spot deletes on their existing authenticated endpoints", async () => {
+    const { dependencies, repository } = setup();
+    const id = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+    const responses = await Promise.all(
+      (["posts", "events", "photographer-spots"] as const).map((domain) =>
+        handleContentItem(
+          new Request(`http://localhost:3001/api/v1/${domain}/${id}`, {
+            method: "DELETE",
+            headers: { authorization: "Bearer signed.jwt" },
+          }),
+          domain,
+          id,
+          dependencies,
+        ),
+      ),
+    );
+
+    expect(responses.map((response) => response.status)).toEqual([204, 204, 204]);
+    expect(repository.deletePost).toHaveBeenCalledWith(userId, "signed.jwt", id);
+    expect(repository.deleteEvent).toHaveBeenCalledWith(userId, "signed.jwt", id);
+    expect(repository.deletePhotographerSpot).toHaveBeenCalledWith(userId, "signed.jwt", id);
   });
 
   it("maps missing and forbidden records to stable errors", async () => {
@@ -180,7 +205,7 @@ describe("content API handlers", () => {
           authorization: "Bearer signed.jwt",
           "content-type": "application/json",
         },
-        body: JSON.stringify({ body: "Updated" }),
+        body: JSON.stringify({ body: "Updated", communityCategory: "groups" }),
       }),
       "posts",
       post.id,
@@ -234,6 +259,43 @@ describe("content API handlers", () => {
       dependencies,
     );
     expect(empty.status).toBe(400);
+  });
+
+  it("filters posts by a valid community category", async () => {
+    const { dependencies, repository } = setup();
+    const response = await handleContentCollection(
+      new Request("http://localhost:3001/api/v1/posts?communityCategory=car"),
+      "posts",
+      dependencies,
+    );
+    expect(response.status).toBe(200);
+    expect(repository.listPosts).toHaveBeenCalledWith(null, "car");
+  });
+
+  it("rejects an invalid community category", async () => {
+    const { dependencies, repository } = setup();
+    const response = await handleContentCollection(
+      new Request("http://localhost:3001/api/v1/posts?communityCategory=boat"),
+      "posts",
+      dependencies,
+    );
+    expect(response.status).toBe(400);
+    expect(repository.listPosts).not.toHaveBeenCalled();
+  });
+
+  it("does not include market products in the default public search types", async () => {
+    const { dependencies, repository } = setup();
+    const response = await handleSearch(
+      new Request("http://localhost:3001/api/v1/search?q=road"),
+      dependencies,
+    );
+
+    expect(response.status).toBe(200);
+    expect(repository.search).toHaveBeenCalledWith(
+      "road",
+      ["profiles", "posts", "events", "photographer-spots"],
+      null,
+    );
   });
 
   it("returns authentication errors without invoking mutations", async () => {

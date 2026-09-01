@@ -39,6 +39,7 @@ import { MediaUploader } from "./media-uploader";
 
 interface Props {
   readonly activities: readonly ExploreFeatureDto[];
+  readonly canManage: boolean;
   readonly initialTab?: string;
   readonly locale: Locale;
   readonly modal?: string;
@@ -49,6 +50,7 @@ interface Props {
 }
 export function UserProfileScreen({
   activities,
+  canManage,
   initialTab,
   locale,
   modal,
@@ -70,8 +72,8 @@ export function UserProfileScreen({
         ) ?? null)
       : null,
     showVehicleModal = Boolean(
-      ownerProfile &&
-      (modal === "create-vehicle" || (modal === "edit" && selected)),
+      (modal === "create-vehicle" && ownerProfile?.canWrite) ||
+      (modal === "edit" && selected && (ownerProfile?.canWrite || canManage)),
     );
   const vehicleEditDenied = Boolean(
     modal === "edit" && selectedVehicleId && !selected,
@@ -119,14 +121,7 @@ export function UserProfileScreen({
             unoptimized
           />
         ) : (
-          <Image
-            alt="Adventure rider profile cover"
-            className="object-cover"
-            fill
-            priority
-            sizes="960px"
-            src="/media/hero-road.webp"
-          />
+          <div aria-label="Profile cover placeholder" className="profile-cover-placeholder" role="img" />
         )}
         <div aria-hidden="true" />
       </div>
@@ -155,7 +150,7 @@ export function UserProfileScreen({
                 {text.cancel}
               </button>
             </div>
-            <div className="profile-media-editors">
+            {ownerProfile.canWrite ? <div className="profile-media-editors">
               <section>
                 <h2>{locale === "th" ? "รูปโปรไฟล์" : "Profile photo"}</h2>
                 <MediaUploader
@@ -174,7 +169,7 @@ export function UserProfileScreen({
                   purpose="cover"
                 />
               </section>
-            </div>
+            </div> : null}
             <ProfileForm
               action={editProfile}
               initialProfile={ownerProfile}
@@ -246,7 +241,7 @@ export function UserProfileScreen({
             {tab === "garage" ? (
               <GaragePanel
                 locale={locale}
-                owner={Boolean(ownerProfile)}
+                canCreate={ownerProfile?.canWrite ?? false}
                 username={profile.username}
                 vehicles={vehicles}
               />
@@ -303,7 +298,7 @@ function ProfileActivities({
             ? "ยังไม่มีกิจกรรมที่เผยแพร่"
             : "No published activities yet"}
         </strong>
-        <Link href="/">{locale === "th" ? "เปิดแผนที่" : "Open map"}</Link>
+        <Link href="/maps">{locale === "th" ? "เปิดแผนที่" : "Open map"}</Link>
       </section>
     );
   return (
@@ -320,7 +315,7 @@ function ProfileActivities({
         return (
           <Link
             className="premium-card profile-activity-card"
-            href={`/?marker=${activity.id}`}
+            href={`/maps?marker=${activity.id}`}
             key={`${activity.kind}:${activity.id}`}
           >
             <Icon size={24} />
@@ -348,13 +343,13 @@ function ProfileActivities({
 }
 
 function GaragePanel({
+  canCreate,
   locale,
-  owner,
   username,
   vehicles,
 }: {
   readonly locale: Locale;
-  readonly owner: boolean;
+  readonly canCreate: boolean;
   readonly username: string;
   readonly vehicles: readonly VehicleDto[];
 }) {
@@ -365,7 +360,7 @@ function GaragePanel({
           <p className="premium-kicker">Garage</p>
           <h2>{locale === "th" ? "Vehicle" : "Vehicles"}</h2>
         </div>
-        {owner ? (
+        {canCreate ? (
           <Link
             className={buttonVariants()}
             href={`/users/${username}?tab=garage&modal=create-vehicle`}

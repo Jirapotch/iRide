@@ -1,7 +1,47 @@
 import type { SearchResultDto } from "@iride/types";
+import type { CommunityCategory } from "@iride/types";
 
 export type AppTheme = "light" | "dark";
 export type CommunityRoomId = "talk" | "market" | "photographers" | "groups";
+
+export function primaryNavigation(username: string | null) {
+  return [
+    { href: "/", key: "home" as const },
+    { href: "/maps", key: "maps" as const },
+    { href: "/create", key: "create" as const },
+    { href: "/search", key: "search" as const },
+    {
+      href: username ? `/users/${encodeURIComponent(username)}` : "/login?intent=profile",
+      key: "profile" as const,
+    },
+  ];
+}
+
+export function communityCategoryHref(category: CommunityCategory): string {
+  return `/community/${category}`;
+}
+
+export function communityTalkHref(category: CommunityCategory): string {
+  return category === "car" || category === "motorcycle" || category === "bicycle"
+    ? `/community/${category}/talk`
+    : communityCategoryHref(category);
+}
+
+export function legacyCommunityHref(
+  room: string | undefined,
+  selection: { readonly post?: string; readonly modal?: string } = {},
+): string {
+  if (room === "market") return "/community/motorcycle/market";
+  const pathname = room === "photographers" ? "/community/photographers" : "/community/groups";
+  const query = new URLSearchParams();
+  if (selection.post) query.set("post", selection.post);
+  if (selection.modal === "edit") query.set("modal", "edit");
+  return query.size ? `${pathname}?${query}` : pathname;
+}
+
+export function publicSearchResults(results: readonly SearchResultDto[]): SearchResultDto[] {
+  return results.filter((result) => result.kind !== "marketProduct");
+}
 
 export const communityRooms = [
   { id: "talk", label: { th: "พูดคุย", en: "Talk" } },
@@ -46,12 +86,9 @@ export function searchResultHref(result: SearchResultDto): string {
     return `/users/${encodeURIComponent(result.username)}`;
   }
   if (result.kind === "post") {
-    return `/community?room=talk&post=${encodeURIComponent(result.id)}`;
+    return `${communityTalkHref(result.communityCategory ?? "groups")}?post=${encodeURIComponent(result.id)}`;
   }
-  if (result.kind === "marketProduct") {
-    return `/community?room=market&product=${encodeURIComponent(result.id)}`;
-  }
-  return `/?marker=${encodeURIComponent(result.id)}`;
+  return `/maps?marker=${encodeURIComponent(result.id)}`;
 }
 
 export function resolveTheme(

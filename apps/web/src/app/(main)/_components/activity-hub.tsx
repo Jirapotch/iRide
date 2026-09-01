@@ -368,7 +368,7 @@ export function ActivityHub({
       ) : null}
       {initialEdit ? (
         <EditModal
-          closeUrl={`/?marker=${initialEdit.id}`}
+          closeUrl={`/maps?marker=${initialEdit.id}`}
           title={locale === "th" ? "แก้ไขข้อมูล" : "Edit details"}
         >
           <BackendForm
@@ -501,25 +501,21 @@ function FeatureSheet({
               }).format(new Date(feature.startsAt))}
             </time>
           </p>
-          {feature.kind === "photographerSpot" ? (
-            <a
-              className="google-maps-action"
-              href={googleMapsSearchUrl({
-                latitude: feature.latitude,
-                longitude: feature.longitude,
-              })}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <ArrowSquareOut size={17} />
-              {locale === "th"
-                ? "นำทางด้วย Google Maps"
-                : "Open in Google Maps"}
-            </a>
-          ) : null}
+          <a
+            className="google-maps-action"
+            href={googleMapsSearchUrl({
+              latitude: feature.latitude,
+              longitude: feature.longitude,
+            })}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <ArrowSquareOut size={17} />
+            {locale === "th" ? "นำทางด้วย Google Maps" : "Open in Google Maps"}
+          </a>
           {feature.canEdit ? (
             <div className="owner-actions">
-              <Link href={`/?marker=${feature.id}&modal=edit`}>
+              <Link href={`/maps?marker=${feature.id}&modal=edit`}>
                 {locale === "th" ? "แก้ไข" : "Edit"}
               </Link>
               <form action={removeContent}>

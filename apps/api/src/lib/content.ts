@@ -17,7 +17,9 @@ import type {
   UpdateEventInput,
   UpdatePhotographerSpotInput,
   UpdatePostInput,
+  CommunityCategory,
 } from "@iride/types";
+import { communityCategories } from "@iride/types";
 import {
   createEventSchema,
   createPhotographerSpotSchema,
@@ -36,8 +38,7 @@ export type SearchType =
   | "profiles"
   | "posts"
   | "events"
-  | "photographer-spots"
-  | "market-products";
+  | "photographer-spots";
 export interface ExploreBounds {
   readonly west: number;
   readonly south: number;
@@ -46,7 +47,7 @@ export interface ExploreBounds {
 }
 
 export interface ContentRepository {
-  readonly listPosts: (viewerId: string | null) => Promise<PostDto[]>;
+  readonly listPosts: (viewerId: string | null, category?: CommunityCategory) => Promise<PostDto[]>;
   readonly getPost: (id: string, viewerId: string | null) => Promise<PostDto | null>;
   readonly createPost: (userId: string, accessToken: string, input: CreatePostInput) => Promise<PostDto>;
   readonly updatePost: (userId: string, accessToken: string, id: string, input: UpdatePostInput) => Promise<PostDto>;
@@ -97,9 +98,15 @@ export async function handleContentCollection(
   return withCors(request, dependencies, async () => {
     if (request.method === "GET") {
       const viewerId = await optionalViewer(request, dependencies);
+      const requestedCategory = new URL(request.url).searchParams.get("communityCategory");
+      if (domain === "posts" && requestedCategory && !communityCategories.includes(requestedCategory as CommunityCategory)) {
+        throw new ContentRequestError("CONTENT_VALIDATION_FAILED", 400);
+      }
       const data =
         domain === "posts"
-          ? await dependencies.repository.listPosts(viewerId)
+          ? requestedCategory
+            ? await dependencies.repository.listPosts(viewerId, requestedCategory as CommunityCategory)
+            : await dependencies.repository.listPosts(viewerId)
           : domain === "events"
             ? await dependencies.repository.listEvents(viewerId)
             : await dependencies.repository.listPhotographerSpots(viewerId);
@@ -231,8 +238,8 @@ export async function handleSearch(
     }
     const types = parseValues<SearchType>(
       url.searchParams.get("types"),
-      ["profiles", "posts", "events", "photographer-spots", "market-products"],
-      ["profiles", "posts", "events", "photographer-spots", "market-products"],
+      ["profiles", "posts", "events", "photographer-spots"],
+      ["profiles", "posts", "events", "photographer-spots"],
     );
     const viewerId = await optionalViewer(request, dependencies);
     return json({ data: await dependencies.repository.search(query, types, viewerId) });

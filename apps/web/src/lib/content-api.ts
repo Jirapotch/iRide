@@ -33,8 +33,9 @@ export class ContentApiError extends Error {
   }
 }
 
-export function getPosts(accessToken?: string) {
-  return contentGet<PostDto[]>("/api/v1/posts", accessToken);
+export function getPosts(accessToken?: string, communityCategory?: import("@iride/types").CommunityCategory) {
+  const query = communityCategory ? `?communityCategory=${encodeURIComponent(communityCategory)}` : "";
+  return contentGet<PostDto[]>(`/api/v1/posts${query}`, accessToken);
 }
 
 export function getEvents(accessToken?: string) {

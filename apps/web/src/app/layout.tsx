@@ -17,8 +17,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/og.png",
-        width: 1792,
-        height: 938,
+        width: 1200,
+        height: 630,
         alt: "iRide — One road. Endless stories.",
       },
     ],

@@ -2,7 +2,8 @@
 
 import {
   Bell,
-  Compass,
+  House,
+  MapTrifold,
   MagnifyingGlass,
   Moon,
   Plus,
@@ -18,7 +19,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import type { Locale } from "@/lib/locale";
-import { notifications } from "@/lib/mock-content";
+import { primaryNavigation } from "@/lib/app-navigation-domain";
+import { notifications } from "@/lib/notifications";
 import { useMockApp } from "./mock-app-provider";
 import { useTheme } from "../../_components/theme-provider";
 import { SignOutButton } from "../../auth/sign-out-button";
@@ -26,10 +28,10 @@ import { setLocale } from "../../locale-actions";
 
 const labels = {
   th: {
-    discover: "ค้นพบ",
+    home: "หน้าหลัก",
+    maps: "แผนที่",
     search: "ค้นหา",
     create: "สร้าง",
-    community: "ชุมชน",
     profile: "โปรไฟล์",
     notifications: "แจ้งเตือน",
     menu: "ตั้งค่า",
@@ -41,12 +43,13 @@ const labels = {
     dark: "มืด",
     login: "เข้าสู่ระบบ",
     logout: "ออกจากระบบ",
+    manageUsers: "จัดการผู้ใช้",
   },
   en: {
-    discover: "Discover",
+    home: "Home",
+    maps: "Maps",
     search: "Search",
     create: "Create",
-    community: "Community",
     profile: "Profile",
     notifications: "Notifications",
     menu: "Settings",
@@ -58,6 +61,7 @@ const labels = {
     dark: "Dark",
     login: "Sign in",
     logout: "Sign out",
+    manageUsers: "Manage users",
   },
 } as const;
 
@@ -65,10 +69,12 @@ export function HeaderActions({
   authenticated,
   locale,
   username,
+  canManage,
 }: {
   readonly authenticated: boolean;
   readonly locale: Locale;
   readonly username: string | null;
+  readonly canManage: boolean;
 }) {
   const text = labels[locale];
   const pathname = usePathname();
@@ -155,6 +161,14 @@ export function HeaderActions({
                   </button>
                 </div>
               </section>
+              {canManage ? (
+                <section>
+                  <p className="drawer-label">Admin</p>
+                  <Link className="drawer-row" href="/settings/users" onClick={() => setDrawerOpen(false)}>
+                    <span><UsersThree size={20} />{text.manageUsers}</span>
+                  </Link>
+                </section>
+              ) : null}
               <section>
                 <p className="drawer-label">{text.language}</p>
                 <form action={setLocale}>
@@ -341,18 +355,13 @@ export function BottomNavigation({
 }
 
 function navigationFor(username: string | null) {
-  return [
-    { href: "/", key: "discover" as const, icon: Compass },
-    { href: "/search", key: "search" as const, icon: MagnifyingGlass },
-    { href: "/create", key: "create" as const, icon: Plus, create: true },
-    { href: "/community", key: "community" as const, icon: UsersThree },
-    {
-      href: username ? `/users/${username}` : "/login?intent=profile",
-      key: "profile" as const,
-      icon: UserCircle,
-      profile: true,
-    },
-  ];
+  const icons = { home: House, maps: MapTrifold, create: Plus, search: MagnifyingGlass, profile: UserCircle } as const;
+  return primaryNavigation(username).map((item) => ({
+    ...item,
+    icon: icons[item.key],
+    ...(item.key === "create" ? { create: true as const } : {}),
+    ...(item.key === "profile" ? { profile: true as const } : {}),
+  }));
 }
 type NavigationItem = ReturnType<typeof navigationFor>[number];
 function NavLink({

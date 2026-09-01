@@ -9,6 +9,8 @@ import { createAdminDatabaseClient } from "@iride/database/admin";
 import { createServerDatabaseClient } from "@iride/database/server";
 import type { Tables, TablesUpdate } from "@iride/database/types";
 import type {
+  AccountRole,
+  AccountStatus,
   OwnProfileDto,
   ProfileErrorCode,
   PublicProfileDto,
@@ -23,10 +25,12 @@ import {
 import { createCorsDecision } from "./cors";
 
 type ProfileRow = Tables<"profiles">;
+type AccessRow = Tables<"account_access">;
 
 export interface ProfileRepository {
   readonly getById: (userId: string) => Promise<ProfileRow | null>;
   readonly getByUsername: (username: string) => Promise<ProfileRow | null>;
+  readonly getAccessByUserId: (userId: string) => Promise<AccessRow | null>;
   readonly updateOwner: (
     userId: string,
     accessToken: string,
@@ -64,7 +68,10 @@ export async function handleGetOwnProfile(
     async (context) => {
       const profile = await dependencies.repository.getById(context.userId);
       if (!profile) throw new ProfileRequestError("PROFILE_NOT_FOUND", 404);
-      return ownProfileDto(profile);
+      return ownProfileDto(
+        profile,
+        await dependencies.repository.getAccessByUserId(context.userId),
+      );
     },
   );
 }
@@ -114,7 +121,10 @@ export async function handlePatchOwnProfile(
 
       const profile = await dependencies.repository.getById(context.userId);
       if (!profile) throw new ProfileRequestError("PROFILE_NOT_FOUND", 404);
-      return ownProfileDto(profile);
+      return ownProfileDto(
+        profile,
+        await dependencies.repository.getAccessByUserId(context.userId),
+      );
     },
   );
 }
@@ -141,8 +151,13 @@ export async function handleGetPublicProfile(
     const profile = await dependencies.repository.getByUsername(
       parsedUsername.data,
     );
+    const access = profile
+      ? await dependencies.repository.getAccessByUserId(profile.id)
+      : null;
     if (
       !profile ||
+      access?.status === "suspended" ||
+      access?.transition_id != null ||
       !profile.username ||
       !profile.display_name ||
       (profile.visibility === "private" && viewer?.userId !== profile.id)
@@ -213,6 +228,7 @@ function productionDependencies(): ProfileDependencies {
       repository: {
         getById: unavailable,
         getByUsername: unavailable,
+        getAccessByUserId: unavailable,
         updateOwner: unavailable,
       },
     };
@@ -234,6 +250,15 @@ function productionDependencies(): ProfileDependencies {
         .from("profiles")
         .select("*")
         .eq("username", normalizeUsername(username))
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    async getAccessByUserId(userId) {
+      const { data, error } = await admin
+        .from("account_access")
+        .select("*")
+        .eq("user_id", userId)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -306,7 +331,12 @@ function publicProfileDto(profile: ProfileRow): PublicProfileDto {
   };
 }
 
-function ownProfileDto(profile: ProfileRow): OwnProfileDto {
+function ownProfileDto(
+  profile: ProfileRow,
+  access: AccessRow | null,
+): OwnProfileDto {
+  const role = (access?.role ?? "user") as AccountRole;
+  const status = (access?.status ?? "locked") as AccountStatus;
   return {
     id: profile.id,
     username: profile.username,
@@ -318,6 +348,10 @@ function ownProfileDto(profile: ProfileRow): OwnProfileDto {
     latitude: profile.latitude,
     longitude: profile.longitude,
     visibility: profile.visibility,
+    role,
+    status,
+    canWrite: status === "active" && access?.transition_id === null,
+    canManage: status === "active" && role === "admin" && access?.transition_id === null,
     isComplete: Boolean(profile.username && profile.display_name),
     usernameChangeAvailableAt: usernameChangeAvailableAt(profile),
     createdAt: profile.created_at,

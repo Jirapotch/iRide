@@ -5,7 +5,7 @@ import type { SearchResultDto } from "@iride/types";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { searchResultHref } from "@/lib/app-navigation-domain";
+import { publicSearchResults, searchResultHref } from "@/lib/app-navigation-domain";
 import { searchContent } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
 
@@ -21,7 +21,7 @@ export function SearchScreen({ locale }: { readonly locale: Locale }) {
     let current = true;
     const timer = window.setTimeout(() => {
       setLoading(true);
-      void searchContent(value).then((data) => { if (current) { setResults(data); setFailed(false); } }).catch(() => { if (current) { setResults([]); setFailed(true); } }).finally(() => { if (current) setLoading(false); });
+      void searchContent(value).then((data) => { if (current) { setResults(publicSearchResults(data)); setFailed(false); } }).catch(() => { if (current) { setResults([]); setFailed(true); } }).finally(() => { if (current) setLoading(false); });
     }, 250);
     return () => { current = false; window.clearTimeout(timer); };
   }, [query]);
@@ -30,7 +30,7 @@ export function SearchScreen({ locale }: { readonly locale: Locale }) {
 
   return <main className="search-page">
     <header><p className="premium-kicker">iRide Search</p><h1>{locale === "th" ? "ค้นหาทุกอย่างใน iRide" : "Search across iRide"}</h1></header>
-    <label className="search-page-input"><MagnifyingGlass size={22}/><span className="sr-only">Search</span><input autoFocus onChange={(event) => setQuery(event.target.value)} placeholder={locale === "th" ? "ผู้ใช้ โพสต์ กิจกรรม หรือสินค้า…" : "People, posts, events or products…"} value={query}/></label>
+    <label className="search-page-input"><MagnifyingGlass size={22}/><span className="sr-only">Search</span><input autoFocus onChange={(event) => setQuery(event.target.value)} placeholder={locale === "th" ? "ผู้ใช้ โพสต์ กิจกรรม หรือ landmark…" : "People, posts, events or landmarks…"} value={query}/></label>
     <div className="search-page-results" aria-busy={loading} aria-live="polite">
       {!query.trim() ? <p>{locale === "th" ? "พิมพ์คำค้นหาเพื่อเริ่มต้น" : "Type something to begin."}</p> : null}
       {query.trim() && failed ? <p>{locale === "th" ? "ค้นหาไม่สำเร็จ กรุณาลองอีกครั้ง" : "Search failed. Please try again."}</p> : null}

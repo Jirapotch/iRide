@@ -19,6 +19,7 @@ interface Config {
   readonly serviceRoleKey: string;
 }
 type Admin = ReturnType<typeof createAdminDatabaseClient>;
+type ViewerCapabilities = { readonly userId: string | null; readonly canWrite: boolean; readonly canManage: boolean };
 
 export function createSocialRepository(config: Config): SocialRepository {
   const admin = createAdminDatabaseClient(config);
@@ -30,21 +31,22 @@ export function createSocialRepository(config: Config): SocialRepository {
     });
   return {
     async listComments(postId, viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const { data: post, error: postError } = await admin
         .from("posts")
-        .select("id")
+        .select("id,author_id")
         .eq("id", postId)
         .is("deleted_at", null)
         .maybeSingle();
       ensure(postError);
-      if (!post) throw failure("CONTENT_NOT_FOUND", 404);
+      if (!post || !(await isVisibleAccount(admin, post.author_id, viewer.canManage))) throw failure("CONTENT_NOT_FOUND", 404);
       const { data, error } = await admin
         .from("comments")
         .select("*")
         .eq("post_id", postId)
         .order("created_at");
       ensure(error);
-      return commentDtos(admin, data ?? [], viewerId);
+      return commentDtos(admin, data ?? [], viewer);
     },
     async createComment(userId, token, postId, input) {
       let parentId: string | null = null;
@@ -68,10 +70,11 @@ export function createSocialRepository(config: Config): SocialRepository {
         .select("*")
         .single();
       ensureWrite(error, data);
-      return (await commentDtos(admin, [data!], userId))[0]!;
+      return (await commentDtos(admin, [data!], await viewerCapabilities(admin, userId)))[0]!;
     },
     async updateComment(userId, token, id, input) {
-      await assertOwner(await findComment(admin, id), "author_id", userId);
+      const viewer = await viewerCapabilities(admin, userId);
+      await assertOwner(await findComment(admin, id), "author_id", viewer);
       const { data, error } = await owner(token)
         .from("comments")
         .update({ body: input.body })
@@ -80,10 +83,10 @@ export function createSocialRepository(config: Config): SocialRepository {
         .select("*")
         .maybeSingle();
       ensureWrite(error, data);
-      return (await commentDtos(admin, [data!], userId))[0]!;
+      return (await commentDtos(admin, [data!], viewer))[0]!;
     },
     async deleteComment(userId, token, id) {
-      await assertOwner(await findComment(admin, id), "author_id", userId);
+      await assertOwner(await findComment(admin, id), "author_id", await viewerCapabilities(admin, userId));
       const { data, error } = await owner(token)
         .from("comments")
         .update({ deleted_at: new Date().toISOString() })
@@ -94,6 +97,7 @@ export function createSocialRepository(config: Config): SocialRepository {
       ensureWrite(error, data);
     },
     async listGarage(username, viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const { data: profile, error: profileError } = await admin
         .from("profiles")
         .select("id,username,display_name,visibility")
@@ -102,7 +106,8 @@ export function createSocialRepository(config: Config): SocialRepository {
       ensure(profileError);
       if (
         !profile ||
-        (profile.visibility === "private" && profile.id !== viewerId)
+        !(await isVisibleAccount(admin, profile.id, viewer.canManage)) ||
+        (profile.visibility === "private" && profile.id !== viewer.userId && !viewer.canManage)
       )
         return [];
       const query = admin
@@ -111,12 +116,13 @@ export function createSocialRepository(config: Config): SocialRepository {
         .eq("owner_id", profile.id)
         .is("archived_at", null)
         .order("created_at", { ascending: false });
-      if (profile.id !== viewerId) query.eq("visibility", "public");
+      if (profile.id !== viewer.userId && !viewer.canManage) query.eq("visibility", "public");
       const { data, error } = await query;
       ensure(error);
-      return vehicleDtos(admin, data ?? [], viewerId);
+      return vehicleDtos(admin, data ?? [], viewer);
     },
     async listProfileActivities(username, viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const { data: profile, error: profileError } = await admin
         .from("profiles")
         .select("id,username,display_name,visibility")
@@ -127,7 +133,8 @@ export function createSocialRepository(config: Config): SocialRepository {
         !profile ||
         !profile.username ||
         !profile.display_name ||
-        (profile.visibility === "private" && profile.id !== viewerId)
+        !(await isVisibleAccount(admin, profile.id, viewer.canManage)) ||
+        (profile.visibility === "private" && profile.id !== viewer.userId && !viewer.canManage)
       )
         return [];
       const [eventsResult, spotsResult] = await Promise.all([
@@ -166,7 +173,7 @@ export function createSocialRepository(config: Config): SocialRepository {
           startsAt: row.starts_at,
           endsAt: row.ends_at,
           author,
-          canEdit: profile.id === viewerId,
+          canEdit: viewer.canManage || (viewer.canWrite && profile.id === viewer.userId),
         })),
         ...(spotsResult.data ?? []).map((row) => ({
           id: row.id,
@@ -178,20 +185,22 @@ export function createSocialRepository(config: Config): SocialRepository {
           startsAt: row.starts_at,
           endsAt: row.ends_at,
           author,
-          canEdit: profile.id === viewerId,
+          canEdit: viewer.canManage || (viewer.canWrite && profile.id === viewer.userId),
         })),
       ];
       return orderProfileActivities(items).slice(0, 100);
     },
     async getVehicle(id, viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const row = await findVehicle(admin, id);
       if (
         !row ||
-        (row.owner_id !== viewerId &&
+        !(await isVisibleAccount(admin, row.owner_id, viewer.canManage)) ||
+        (row.owner_id !== viewer.userId && !viewer.canManage &&
           (row.archived_at || row.visibility !== "public"))
       )
         return null;
-      return (await vehicleDtos(admin, [row], viewerId))[0] ?? null;
+      return (await vehicleDtos(admin, [row], viewer))[0] ?? null;
     },
     async createVehicle(userId, token, input) {
       await assertReadyMedia(admin, userId, input.mediaIds, "vehicle");
@@ -206,11 +215,12 @@ export function createSocialRepository(config: Config): SocialRepository {
       ensureWrite(error, id);
       const data = await findVehicle(admin, id!);
       ensureWrite(null, data);
-      return (await vehicleDtos(admin, [data!], userId))[0]!;
+      return (await vehicleDtos(admin, [data!], await viewerCapabilities(admin, userId)))[0]!;
     },
     async updateVehicle(userId, token, id, input) {
       const current = await findVehicle(admin, id);
-      await assertOwner(current, "owner_id", userId, "archived_at");
+      const viewer = await viewerCapabilities(admin, userId);
+      await assertOwner(current, "owner_id", viewer, "archived_at");
       if (input.mediaIds)
         await assertReadyMedia(admin, userId, input.mediaIds, "vehicle");
       let data;
@@ -248,13 +258,13 @@ export function createSocialRepository(config: Config): SocialRepository {
         ensureWrite(result.error, result.data);
         data = result.data;
       }
-      return (await vehicleDtos(admin, [data!], userId))[0]!;
+      return (await vehicleDtos(admin, [data!], viewer))[0]!;
     },
     async deleteVehicle(userId, token, id) {
       await assertOwner(
         await findVehicle(admin, id),
         "owner_id",
-        userId,
+        await viewerCapabilities(admin, userId),
         "archived_at",
       );
       const { data, error } = await owner(token).rpc(
@@ -264,6 +274,7 @@ export function createSocialRepository(config: Config): SocialRepository {
       ensureWrite(error, data);
     },
     async listMarketProducts(viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const { data, error } = await admin
         .from("market_products")
         .select("*")
@@ -271,12 +282,13 @@ export function createSocialRepository(config: Config): SocialRepository {
         .order("created_at", { ascending: false })
         .limit(100);
       ensure(error);
-      return productDtos(admin, data ?? [], viewerId);
+      return productDtos(admin, data ?? [], viewer);
     },
     async getMarketProduct(id, viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const row = await findProduct(admin, id);
-      if (!row || (row.deleted_at && row.owner_id !== viewerId)) return null;
-      return (await productDtos(admin, [row], viewerId))[0] ?? null;
+      if (!row || !(await isVisibleAccount(admin, row.owner_id, viewer.canManage)) || (row.deleted_at && row.owner_id !== viewer.userId && !viewer.canManage)) return null;
+      return (await productDtos(admin, [row], viewer))[0] ?? null;
     },
     async createMarketProduct(userId, token, input) {
       if (input.coverMediaId)
@@ -287,10 +299,11 @@ export function createSocialRepository(config: Config): SocialRepository {
         .select("*")
         .single();
       ensureWrite(error, data);
-      return (await productDtos(admin, [data!], userId))[0]!;
+      return (await productDtos(admin, [data!], await viewerCapabilities(admin, userId)))[0]!;
     },
     async updateMarketProduct(userId, token, id, input) {
-      await assertOwner(await findProduct(admin, id), "owner_id", userId);
+      const viewer = await viewerCapabilities(admin, userId);
+      await assertOwner(await findProduct(admin, id), "owner_id", viewer);
       if (input.coverMediaId)
         await assertReadyMedia(admin, userId, [input.coverMediaId], "market");
       const patch = {
@@ -314,10 +327,10 @@ export function createSocialRepository(config: Config): SocialRepository {
         .select("*")
         .maybeSingle();
       ensureWrite(error, data);
-      return (await productDtos(admin, [data!], userId))[0]!;
+      return (await productDtos(admin, [data!], viewer))[0]!;
     },
     async deleteMarketProduct(userId, token, id) {
-      await assertOwner(await findProduct(admin, id), "owner_id", userId);
+      await assertOwner(await findProduct(admin, id), "owner_id", await viewerCapabilities(admin, userId));
       const { data, error } = await owner(token)
         .from("market_products")
         .update({ deleted_at: new Date().toISOString() })
@@ -361,17 +374,26 @@ async function findProduct(admin: Admin, id: string) {
 async function authors(
   admin: Admin,
   ids: readonly string[],
+  includeSuspended = false,
 ): Promise<Map<string, ContentAuthorDto>> {
   const unique = [...new Set(ids)];
   if (!unique.length) return new Map();
-  const { data, error } = await admin
+  const [{ data, error }, { data: access, error: accessError }] = await Promise.all([
+    admin
     .from("profiles")
     .select("id,username,display_name")
-    .in("id", unique);
+    .in("id", unique),
+    admin.from("account_access").select("user_id,status,transition_id").in("user_id", unique),
+  ]);
   ensure(error);
+  ensure(accessError);
+  const statuses = new Map((access ?? []).map((row) => [row.user_id, row]));
   return new Map(
     (data ?? [])
-      .filter((row) => row.username && row.display_name)
+      .filter((row) => {
+        const access = statuses.get(row.id);
+        return Boolean(row.username && row.display_name && access?.transition_id === null && (includeSuspended || access.status !== "suspended"));
+      })
       .map((row) => [
         row.id,
         { id: row.id, username: row.username!, displayName: row.display_name! },
@@ -382,7 +404,7 @@ async function authors(
 async function commentDtos(
   admin: Admin,
   rows: Tables<"comments">[],
-  viewerId: string | null,
+  viewer: ViewerCapabilities,
 ): Promise<CommentDto[]> {
   const people = await authors(
     admin,
@@ -390,6 +412,7 @@ async function commentDtos(
       row.author_id,
       ...(row.reply_to_user_id ? [row.reply_to_user_id] : []),
     ]),
+    viewer.canManage,
   );
   return rows.flatMap((row) => {
     const author = people.get(row.author_id);
@@ -405,7 +428,7 @@ async function commentDtos(
           ? (people.get(row.reply_to_user_id) ?? null)
           : null,
         deleted: Boolean(row.deleted_at),
-        canEdit: !row.deleted_at && row.author_id === viewerId,
+        canEdit: !row.deleted_at && (viewer.canManage || (viewer.canWrite && row.author_id === viewer.userId)),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       },
@@ -416,11 +439,11 @@ async function commentDtos(
 async function vehicleDtos(
   admin: Admin,
   rows: Tables<"vehicles">[],
-  viewerId: string | null,
+  viewer: ViewerCapabilities,
 ): Promise<VehicleDto[]> {
   const people = await authors(
     admin,
-    rows.map((row) => row.owner_id),
+    rows.map((row) => row.owner_id), viewer.canManage,
   );
   const ids = rows.map((row) => row.id);
   const media = new Map<string, string[]>();
@@ -452,7 +475,7 @@ async function vehicleDtos(
         description: row.description,
         visibility: row.visibility,
         mediaIds: media.get(row.id) ?? [],
-        canEdit: row.owner_id === viewerId,
+        canEdit: viewer.canManage || (viewer.canWrite && row.owner_id === viewer.userId),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       },
@@ -463,11 +486,11 @@ async function vehicleDtos(
 async function productDtos(
   admin: Admin,
   rows: Tables<"market_products">[],
-  viewerId: string | null,
+  viewer: ViewerCapabilities,
 ): Promise<MarketProductDto[]> {
   const people = await authors(
     admin,
-    rows.map((row) => row.owner_id),
+    rows.map((row) => row.owner_id), viewer.canManage,
   );
   return rows.flatMap((row) => {
     const owner = people.get(row.owner_id);
@@ -482,7 +505,7 @@ async function productDtos(
         category: row.category,
         vehicleKinds: row.vehicle_kinds,
         coverMediaId: row.cover_media_id,
-        canEdit: row.owner_id === viewerId,
+        canEdit: viewer.canManage || (viewer.canWrite && row.owner_id === viewer.userId),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       },
@@ -569,18 +592,32 @@ async function assertReadyMedia(
 async function assertOwner<Row extends Record<Key, string>, Key extends string>(
   row: Row | null,
   key: Key,
-  userId: string,
+  viewer: ViewerCapabilities,
   deletedKey = "deleted_at",
 ) {
   if (
     !row ||
-    row[key] !== userId ||
+    (!viewer.canManage && (!viewer.canWrite || row[key] !== viewer.userId)) ||
     (deletedKey in row && row[deletedKey as keyof Row])
   )
     throw failure(
       row ? "CONTENT_FORBIDDEN" : "CONTENT_NOT_FOUND",
       row ? 403 : 404,
     );
+}
+
+async function viewerCapabilities(admin: Admin, userId: string | null): Promise<ViewerCapabilities> {
+  if (!userId) return { userId: null, canWrite: false, canManage: false };
+  const { data, error } = await admin.from("account_access").select("role,status,transition_id").eq("user_id", userId).maybeSingle();
+  ensure(error);
+  const active = data?.status === "active" && data.transition_id === null;
+  return { userId, canWrite: active, canManage: active && data?.role === "admin" };
+}
+
+async function isVisibleAccount(admin: Admin, userId: string, includeSuspended: boolean): Promise<boolean> {
+  const { data, error } = await admin.from("account_access").select("status,transition_id").eq("user_id", userId).maybeSingle();
+  ensure(error);
+  return data?.transition_id === null && (includeSuspended || data.status !== "suspended");
 }
 function ensure(error: { code?: string; message?: string } | null) {
   if (error) throw failure("CONTENT_UNAVAILABLE", 503, error);

@@ -6,112 +6,83 @@ import {
   DotsThreeVertical,
   MapPin,
   NotePencil,
-  Storefront,
   Trash,
-  UsersThree,
 } from "@phosphor-icons/react";
 import type {
   CommentDto,
+  CommunityCategory,
   ContentAuthorDto,
-  MarketProductDto,
   PhotographerSpotDto,
   PostDto,
 } from "@iride/types";
-import Image from "next/image";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
-import {
-  communityRooms,
-  type CommunityRoomId,
-} from "@/lib/app-navigation-domain";
-import { getComments, mediaVariantUrl } from "@/lib/content-api";
+import { communityTalkHref, type CommunityRoomId } from "@/lib/app-navigation-domain";
+import { getComments } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
 import { commentAction } from "../community/actions";
-import { removeContent, removeMarketAction } from "../create/actions";
+import { removeContent } from "../create/actions";
 import type { MarkerOption } from "./create-content-screen";
 import { EditModal } from "./edit-modal";
 
 const BackendForm = dynamic(() =>
   import("./create-content-screen").then((module) => module.BackendForm),
 );
-const MarketForm = dynamic(() =>
-  import("./create-content-screen").then((module) => module.MarketForm),
-);
-
 interface Props {
   readonly authenticated: boolean;
+  readonly canWrite: boolean;
   readonly editId: string | undefined;
   readonly locale: Locale;
   readonly markerOptions: readonly MarkerOption[];
   readonly posts: readonly PostDto[];
-  readonly products: readonly MarketProductDto[];
   readonly room: CommunityRoomId;
-  readonly selectedProductId: string | undefined;
   readonly spots: readonly PhotographerSpotDto[];
   readonly viewer: ContentAuthorDto | null;
+  readonly category: CommunityCategory;
+  readonly heading: string;
 }
 export function CommunityScreen({
   authenticated,
+  canWrite,
   editId,
   locale,
   markerOptions,
   posts,
-  products,
   room,
-  selectedProductId,
   spots,
   viewer,
+  category,
+  heading,
 }: Props) {
+  const talkHref = communityTalkHref(category);
   const editPost = editId
     ? (posts.find((item) => item.id === editId && item.canEdit) ?? null)
     : null;
-  const editProduct = editId
-    ? (products.find((item) => item.id === editId && item.canEdit) ?? null)
-    : null;
-  const editDenied = Boolean(editId && !editPost && !editProduct);
+  const editDenied = Boolean(editId && !editPost);
   return (
     <div className="community-page">
       <header className="community-heading">
-        <p className="premium-kicker">iRide Community</p>
+        <h1>{heading}</h1>
       </header>
-      <nav
-        aria-label={locale === "th" ? "ห้องชุมชน" : "Community rooms"}
-        className="community-rooms"
-      >
-        {communityRooms.map((item) => (
-          <Link
-            aria-current={item.id === room ? "page" : undefined}
-            href={`/community?room=${item.id}`}
-            key={item.id}
-          >
-            {item.label[locale]}
-          </Link>
-        ))}
-      </nav>
-      {room === "talk" ? (
+      {room === "talk" || room === "groups" || room === "photographers" ? (
         <TalkRoom
           authenticated={authenticated}
+          canWrite={canWrite}
+          category={category}
           locale={locale}
           posts={posts}
+          talkHref={talkHref}
           viewer={viewer}
-        />
-      ) : null}
-      {room === "market" ? (
-        <MarketRoom
-          locale={locale}
-          products={products}
-          selectedProductId={selectedProductId}
         />
       ) : null}
       {room === "photographers" ? (
         <PhotographerRoom locale={locale} spots={spots} />
       ) : null}
-      {room === "groups" ? <GroupsRoom locale={locale} /> : null}
       {editPost ? (
         <EditModal
-          closeUrl={`/community?room=talk&post=${editPost.id}`}
+          closeUrl={`${talkHref}?post=${editPost.id}`}
           title={locale === "th" ? "แก้ไขโพสต์" : "Edit post"}
         >
           <BackendForm
@@ -120,14 +91,6 @@ export function CommunityScreen({
             markerOptions={markerOptions}
             type="post"
           />
-        </EditModal>
-      ) : null}
-      {editProduct ? (
-        <EditModal
-          closeUrl={`/community?room=market&product=${editProduct.id}`}
-          title={locale === "th" ? "แก้ไขสินค้า" : "Edit product"}
-        >
-          <MarketForm initial={editProduct} locale={locale} />
         </EditModal>
       ) : null}
       {editDenied ? (
@@ -143,20 +106,30 @@ export function CommunityScreen({
 
 function TalkRoom({
   authenticated,
+  canWrite,
+  category,
   locale,
   posts,
+  talkHref,
   viewer,
 }: {
   readonly authenticated: boolean;
+  readonly canWrite: boolean;
+  readonly category: CommunityCategory;
   readonly locale: Locale;
   readonly posts: readonly PostDto[];
+  readonly talkHref: string;
   readonly viewer: ContentAuthorDto | null;
 }) {
   return (
     <section className="community-feed">
-      <Link className="community-create-link" href="/create?type=post">
-        + {locale === "th" ? "เขียนโพสต์" : "Write a post"}
-      </Link>
+      {canWrite ? (
+        <Link className="community-create-link" href={`/create?type=post&category=${category}`}>
+          + {locale === "th" ? "เขียนโพสต์" : "Write a post"}
+        </Link>
+      ) : authenticated ? (
+        <p className="access-wait-note">{locale === "th" ? "บัญชีนี้อ่านได้อย่างเดียว กรุณารอผู้ดูแลระบบปลดล็อก" : "This account is read-only until an administrator unlocks it."}</p>
+      ) : null}
       {posts.length ? (
         posts.map((post) => (
           <article
@@ -175,8 +148,8 @@ function TalkRoom({
                     locale === "th" ? "ลบโพสต์นี้หรือไม่?" : "Delete this post?"
                   }
                   deleteAction={removeContent}
-                  editHref={`/community?room=talk&post=${post.id}&modal=edit`}
-                  hidden={{ domain: "posts", id: post.id }}
+                  editHref={`${talkHref}?post=${post.id}&modal=edit`}
+                  hidden={{ domain: "posts", id: post.id, communityCategory: post.communityCategory }}
                   locale={locale}
                 />
               ) : null}
@@ -187,7 +160,7 @@ function TalkRoom({
                 {post.markerTags.map((tag) =>
                   tag.available ? (
                     <Link
-                      href={`/?marker=${tag.id}`}
+                      href={`/maps?marker=${tag.id}`}
                       key={`${tag.kind}:${tag.id}`}
                     >
                       <MapPin size={15} />
@@ -215,9 +188,10 @@ function TalkRoom({
               </span>
             </footer>
             <CommentThread
-              authenticated={authenticated}
+              authenticated={canWrite}
               locale={locale}
               postId={post.id}
+              returnHref={`${talkHref}?post=${post.id}`}
               viewer={viewer}
             />
           </article>
@@ -316,11 +290,13 @@ function CommentThread({
   authenticated,
   locale,
   postId,
+  returnHref,
   viewer,
 }: {
   readonly authenticated: boolean;
   readonly locale: Locale;
   readonly postId: string;
+  readonly returnHref: string;
   readonly viewer: ContentAuthorDto | null;
 }) {
   const [open, setOpen] = useState(false),
@@ -453,7 +429,7 @@ function CommentThread({
             </form>
           ) : (
             <Link
-              href={`/login?next=${encodeURIComponent(`/community?room=talk&post=${postId}`)}`}
+              href={`/login?next=${encodeURIComponent(returnHref)}`}
             >
               {locale === "th"
                 ? "เข้าสู่ระบบเพื่อแสดงความคิดเห็น"
@@ -578,88 +554,6 @@ function CommentBody({
   );
 }
 
-function MarketRoom({
-  locale,
-  products,
-  selectedProductId,
-}: {
-  readonly locale: Locale;
-  readonly products: readonly MarketProductDto[];
-  readonly selectedProductId: string | undefined;
-}) {
-  return (
-    <section>
-      <div className="room-action-row">
-        <p>
-          {locale === "th"
-            ? "สินค้าจากสมาชิก iRide"
-            : "Items from iRide members"}
-        </p>
-        <Link href="/create?type=market">
-          + {locale === "th" ? "ลงขายสินค้า" : "Sell an item"}
-        </Link>
-      </div>
-      <div className="product-grid">
-        {products.map((product) => {
-          const selected = selectedProductId === product.id;
-          return (
-            <article
-              className={`product-card ${selected ? "is-selected" : ""}`}
-              id={`product-${product.id}`}
-              key={product.id}
-            >
-              <div className="product-media">
-                <Image
-                  alt=""
-                  height={480}
-                  src={
-                    product.coverMediaId
-                      ? mediaVariantUrl(product.coverMediaId, "thumbnail")
-                      : "/media/market-gear.webp"
-                  }
-                  unoptimized={Boolean(product.coverMediaId)}
-                  width={480}
-                />
-                <span>{product.category}</span>
-                {product.canEdit ? (
-                  <OwnerActionMenu
-                    confirmText={
-                      locale === "th"
-                        ? "ลบสินค้านี้หรือไม่?"
-                        : "Delete this item?"
-                    }
-                    deleteAction={removeMarketAction}
-                    editHref={`/community?room=market&product=${product.id}&modal=edit`}
-                    hidden={{ id: product.id }}
-                    locale={locale}
-                  />
-                ) : null}
-              </div>
-              <div className="p-3">
-                <h2>{product.name}</h2>
-                <p>
-                  {new Intl.NumberFormat(locale === "th" ? "th-TH" : "en-US", {
-                    style: "currency",
-                    currency: "THB",
-                  }).format(product.priceSatang / 100)}
-                </p>
-                <Link href={`/users/${product.owner.username}`}>
-                  @{product.owner.username}
-                </Link>
-                {!product.canEdit ? (
-                  <Link href={`/community?room=market&product=${product.id}`}>
-                    <Storefront size={17} />
-                    {locale === "th" ? "ดูสินค้า" : "View"}
-                  </Link>
-                ) : null}
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
 function PhotographerRoom({
   locale,
   spots,
@@ -695,23 +589,6 @@ function PhotographerRoom({
           }
         />
       )}
-    </section>
-  );
-}
-function GroupsRoom({ locale }: { readonly locale: Locale }) {
-  return (
-    <section className="room-card-grid">
-      {[
-        "Bangkok Weekend Riders",
-        "Classic Car Thailand",
-        "City Bicycle Crew",
-      ].map((name) => (
-        <article className="premium-card room-person-card" key={name}>
-          <UsersThree size={24} />
-          <strong>{name}</strong>
-          <span>{locale === "th" ? "กลุ่มเดโม" : "Demo group"}</span>
-        </article>
-      ))}
     </section>
   );
 }

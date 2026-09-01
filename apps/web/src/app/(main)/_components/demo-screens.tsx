@@ -3,7 +3,7 @@
 import { Bell } from "@phosphor-icons/react";
 
 import type { Locale } from "@/lib/locale";
-import { notifications } from "@/lib/mock-content";
+import { notifications } from "@/lib/notifications";
 import { useMockApp } from "./mock-app-provider";
 
 const shell = "mx-auto w-full max-w-[1180px] px-4 py-5 sm:px-6 sm:py-8";

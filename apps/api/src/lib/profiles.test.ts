@@ -35,10 +35,27 @@ function profile(
   };
 }
 
-function setup(row: Tables<"profiles"> | null = profile()) {
+function setup(
+  row: Tables<"profiles"> | null = profile(),
+  access: Partial<Tables<"account_access">> = {},
+) {
   const repository: ProfileRepository = {
     getById: vi.fn().mockResolvedValue(row),
     getByUsername: vi.fn().mockResolvedValue(row),
+    getAccessByUserId: vi.fn().mockResolvedValue({
+      user_id: row?.id ?? userId,
+      role: "user",
+      status: "active",
+      transition_id: null,
+      transition_action: null,
+      transition_actor_id: null,
+      transition_previous_role: null,
+      transition_previous_status: null,
+      transition_started_at: null,
+      created_at: "2026-08-27T00:00:00.000Z",
+      updated_at: "2026-08-27T00:00:00.000Z",
+      ...access,
+    }),
     updateOwner: vi.fn().mockResolvedValue(undefined),
   };
   const dependencies: ProfileDependencies = {
@@ -52,7 +69,7 @@ function setup(row: Tables<"profiles"> | null = profile()) {
 describe("profile API handlers", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns an owner DTO without auth metadata", async () => {
+  it("returns an active user owner's access capabilities without auth metadata", async () => {
     const { dependencies } = setup();
     const response = await handleGetOwnProfile(
       new Request("http://localhost:3001/api/v1/profile/me", {
@@ -67,6 +84,10 @@ describe("profile API handlers", () => {
       id: userId,
       isComplete: true,
       latitude: 13.7563,
+      role: "user",
+      status: "active",
+      canWrite: true,
+      canManage: false,
     });
     expect(JSON.stringify(body)).not.toContain("email");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
@@ -236,6 +257,37 @@ describe("profile API handlers", () => {
       otherDependencies,
     );
     expect(denied.status).toBe(404);
+  });
+
+  it("fails closed for a pending restore even though its status is active", async () => {
+    const { dependencies } = setup(profile(), {
+      status: "active",
+      transition_id: "33333333-3333-4333-8333-333333333333",
+      transition_action: "restore",
+      transition_previous_status: "suspended",
+      transition_started_at: "2026-09-01T00:00:00.000Z",
+    });
+
+    const response = await handleGetOwnProfile(
+      new Request("http://localhost:3001/api/v1/profile/me", {
+        headers: { authorization: "Bearer signed.jwt" },
+      }),
+      dependencies,
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toMatchObject({ canWrite: false, canManage: false });
+  });
+
+  it("hides suspended profiles even though the service-role repository can read them", async () => {
+    const { dependencies } = setup(profile(), { status: "suspended" });
+    const response = await handleGetPublicProfile(
+      new Request("http://localhost:3001/api/v1/users/road_rider"),
+      "road_rider",
+      dependencies,
+    );
+
+    expect(response.status).toBe(404);
   });
 
   it("rejects invalid optional bearer tokens and denied CORS origins", async () => {

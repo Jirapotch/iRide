@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import type {
   EventDto,
+  CommunityCategory,
   MarkerTagInput,
   MarketProductDto,
   PhotographerSpotDto,
@@ -38,7 +39,7 @@ import { resolveGoogleMapsLocation, saveContent } from "../create/actions";
 import { MediaUploader } from "../../users/[username]/media-uploader";
 import { ActionSubmitButton } from "./action-submit-button";
 
-type CreateType = "post" | "activity" | "trip" | "photographer-spot" | "market";
+type CreateType = "post" | "activity" | "trip" | "photographer-spot";
 export type InitialContent =
   PostDto | EventDto | PhotographerSpotDto | MarketProductDto | null;
 export interface MarkerOption {
@@ -53,11 +54,13 @@ export function CreateContentScreen({
   type,
   initial,
   markerOptions = [],
+  defaultCommunityCategory = "groups",
 }: {
   readonly locale: Locale;
   readonly type: CreateType;
   readonly initial: InitialContent;
   readonly markerOptions?: readonly MarkerOption[];
+  readonly defaultCommunityCategory?: CommunityCategory;
 }) {
   const options: { type: CreateType; label: string }[] = [
     { type: "post", label: locale === "th" ? "โพสต์" : "Post" },
@@ -65,11 +68,7 @@ export function CreateContentScreen({
     { type: "trip", label: locale === "th" ? "ทริป" : "Trip" },
     {
       type: "photographer-spot",
-      label: locale === "th" ? "Landmark ช่างภาพ" : "Photographer spot",
-    },
-    {
-      type: "market",
-      label: locale === "th" ? "สินค้า Market" : "Market item",
+      label: locale === "th" ? "landmark ช่างภาพ" : "Photographer spot",
     },
   ];
   return (
@@ -90,19 +89,7 @@ export function CreateContentScreen({
         ))}
       </nav>
       <section className="create-card premium-card">
-        {type === "market" ? (
-          <MarketForm
-            initial={initial && "priceSatang" in initial ? initial : null}
-            locale={locale}
-          />
-        ) : (
-          <BackendForm
-            initial={initial}
-            locale={locale}
-            markerOptions={markerOptions}
-            type={type}
-          />
-        )}
+        <BackendForm defaultCommunityCategory={defaultCommunityCategory} initial={initial} locale={locale} markerOptions={markerOptions} type={type} />
       </section>
     </main>
   );
@@ -113,11 +100,13 @@ export function BackendForm({
   type,
   initial,
   markerOptions = [],
+  defaultCommunityCategory = "groups",
 }: {
   readonly locale: Locale;
-  readonly type: Exclude<CreateType, "market">;
+  readonly type: CreateType;
   readonly initial: InitialContent;
   readonly markerOptions?: readonly MarkerOption[];
+  readonly defaultCommunityCategory?: CommunityCategory;
 }) {
   const event = initial && "organizer" in initial ? initial : null;
   const spot = initial && "photographer" in initial ? initial : null;
@@ -140,6 +129,7 @@ export function BackendForm({
           initial={post}
           locale={locale}
           markerOptions={markerOptions}
+          defaultCommunityCategory={defaultCommunityCategory}
         />
       ) : null}
       {type === "activity" ? (
@@ -275,10 +265,12 @@ function PostFields({
   initial,
   locale,
   markerOptions,
+  defaultCommunityCategory,
 }: {
   readonly initial: PostDto | null;
   readonly locale: Locale;
   readonly markerOptions: readonly MarkerOption[];
+  readonly defaultCommunityCategory: CommunityCategory;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [body, setBody] = useState(initial?.body ?? "");
@@ -340,6 +332,15 @@ function PostFields({
   }
   return (
     <>
+      <Field label={locale === "th" ? "เลือกชุมชน" : "Community category"}>
+        <select defaultValue={initial?.communityCategory ?? defaultCommunityCategory} name="communityCategory" required>
+          <option value="car">{locale === "th" ? "รถยนต์" : "Cars"}</option>
+          <option value="motorcycle">{locale === "th" ? "มอเตอร์ไซค์" : "Motorcycles"}</option>
+          <option value="bicycle">{locale === "th" ? "จักรยาน" : "Bicycles"}</option>
+          <option value="photographers">{locale === "th" ? "ช่างภาพ" : "Photographers"}</option>
+          <option value="groups">{locale === "th" ? "กลุ่ม" : "Groups"}</option>
+        </select>
+      </Field>
       <Field label={locale === "th" ? "ข้อความ" : "Post text"}>
         <div className="marker-mention-composer">
           <textarea

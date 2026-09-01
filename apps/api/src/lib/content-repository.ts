@@ -24,6 +24,11 @@ interface ContentRepositoryConfig {
 }
 
 type AdminClient = ReturnType<typeof createAdminDatabaseClient>;
+type ViewerCapabilities = {
+  readonly userId: string | null;
+  readonly canWrite: boolean;
+  readonly canManage: boolean;
+};
 
 export function createContentRepository(
   config: ContentRepositoryConfig,
@@ -37,42 +42,46 @@ export function createContentRepository(
     });
 
   return {
-    async listPosts(viewerId) {
-      const { data, error } = await admin
+    async listPosts(viewerId, category) {
+      const viewer = await viewerCapabilities(admin, viewerId);
+      let query = admin
         .from("posts")
         .select("*")
         .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .order("created_at", { ascending: false });
+      if (category) query = query.eq("community_category", category);
+      const { data, error } = await query.limit(50);
       ensureQuery(error);
-      return postDtos(admin, data ?? [], viewerId);
+      return postDtos(admin, data ?? [], viewer);
     },
     async getPost(id, viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const row = await findPost(admin, id);
-      if (!row || (row.deleted_at && row.author_id !== viewerId)) return null;
-      return (await postDtos(admin, [row], viewerId))[0] ?? null;
+      if (!row || (row.deleted_at && row.author_id !== viewer.userId && !viewer.canManage)) return null;
+      return (await postDtos(admin, [row], viewer))[0] ?? null;
     },
     async createPost(userId, accessToken, input) {
       await validateMarkerTags(admin, input.markerTags ?? []);
       const { data:id, error } = await ownerClient(accessToken).rpc("save_post_with_markers", {
-        target_post_id:null as unknown as string, post_body:input.body, marker_tags:(input.markerTags ?? []) as unknown as Json,
+        target_post_id:null as unknown as string, post_body:input.body, marker_tags:(input.markerTags ?? []) as unknown as Json, post_community_category:input.communityCategory,
       });
       ensureWrite(error, id);
       const data=await findPost(admin,id!);ensureWrite(null,data);
-      return (await postDtos(admin, [data!], userId))[0]!;
+      return (await postDtos(admin, [data!], await viewerCapabilities(admin, userId)))[0]!;
     },
     async updatePost(userId, accessToken, id, input) {
-      await assertOwner(await findPost(admin, id), "author_id", userId);
+      const viewer = await viewerCapabilities(admin, userId);
+      await assertOwner(await findPost(admin, id), "author_id", viewer);
       await validateMarkerTags(admin, input.markerTags ?? []);
       const { data:savedId, error } = await ownerClient(accessToken).rpc("save_post_with_markers", {
-        target_post_id:id, post_body:input.body, marker_tags:(input.markerTags ?? []) as unknown as Json,
+        target_post_id:id, post_body:input.body, marker_tags:(input.markerTags ?? []) as unknown as Json, post_community_category:input.communityCategory,
       });
       ensureWrite(error, savedId);
       const data=await findPost(admin,savedId!);ensureWrite(null,data);
-      return (await postDtos(admin, [data!], userId))[0]!;
+      return (await postDtos(admin, [data!], viewer))[0]!;
     },
     async deletePost(userId, accessToken, id) {
-      await assertOwner(await findPost(admin, id), "author_id", userId);
+      await assertOwner(await findPost(admin, id), "author_id", await viewerCapabilities(admin, userId));
       const { data, error } = await ownerClient(accessToken)
         .from("posts")
         .update({ deleted_at: new Date().toISOString() })
@@ -83,6 +92,7 @@ export function createContentRepository(
       ensureWrite(error, data);
     },
     async listEvents(viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const { data, error } = await admin
         .from("events")
         .select("*")
@@ -90,12 +100,13 @@ export function createContentRepository(
         .order("starts_at")
         .limit(100);
       ensureQuery(error);
-      return eventDtos(admin, data ?? [], viewerId);
+      return eventDtos(admin, data ?? [], viewer);
     },
     async getEvent(id, viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const row = await findEvent(admin, id);
-      if (!row || (row.deleted_at && row.organizer_id !== viewerId)) return null;
-      return (await eventDtos(admin, [row], viewerId))[0] ?? null;
+      if (!row || (row.deleted_at && row.organizer_id !== viewer.userId && !viewer.canManage)) return null;
+      return (await eventDtos(admin, [row], viewer))[0] ?? null;
     },
     async createEvent(userId, accessToken, input) {
       const insert = eventWrite(input, { organizer_id: userId });
@@ -105,11 +116,12 @@ export function createContentRepository(
         .select("*")
         .single();
       ensureWrite(error, data);
-      return (await eventDtos(admin, [data!], userId))[0]!;
+      return (await eventDtos(admin, [data!], await viewerCapabilities(admin, userId)))[0]!;
     },
     async updateEvent(userId, accessToken, id, input) {
+      const viewer = await viewerCapabilities(admin, userId);
       const current = await findEvent(admin, id);
-      await assertOwner(current, "organizer_id", userId);
+      await assertOwner(current, "organizer_id", viewer);
       const merged = mergeEvent(current!, input);
       const { data, error } = await ownerClient(accessToken)
         .from("events")
@@ -119,10 +131,10 @@ export function createContentRepository(
         .select("*")
         .maybeSingle();
       ensureWrite(error, data);
-      return (await eventDtos(admin, [data!], userId))[0]!;
+      return (await eventDtos(admin, [data!], viewer))[0]!;
     },
     async deleteEvent(userId, accessToken, id) {
-      await assertOwner(await findEvent(admin, id), "organizer_id", userId);
+      await assertOwner(await findEvent(admin, id), "organizer_id", await viewerCapabilities(admin, userId));
       const { data, error } = await ownerClient(accessToken)
         .from("events")
         .update({ deleted_at: new Date().toISOString() })
@@ -133,6 +145,7 @@ export function createContentRepository(
       ensureWrite(error, data);
     },
     async listPhotographerSpots(viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const { data, error } = await admin
         .from("photographer_spots")
         .select("*")
@@ -140,12 +153,13 @@ export function createContentRepository(
         .order("starts_at")
         .limit(100);
       ensureQuery(error);
-      return spotDtos(admin, data ?? [], viewerId);
+      return spotDtos(admin, data ?? [], viewer);
     },
     async getPhotographerSpot(id, viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const row = await findSpot(admin, id);
-      if (!row || (row.deleted_at && row.owner_id !== viewerId)) return null;
-      return (await spotDtos(admin, [row], viewerId))[0] ?? null;
+      if (!row || (row.deleted_at && row.owner_id !== viewer.userId && !viewer.canManage)) return null;
+      return (await spotDtos(admin, [row], viewer))[0] ?? null;
     },
     async createPhotographerSpot(userId, accessToken, input) {
       const { data, error } = await ownerClient(accessToken)
@@ -154,11 +168,12 @@ export function createContentRepository(
         .select("*")
         .single();
       ensureWrite(error, data);
-      return (await spotDtos(admin, [data!], userId))[0]!;
+      return (await spotDtos(admin, [data!], await viewerCapabilities(admin, userId)))[0]!;
     },
     async updatePhotographerSpot(userId, accessToken, id, input) {
+      const viewer = await viewerCapabilities(admin, userId);
       const current = await findSpot(admin, id);
-      await assertOwner(current, "owner_id", userId);
+      await assertOwner(current, "owner_id", viewer);
       const { data, error } = await ownerClient(accessToken)
         .from("photographer_spots")
         .update(spotWrite({ ...spotInput(current!), ...input }, {}))
@@ -167,10 +182,10 @@ export function createContentRepository(
         .select("*")
         .maybeSingle();
       ensureWrite(error, data);
-      return (await spotDtos(admin, [data!], userId))[0]!;
+      return (await spotDtos(admin, [data!], viewer))[0]!;
     },
     async deletePhotographerSpot(userId, accessToken, id) {
-      await assertOwner(await findSpot(admin, id), "owner_id", userId);
+      await assertOwner(await findSpot(admin, id), "owner_id", await viewerCapabilities(admin, userId));
       const { data, error } = await ownerClient(accessToken)
         .from("photographer_spots")
         .update({ deleted_at: new Date().toISOString() })
@@ -181,12 +196,16 @@ export function createContentRepository(
       ensureWrite(error, data);
     },
     async explore(bounds, layers, viewerId) {
+      const viewer = await viewerCapabilities(admin, viewerId);
       const { data, error } = await admin.rpc("explore_content", {
         ...bounds,
         layers,
       });
       ensureQuery(error);
-      return (data ?? []).map((row) => ({
+      const people = await authors(admin, (data ?? []).map((row) => row.author_id), viewer.canManage);
+      return (data ?? []).flatMap((row) => {
+        const author = people.get(row.author_id);
+        return author ? [{
         id: row.id,
         kind: normalizeExploreKind(row.kind),
         title: row.title,
@@ -195,16 +214,13 @@ export function createContentRepository(
         longitude: row.longitude,
         startsAt: row.starts_at,
         endsAt: row.ends_at,
-        author: {
-          id: row.author_id,
-          username: row.author_username,
-          displayName: row.author_display_name,
-        },
-        canEdit: row.author_id === viewerId,
-      }));
+        author,
+        canEdit: viewer.canManage || (viewer.canWrite && row.author_id === viewer.userId),
+      }] : [];
+      });
     },
     async search(query, types, viewerId) {
-      return searchContent(admin, query, types, viewerId);
+      return searchContent(admin, query, types, await viewerCapabilities(admin, viewerId));
     },
   };
 }
@@ -227,16 +243,25 @@ async function findSpot(admin: AdminClient, id: string) {
   return data;
 }
 
-async function authors(admin: AdminClient, ids: readonly string[]) {
+async function authors(admin: AdminClient, ids: readonly string[], includeSuspended = false) {
   const unique = Array.from(new Set(ids));
-  const { data, error } = await admin
+  if (!unique.length) return new Map();
+  const [{ data, error }, { data: access, error: accessError }] = await Promise.all([
+    admin
     .from("profiles")
     .select("id, username, display_name")
-    .in("id", unique);
+    .in("id", unique),
+    admin.from("account_access").select("user_id,status,transition_id").in("user_id", unique),
+  ]);
   ensureQuery(error);
+  ensureQuery(accessError);
+  const statusByUserId = new Map((access ?? []).map((row) => [row.user_id, row]));
   return new Map(
     (data ?? [])
-      .filter((row) => row.username && row.display_name)
+      .filter((row) => {
+        const access = statusByUserId.get(row.id);
+        return Boolean(row.username && row.display_name && access?.transition_id === null && (includeSuspended || access.status !== "suspended"));
+      })
       .map((row) => [
         row.id,
         { id: row.id, username: row.username!, displayName: row.display_name! },
@@ -244,23 +269,38 @@ async function authors(admin: AdminClient, ids: readonly string[]) {
   );
 }
 
-async function postDtos(admin: AdminClient, rows: Tables<"posts">[], viewerId: string | null): Promise<PostDto[]> {
-  const people = await authors(admin, rows.map((row) => row.author_id));
+async function postDtos(admin: AdminClient, rows: Tables<"posts">[], viewer: ViewerCapabilities): Promise<PostDto[]> {
+  const people = await authors(admin, rows.map((row) => row.author_id), viewer.canManage);
   const postIds = rows.map((row) => row.id);
-  const tags = await postMarkerTags(admin, postIds);
+  const tags = await postMarkerTags(admin, postIds, viewer);
   const counts = new Map<string, number>();
   if (postIds.length) {
-    const { data, error } = await admin.from("comments").select("post_id").in("post_id", postIds);
+    const { data, error } = await admin.from("comments").select("post_id,author_id").in("post_id", postIds);
     ensureQuery(error);
-    for (const item of data ?? []) counts.set(item.post_id, (counts.get(item.post_id) ?? 0) + 1);
+    const authorIds = [...new Set((data ?? []).map((item) => item.author_id))];
+    const { data: access, error: accessError } = authorIds.length
+      ? await admin.from("account_access").select("user_id,status,transition_id").in("user_id", authorIds)
+      : { data: [], error: null };
+    ensureQuery(accessError);
+    const statuses = new Map((access ?? []).map((item) => [item.user_id, item]));
+    for (const item of data ?? []) {
+      const access = statuses.get(item.author_id);
+      if (access?.transition_id === null && (viewer.canManage || access.status !== "suspended")) {
+        counts.set(item.post_id, (counts.get(item.post_id) ?? 0) + 1);
+      }
+    }
   }
   return rows.flatMap((row) => {
     const author = people.get(row.author_id);
-    return author ? [{ id: row.id, body: row.body, author, canEdit: row.author_id === viewerId, commentCount: counts.get(row.id) ?? 0, markerTags: tags.get(row.id) ?? [], createdAt: row.created_at, updatedAt: row.updated_at }] : [];
+    return author ? [{ id: row.id, body: row.body, communityCategory: row.community_category, author, canEdit: viewer.canManage || (viewer.canWrite && row.author_id === viewer.userId), commentCount: counts.get(row.id) ?? 0, markerTags: tags.get(row.id) ?? [], createdAt: row.created_at, updatedAt: row.updated_at }] : [];
   });
 }
 
-async function postMarkerTags(admin: AdminClient, postIds: readonly string[]) {
+async function postMarkerTags(
+  admin: AdminClient,
+  postIds: readonly string[],
+  viewer: ViewerCapabilities,
+) {
   const result = new Map<string, PostDto["markerTags"]>();
   if (!postIds.length) return result;
   const { data, error } = await admin.from("post_marker_tags").select("*").in("post_id", [...postIds]).order("position");
@@ -268,17 +308,26 @@ async function postMarkerTags(admin: AdminClient, postIds: readonly string[]) {
   const eventIds=(data??[]).flatMap((row)=>row.event_id?[row.event_id]:[]);
   const spotIds=(data??[]).flatMap((row)=>row.photographer_spot_id?[row.photographer_spot_id]:[]);
   const [events,spots]=await Promise.all([
-    eventIds.length?admin.from("events").select("id,title,kind,deleted_at").in("id",eventIds):Promise.resolve({data:[],error:null}),
-    spotIds.length?admin.from("photographer_spots").select("id,title,deleted_at").in("id",spotIds):Promise.resolve({data:[],error:null}),
+    eventIds.length?admin.from("events").select("id,title,kind,deleted_at,organizer_id").in("id",eventIds):Promise.resolve({data:[],error:null}),
+    spotIds.length?admin.from("photographer_spots").select("id,title,deleted_at,owner_id").in("id",spotIds):Promise.resolve({data:[],error:null}),
   ]);
   ensureQuery(events.error);ensureQuery(spots.error);
   const eventMap=new Map((events.data??[]).map((row)=>[row.id,row]));
   const spotMap=new Map((spots.data??[]).map((row)=>[row.id,row]));
+  const people = await authors(admin, [
+    ...(events.data ?? []).map((row) => row.organizer_id),
+    ...(spots.data ?? []).map((row) => row.owner_id),
+  ], viewer.canManage);
   for(const row of data??[]){
     const target=row.event_id?eventMap.get(row.event_id):row.photographer_spot_id?spotMap.get(row.photographer_spot_id):undefined;
+    const targetVisible = Boolean(
+      target &&
+      !target.deleted_at &&
+      people.has("organizer_id" in target ? target.organizer_id : target.owner_id),
+    );
     const value = row.event_id
-      ? {kind:"event" as const,id:row.event_id,title:target&&!target.deleted_at?target.title:null,markerKind:target&&!target.deleted_at&&"kind" in target?normalizeExploreKind(String(target.kind)):null,available:Boolean(target&&!target.deleted_at)}
-      : {kind:"photographerSpot" as const,id:row.photographer_spot_id!,title:target&&!target.deleted_at?target.title:null,markerKind:target&&!target.deleted_at?"photographerSpot" as const:null,available:Boolean(target&&!target.deleted_at)};
+      ? {kind:"event" as const,id:row.event_id,title:targetVisible?target!.title:null,markerKind:targetVisible&&"kind" in target! ?normalizeExploreKind(String(target!.kind)):null,available:targetVisible}
+      : {kind:"photographerSpot" as const,id:row.photographer_spot_id!,title:targetVisible?target!.title:null,markerKind:targetVisible?"photographerSpot" as const:null,available:targetVisible};
     result.set(row.post_id,[...(result.get(row.post_id)??[]),value]);
   }
   return result;
@@ -295,8 +344,8 @@ async function validateMarkerTags(admin:AdminClient,tags:NonNullable<CreatePostI
   if((events.data??[]).length!==eventIds.length||(spots.data??[]).length!==spotIds.length)throw repositoryError("CONTENT_VALIDATION_FAILED",400);
 }
 
-async function eventDtos(admin: AdminClient, rows: Tables<"events">[], viewerId: string | null): Promise<EventDto[]> {
-  const people = await authors(admin, rows.map((row) => row.organizer_id));
+async function eventDtos(admin: AdminClient, rows: Tables<"events">[], viewer: ViewerCapabilities): Promise<EventDto[]> {
+  const people = await authors(admin, rows.map((row) => row.organizer_id), viewer.canManage);
   return rows.flatMap((row) => {
     const organizer = people.get(row.organizer_id);
     return organizer ? [{
@@ -305,19 +354,19 @@ async function eventDtos(admin: AdminClient, rows: Tables<"events">[], viewerId:
       destinationLabel: row.destination_label, destinationLatitude: row.destination_latitude,
       destinationLongitude: row.destination_longitude, startsAt: row.starts_at, endsAt: row.ends_at,
       timezone: row.timezone, vehicleKinds: row.vehicle_kinds, organizer,
-      canEdit: row.organizer_id === viewerId, createdAt: row.created_at, updatedAt: row.updated_at,
+      canEdit: viewer.canManage || (viewer.canWrite && row.organizer_id === viewer.userId), createdAt: row.created_at, updatedAt: row.updated_at,
     }] : [];
   });
 }
 
-async function spotDtos(admin: AdminClient, rows: Tables<"photographer_spots">[], viewerId: string | null): Promise<PhotographerSpotDto[]> {
-  const people = await authors(admin, rows.map((row) => row.owner_id));
+async function spotDtos(admin: AdminClient, rows: Tables<"photographer_spots">[], viewer: ViewerCapabilities): Promise<PhotographerSpotDto[]> {
+  const people = await authors(admin, rows.map((row) => row.owner_id), viewer.canManage);
   return rows.flatMap((row) => {
     const photographer = people.get(row.owner_id);
     return photographer ? [{
       id: row.id, title: row.title, description: row.description, locationLabel: row.location_label,
       latitude: row.latitude, longitude: row.longitude, startsAt: row.starts_at, endsAt: row.ends_at,
-      timezone: row.timezone, photographer, canEdit: row.owner_id === viewerId,
+      timezone: row.timezone, photographer, canEdit: viewer.canManage || (viewer.canWrite && row.owner_id === viewer.userId),
       createdAt: row.created_at, updatedAt: row.updated_at,
     }] : [];
   });
@@ -398,9 +447,9 @@ function spotInput(row: Tables<"photographer_spots">): CreatePhotographerSpotInp
 async function assertOwner<Row extends Record<Key, string>, Key extends string>(
   row: Row | null,
   key: Key,
-  userId: string,
+  viewer: ViewerCapabilities,
 ): Promise<void> {
-  if (!row || row[key] !== userId || ("deleted_at" in row && row.deleted_at)) {
+  if (!row || (!viewer.canManage && (!viewer.canWrite || row[key] !== viewer.userId)) || ("deleted_at" in row && row.deleted_at)) {
     throw repositoryError(row ? "CONTENT_FORBIDDEN" : "CONTENT_NOT_FOUND", row ? 403 : 404);
   }
 }
@@ -429,7 +478,7 @@ async function searchContent(
   admin: AdminClient,
   query: string,
   types: SearchType[],
-  viewerId: string | null,
+  viewer: ViewerCapabilities,
 ): Promise<SearchResultDto[]> {
   const pattern = `%${query.replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
   const results: SearchResultDto[] = [];
@@ -440,30 +489,34 @@ async function searchContent(
     ]);
     ensureQuery(byUsername.error); ensureQuery(byName.error);
     const profiles = new Map([...(byUsername.data ?? []), ...(byName.data ?? [])].map((row) => [row.id, row]));
-    for (const row of profiles.values()) if (row.username && row.display_name) results.push({ id: row.id, kind: "profile", title: row.display_name, subtitle: `@${row.username}`, username: row.username });
+    const people = await authors(admin, [...profiles.keys()], viewer.canManage);
+    for (const row of profiles.values()) if (row.username && row.display_name && people.has(row.id)) results.push({ id: row.id, kind: "profile", title: row.display_name, subtitle: `@${row.username}`, username: row.username });
   }
   if (types.includes("posts")) {
-    const { data, error } = await admin.from("posts").select("id,body,author_id").is("deleted_at", null).ilike("body", pattern).limit(8);
+    const { data, error } = await admin.from("posts").select("id,body,author_id,community_category").is("deleted_at", null).ilike("body", pattern).limit(8);
     ensureQuery(error);
-    const people = await authors(admin, (data ?? []).map((row) => row.author_id));
-    for (const row of data ?? []) { const author = people.get(row.author_id); if (author) results.push({ id: row.id, kind: "post", title: row.body.slice(0, 80), subtitle: author.displayName, username: author.username }); }
+    const people = await authors(admin, (data ?? []).map((row) => row.author_id), viewer.canManage);
+    for (const row of data ?? []) { const author = people.get(row.author_id); if (author) results.push({ id: row.id, kind: "post", title: row.body.slice(0, 80), subtitle: author.displayName, username: author.username, communityCategory: row.community_category }); }
   }
   if (types.includes("events")) {
     const { data, error } = await admin.from("events").select("id,title,location_label,organizer_id").is("deleted_at", null).ilike("title", pattern).limit(8);
     ensureQuery(error);
-    for (const row of data ?? []) results.push({ id: row.id, kind: "event", title: row.title, subtitle: row.location_label, username: null });
+    const people = await authors(admin, (data ?? []).map((row) => row.organizer_id), viewer.canManage);
+    for (const row of data ?? []) if (people.has(row.organizer_id)) results.push({ id: row.id, kind: "event", title: row.title, subtitle: row.location_label, username: null });
   }
   if (types.includes("photographer-spots")) {
     const { data, error } = await admin.from("photographer_spots").select("id,title,location_label,owner_id").is("deleted_at", null).ilike("title", pattern).limit(8);
     ensureQuery(error);
-    const people = await authors(admin, (data ?? []).map((row) => row.owner_id));
+    const people = await authors(admin, (data ?? []).map((row) => row.owner_id), viewer.canManage);
     for (const row of data ?? []) { const owner = people.get(row.owner_id); if (owner) results.push({ id: row.id, kind: "photographerSpot", title: row.title, subtitle: row.location_label, username: owner.username }); }
   }
-  if (types.includes("market-products")) {
-    const { data, error } = await admin.from("market_products").select("id,name,category").is("deleted_at", null).ilike("name", pattern).limit(8);
-    ensureQuery(error);
-    for (const row of data ?? []) results.push({ id: row.id, kind: "marketProduct", title: row.name, subtitle: row.category, username: null });
-  }
-  void viewerId;
   return results.slice(0, 30);
+}
+
+async function viewerCapabilities(admin: AdminClient, userId: string | null): Promise<ViewerCapabilities> {
+  if (!userId) return { userId: null, canWrite: false, canManage: false };
+  const { data, error } = await admin.from("account_access").select("role,status,transition_id").eq("user_id", userId).maybeSingle();
+  ensureQuery(error);
+  const active = data?.status === "active" && data.transition_id === null;
+  return { userId, canWrite: active, canManage: active && data?.role === "admin" };
 }

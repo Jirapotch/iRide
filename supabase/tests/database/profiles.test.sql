@@ -105,7 +105,7 @@ select ok(not has_column_privilege('anon', 'public.profiles', 'latitude', 'selec
 select ok(not has_column_privilege('authenticated', 'public.profiles', 'longitude', 'select'), 'authenticated cannot select longitude');
 select ok(not has_table_privilege('authenticated', 'public.profiles', 'insert'), 'authenticated cannot insert profiles');
 select ok(not has_table_privilege('authenticated', 'public.profiles', 'delete'), 'authenticated cannot delete profiles');
-select ok(not has_schema_privilege('authenticated', 'private', 'usage'), 'authenticated cannot use private schema');
+select ok(has_schema_privilege('authenticated', 'private', 'usage'), 'authenticated can resolve private policy helpers');
 
 set local role anon;
 select is((select count(username)::integer from public.profiles), 1, 'anon sees only complete public profiles');
@@ -121,7 +121,7 @@ where id = '10000000-0000-4000-8000-000000000001';
 select is(
   (select bio from public.profiles where id = '10000000-0000-4000-8000-000000000001'),
   'Roads and stories',
-  'owner can update own profile without private schema access'
+  'owner can update own profile through private policy helpers'
 );
 select is(
   (select count(*)::integer from public.profiles where id = '20000000-0000-4000-8000-000000000002'),

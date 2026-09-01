@@ -8,6 +8,7 @@ export const MOCK_SUPABASE_PORT = 54321;
 export const MOCK_SUPABASE_URL = `http://127.0.0.1:${MOCK_SUPABASE_PORT}`;
 export const MOCK_PUBLISHABLE_KEY = "sb_publishable_e2e_auth_mock";
 export const MOCK_USER_ID = "11111111-1111-4111-8111-111111111111";
+export const MOCK_TARGET_USER_ID = "22222222-2222-4222-8222-222222222222";
 
 const keyId = "iride-e2e-es256";
 const { privateKey, publicKey } = generateKeyPairSync("ec", {
@@ -15,10 +16,16 @@ const { privateKey, publicKey } = generateKeyPairSync("ec", {
 });
 const publicJwk = publicKey.export({ format: "jwk" });
 let profile = completeProfile();
+let accountAccess = completeAccountAccess();
+let targetAccess = targetAccountAccess();
+let posts = new Map();
 let events = new Map();
 
 export function startMockSupabaseAuth() {
   events = new Map();
+  accountAccess = completeAccountAccess();
+  targetAccess = targetAccountAccess();
+  posts = new Map();
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", MOCK_SUPABASE_URL);
 
@@ -73,13 +80,63 @@ export function startMockSupabaseAuth() {
       return json(response, 200, { data: profile });
     }
 
+    if (request.method === "POST" && url.pathname === "/test/account-access") {
+      const body = await readJsonBody(request);
+      accountAccess = { ...accountAccess, status: body?.status === "locked" ? "locked" : "active", role: body?.role === "user" ? "user" : "admin", updated_at: new Date().toISOString() };
+      return json(response, 200, { data: accountAccess });
+    }
+
+    if (request.method === "GET" && url.pathname === "/rest/v1/account_access") {
+      const ids = filterValues(url.searchParams.get("user_id"));
+      const rows = [accountAccess, targetAccess].filter((item) => !ids || ids.includes(item.user_id));
+      return postgrestJson(response, postgrestBody(request, rows, rows[0] ?? null));
+    }
+
     if (request.method === "GET" && url.pathname === "/rest/v1/profiles") {
       const ids = filterValues(url.searchParams.get("id"));
       const username = filterValue(url.searchParams.get("username"));
-      const matches =
-        (!ids || ids.includes(profile.id)) &&
-        (!username || username === profile.username);
-      return postgrestJson(response, matches ? [profile] : []);
+      const rows = [profile, targetProfile()].filter((item) => (!ids || ids.includes(item.id)) && (!username || username === item.username));
+      return postgrestJson(response, postgrestBody(request, rows, rows[0] ?? null));
+    }
+
+    if (request.method === "PUT" && url.pathname.startsWith("/auth/v1/admin/users/")) {
+      await readJsonBody(request);
+      return json(response, 200, { user: { id: url.pathname.split("/").at(-1) } });
+    }
+
+    if (request.method === "POST" && url.pathname === "/rest/v1/rpc/begin_account_access_transition") {
+      const body = await readJsonBody(request);
+      const previous = targetAccess.status;
+      const next = body?.requested_action === "unlock" || body?.requested_action === "restore" ? "active" : body?.requested_action === "suspend" ? "suspended" : "locked";
+      targetAccess = { ...targetAccess, status: next, transition_id: "33333333-3333-4333-8333-333333333333", transition_action: body?.requested_action, transition_previous_status: previous, transition_actor_id: body?.actor_id, updated_at: new Date().toISOString() };
+      return postgrestJson(response, postgrestBody(request, [transitionRow(targetAccess, previous)], transitionRow(targetAccess, previous)));
+    }
+
+    if (request.method === "POST" && url.pathname === "/rest/v1/rpc/finalize_account_access_transition") {
+      await readJsonBody(request);
+      targetAccess = { ...targetAccess, transition_id: null, transition_action: null, transition_previous_status: null, transition_actor_id: null, updated_at: new Date().toISOString() };
+      const row = { role: targetAccess.role, status: targetAccess.status, updated_at: targetAccess.updated_at };
+      return postgrestJson(response, postgrestBody(request, [row], row));
+    }
+
+    if (request.method === "POST" && url.pathname === "/rest/v1/rpc/save_post_with_markers") {
+      const body = await readJsonBody(request);
+      const id = body?.target_post_id || randomUUID();
+      const timestamp = new Date().toISOString();
+      posts.set(id, { id, author_id: MOCK_USER_ID, body: body?.post_body ?? "", community_category: body?.post_community_category ?? "groups", deleted_at: null, created_at: posts.get(id)?.created_at ?? timestamp, updated_at: timestamp });
+      return postgrestJson(response, id);
+    }
+
+    if (request.method === "GET" && url.pathname === "/rest/v1/posts") {
+      const ids = filterValues(url.searchParams.get("id"));
+      const authorId = filterValue(url.searchParams.get("author_id"));
+      const category = filterValue(url.searchParams.get("community_category"));
+      const rows = Array.from(posts.values()).filter((item) => (!ids || ids.includes(item.id)) && (!authorId || item.author_id === authorId) && (!category || item.community_category === category) && !item.deleted_at);
+      return postgrestJson(response, postgrestBody(request, rows, rows[0] ?? null));
+    }
+
+    if (request.method === "GET" && ["/rest/v1/comments", "/rest/v1/post_marker_tags", "/rest/v1/photographer_spots", "/rest/v1/vehicles"].includes(url.pathname)) {
+      return postgrestJson(response, postgrestBody(request, [], null));
     }
 
     if (url.pathname === "/rest/v1/events") {
@@ -285,6 +342,32 @@ function completeProfile() {
     created_at: timestamp,
     updated_at: timestamp,
   };
+}
+
+function completeAccountAccess() {
+  return {
+    user_id: MOCK_USER_ID,
+    role: "admin",
+    status: "active",
+    transition_id: null,
+    transition_action: null,
+    transition_previous_status: null,
+    transition_actor_id: null,
+    created_at: "2026-08-27T00:00:00.000Z",
+    updated_at: "2026-08-27T00:00:00.000Z",
+  };
+}
+
+function targetAccountAccess() {
+  return { ...completeAccountAccess(), user_id: MOCK_TARGET_USER_ID, role: "user", status: "locked" };
+}
+
+function targetProfile() {
+  return { ...completeProfile(), id: MOCK_TARGET_USER_ID, username: "locked_rider", display_name: "Locked Rider" };
+}
+
+function transitionRow(access, previousStatus) {
+  return { role: access.role, status: access.status, updated_at: access.updated_at, transition_token: access.transition_id, previous_status: previousStatus };
 }
 
 function incompleteProfile() {

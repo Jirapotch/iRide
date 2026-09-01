@@ -11,6 +11,7 @@ import { createMediaRepository } from "./media-repository";
 interface OwnedUpload { readonly id:string; readonly ownerId:string; readonly purpose:MediaPurpose; readonly status:MediaStatus; readonly objectKey:string; readonly mimeType:string; readonly bytes:number }
 interface ProcessingMessage { readonly version:1; readonly jobId:string; readonly idempotencyKey:string; readonly attempt:0; readonly mediaId:string; readonly ownerId:string; readonly purpose:MediaPurpose; readonly objectKey:string }
 export interface MediaRepository {
+  readonly getAccountAccess:(userId:string)=>Promise<{readonly status:"locked"|"active"|"suspended";readonly transitionId:string|null}|null>;
   readonly createUpload:(input:{id:string;ownerId:string;purpose:MediaPurpose;objectKey:string;filename:string;mimeType:string;bytes:number},token:string)=>Promise<void>;
   readonly findOwnedUpload:(userId:string,id:string)=>Promise<OwnedUpload|null>;
   readonly markProcessingAndEnqueue:(userId:string,id:string,message:ProcessingMessage)=>Promise<void>;
@@ -28,7 +29,7 @@ class MediaError extends Error { constructor(readonly code:string,readonly statu
 export function handleMediaUpload(request:Request,dependencies=productionDependencies()){
   return execute(request,dependencies,async()=>{
     if(request.method!=="POST")return methodNotAllowed();
-    const auth=await dependencies.authenticate(request);const input=await read<MediaUploadRequest>(request,mediaUploadRequestSchema);
+    const auth=await dependencies.authenticate(request);await requireActiveAccount(dependencies.repository,auth.userId);const input=await read<MediaUploadRequest>(request,mediaUploadRequestSchema);
     const id=dependencies.newId();const objectKey=mediaObjectKey(auth.userId,input.purpose,input.filename,id);
     await dependencies.repository.createUpload({id,ownerId:auth.userId,purpose:input.purpose,objectKey,filename:input.filename,mimeType:input.mimeType,bytes:input.bytes},bearer(request));
     const uploadUrl=await dependencies.storage.signUpload(objectKey,input.mimeType,input.bytes,300);
@@ -39,7 +40,7 @@ export function handleMediaUpload(request:Request,dependencies=productionDepende
 export function handleMediaComplete(request:Request,id:string,dependencies=productionDependencies()){
   return execute(request,dependencies,async()=>{
     requireUuid(id);if(request.method!=="POST")return methodNotAllowed();
-    const auth=await dependencies.authenticate(request);const media=await dependencies.repository.findOwnedUpload(auth.userId,id);
+    const auth=await dependencies.authenticate(request);await requireActiveAccount(dependencies.repository,auth.userId);const media=await dependencies.repository.findOwnedUpload(auth.userId,id);
     if(!media)throw new MediaError("MEDIA_NOT_FOUND",404);
     if(media.status==="processing"||media.status==="ready")return Response.json({data:{mediaId:id,status:media.status}},{status:202});
     if(media.status!=="uploading")throw new MediaError("MEDIA_UPLOAD_INVALID",400);
@@ -70,6 +71,7 @@ async function execute(request:Request,dependencies:MediaDependencies,operation:
 }
 async function read<T>(request:Request,schema:{safeParse:(value:unknown)=>{success:true;data:unknown}|{success:false}}){let body:unknown;try{body=await request.json()}catch{throw new MediaError("MEDIA_VALIDATION_FAILED",400)}const result=schema.safeParse(body);if(!result.success)throw new MediaError("MEDIA_VALIDATION_FAILED",400);return result.data as T}
 async function optionalViewer(request:Request,deps:MediaDependencies){return request.headers.has("authorization")?(await deps.authenticate(request)).userId:null}
+async function requireActiveAccount(repository:MediaRepository,userId:string){const access=await repository.getAccountAccess(userId);if(access?.status!=="active"||access.transitionId!==null)throw new MediaError("MEDIA_FORBIDDEN",403)}
 function bearer(request:Request){return parseBearerToken(request.headers.get("authorization"))}
 function requireUuid(value:string){if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value))throw new MediaError("MEDIA_NOT_FOUND",404)}
 function error(code:string,status:number,headers?:Headers){return Response.json({error:{code,message:code}},{status,...(headers?{headers}:{})})}

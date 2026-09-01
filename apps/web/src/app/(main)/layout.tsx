@@ -18,7 +18,7 @@ export default async function MainLayout({
     : null;
 
   return (
-    <AppShell authenticated={Boolean(session)} locale={locale} username={profile?.username ?? null}>
+    <AppShell authenticated={Boolean(session)} canManage={profile?.canManage ?? false} locale={locale} username={profile?.username ?? null}>
       {children}
     </AppShell>
   );

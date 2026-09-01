@@ -38,6 +38,7 @@ export default async function UserProfilePage({
   return (
     <AppShell
       authenticated={Boolean(session)}
+      canManage={ownProfile?.canManage ?? false}
       locale={locale}
       username={ownProfile?.username ?? null}
     >
@@ -45,6 +46,7 @@ export default async function UserProfilePage({
         activities={activities}
         locale={locale}
         ownerProfile={ownerProfile}
+        canManage={ownProfile?.canManage ?? false}
         profile={profile}
         vehicles={vehicles}
         {...(query.tab ? { initialTab: query.tab } : {})}

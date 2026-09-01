@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  communityCategories,
   eventKinds,
   mediaPurposes,
   profileVisibilities,
@@ -137,6 +138,7 @@ const markerTagSchema = z.object({
 export const createPostSchema = z
   .object({
     body: requiredText(2_000),
+    communityCategory: z.enum(communityCategories),
     markerTags: z.array(markerTagSchema).max(5).optional(),
   })
   .strict()

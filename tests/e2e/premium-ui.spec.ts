@@ -13,7 +13,7 @@ async function createOwnerActivity(page: Page) {
   await page.getByLabel("Location name").fill("Bangkok");
   await page.getByLabel("Starts").fill("2026-09-01T06:00");
   await page.getByRole("button", { name: "Publish" }).click();
-  await expect(page).toHaveURL(/\?marker=/);
+  await expect(page).toHaveURL(/\/maps\?marker=/);
 }
 
 async function openMarkerSheet(
@@ -42,7 +42,7 @@ async function openMarkerSheet(
     }),
   );
   await page.setViewportSize(viewport);
-  await page.goto("/");
+  await page.goto("/maps");
   const marker = page.getByRole("button", { name: "Test meeting" });
   const documentHeightBeforeOpen = await page.evaluate(
     () => document.documentElement.scrollHeight,
@@ -51,6 +51,10 @@ async function openMarkerSheet(
   await expect(
     page.getByRole("dialog", { name: "Test meeting" }),
   ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open in Google Maps" })).toHaveAttribute(
+    "href",
+    /query=13\.7563%2C100\.5018/,
+  );
   return { documentHeightBeforeOpen, marker };
 }
 
@@ -68,7 +72,59 @@ test.beforeEach(async ({ context, page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
 });
 
-test("discover renders the full map and marker filter FAB without list mode", async ({
+test("locked accounts see a read-only create state", async ({ page, request }) => {
+  await request.post("http://127.0.0.1:54321/test/account-access", { data: { role: "user", status: "locked" } });
+  try {
+    await page.goto("/login?next=%2Fcreate");
+    await page.getByRole("button", { name: /Google/ }).click();
+    await expect(page.getByRole("heading", { name: "Your account is read-only" })).toBeVisible();
+  } finally {
+    await request.post("http://127.0.0.1:54321/test/account-access", { data: { role: "admin", status: "active" } });
+  }
+});
+
+test("post category is required and changing it on edit redirects to the new feed", async ({ page }) => {
+  await page.goto("/login?next=%2Fcreate%3Ftype%3Dpost%26category%3Dcar");
+  await page.getByRole("button", { name: /Google/ }).click();
+  const category = page.getByLabel("Community category");
+  await expect(category).toHaveAttribute("required", "");
+  await expect(category.locator("option")).toHaveCount(5);
+  await page.getByLabel("Post text").fill("Category route test");
+  await category.selectOption("car");
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page).toHaveURL(/\/community\/car\/talk\?post=/);
+  const createdUrl = new URL(page.url());
+  await page.goto(`${createdUrl.pathname}${createdUrl.search}&modal=edit`);
+  const dialog = page.getByRole("dialog", { name: "Edit post" });
+  await dialog.getByLabel("Community category").selectOption("bicycle");
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL(/\/community\/bicycle\/talk\?post=/);
+});
+
+test("legacy community routes preserve their closest destination", async ({ page }) => {
+  await page.goto("/community?room=talk&post=p1&modal=edit");
+  await expect(page).toHaveURL(/\/community\/groups\?post=p1&modal=edit$/);
+  await page.goto("/community?room=market");
+  await expect(page).toHaveURL(/\/community\/motorcycle\/market$/);
+});
+
+test("locked owners cannot open garage or profile media write controls", async ({ page, request }) => {
+  await request.post("http://127.0.0.1:54321/test/account-access", { data: { role: "user", status: "locked" } });
+  try {
+    await page.goto("/login?next=%2Fusers%2Fe2e_rider");
+    await page.getByRole("button", { name: /Google/ }).click();
+    await page.getByRole("button", { name: "Edit" }).click();
+    await expect(page.getByText("Profile photo")).toHaveCount(0);
+    await page.goto("/users/e2e_rider?tab=garage");
+    await expect(page.getByRole("link", { name: "Add" })).toHaveCount(0);
+    await page.goto("/users/e2e_rider?tab=garage&modal=create-vehicle");
+    await expect(page.getByRole("dialog", { name: "Add vehicle" })).toHaveCount(0);
+  } finally {
+    await request.post("http://127.0.0.1:54321/test/account-access", { data: { role: "admin", status: "active" } });
+  }
+});
+
+test("maps renders the full map and marker filter FAB without list mode", async ({
   page,
 }) => {
   await page.route("**/api/explore?**", async (route) =>
@@ -92,7 +148,7 @@ test("discover renders the full map and marker filter FAB without list mode", as
       }),
     }),
   );
-  await page.goto("/");
+  await page.goto("/maps");
   const map = page.getByRole("region", { name: "Discover map" });
   const canvas = page.locator(".maplibregl-canvas");
   await expect(canvas).toBeVisible();
@@ -111,22 +167,18 @@ test("discover renders the full map and marker filter FAB without list mode", as
   await expect(marker).toHaveCSS("clip-path", /polygon\(50% 100%/);
 });
 
-test("community exposes rooms and market deep links", async ({ page }) => {
-  await page.goto("/community");
-  for (const room of ["Talk", "Market", "Photographers", "Groups"])
-    await expect(
-      page.getByRole("link", { name: room, exact: true }),
-    ).toBeVisible();
-  await page.goto(
-    "/community?room=market&product=00000000-0000-4000-8000-000000000001",
-  );
-  await expect(
-    page.locator("#product-00000000-0000-4000-8000-000000000001"),
-  ).toHaveClass(/is-selected/);
+test("home categories lead to nested talk and coming-soon market pages", async ({ page }) => {
+  await page.goto("/");
+  for (const category of ["Cars", "Motorcycles", "Bicycles", "Photographers", "Groups"])
+    await expect(page.getByRole("link", { name: category, exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Motorcycles", exact: true }).click();
+  await expect(page.getByRole("link", { name: /^Talk/ })).toBeVisible();
+  await page.getByRole("link", { name: /^Market/ }).click();
+  await expect(page.getByText("Coming soon", { exact: true })).toBeVisible();
 });
 
 test("theme selection survives reload", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/maps");
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Light" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
@@ -137,7 +189,7 @@ test("theme selection survives reload", async ({ page }) => {
 test("map chrome follows theme without replacing the map canvas", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/maps");
   const map = page.getByRole("region", { name: "Discover map" });
   const canvas = page.locator(".maplibregl-canvas");
   await canvas.evaluate((element) => {
@@ -194,7 +246,7 @@ test("mobile discover map cannot scroll past its visible viewport", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 664 });
-  await page.goto("/");
+  await page.goto("/maps");
   await page.addStyleTag({ content: "body { min-height: 780px; }" });
 
   await page.evaluate(() => scrollTo(0, 200));
@@ -319,14 +371,19 @@ test("marker detail moves keyboard focus inside the dialog and traps it", async 
   const dialog = page.getByRole("dialog", { name: "Test meeting" });
   const close = dialog.getByRole("button", { name: "Close" });
   const author = dialog.getByRole("link", { name: "Rider" });
+  const googleMaps = dialog.getByRole("link", { name: "Open in Google Maps" });
 
   await expect(close).toBeFocused();
   await page.keyboard.press("Shift+Tab");
-  await expect(author).toBeFocused();
+  await expect(googleMaps).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(close).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(author).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(googleMaps).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
 
   await close.click();
   await expect(marker).toBeFocused();

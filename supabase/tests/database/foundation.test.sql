@@ -47,7 +47,7 @@ select ok((select relrowsecurity from pg_class where oid = 'pgmq.q_media_process
 select ok((select relrowsecurity from pg_class where oid = 'pgmq.a_media_processing'::regclass), 'archive queue has RLS');
 select ok(exists(select 1 from pg_publication where pubname = 'supabase_realtime'), 'Realtime publication exists');
 
-select ok(not has_schema_privilege('anon', 'private', 'usage'), 'anon cannot use private schema');
+select ok(has_schema_privilege('anon', 'private', 'usage'), 'anon can resolve private policy helpers');
 select ok(not has_schema_privilege('authenticated', 'internal', 'usage'), 'authenticated cannot use internal schema');
 select ok(not has_schema_privilege('anon', 'pgmq', 'usage'), 'anon cannot use pgmq schema');
 select ok(not has_schema_privilege('authenticated', 'pgmq', 'usage'), 'authenticated cannot use pgmq schema');

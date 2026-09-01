@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { createHealthResponse, serviceNames } from "./index";
+import {
+  communityCategories,
+  createHealthResponse,
+  serviceNames,
+} from "./index";
 
 describe("health contract", () => {
   it.each(serviceNames)("creates a valid %s response", (service) => {
@@ -9,5 +13,17 @@ describe("health contract", () => {
       service,
       version: "1.2.3",
     });
+  });
+});
+
+describe("community category contract", () => {
+  it("exposes the supported community categories", () => {
+    expect(communityCategories).toEqual([
+      "car",
+      "motorcycle",
+      "bicycle",
+      "photographers",
+      "groups",
+    ]);
   });
 });

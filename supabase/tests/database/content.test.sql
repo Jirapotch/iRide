@@ -20,6 +20,8 @@ where id = '10000000-0000-4000-8000-000000000001';
 update public.profiles
 set username = 'other_owner', display_name = 'Other Owner', visibility = 'public'
 where id = '20000000-0000-4000-8000-000000000002';
+update public.account_access set status = 'active'
+where user_id in ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002');
 
 select ok(has_table_privilege('anon', 'public.posts', 'select'), 'anon can read posts');
 select ok(not has_table_privilege('anon', 'public.posts', 'insert'), 'anon cannot create posts');
@@ -66,8 +68,8 @@ select throws_ok(
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', true);
 
-insert into public.posts (id, author_id, body)
-values ('40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000001', 'First post');
+insert into public.posts (id, author_id, body, community_category)
+values ('40000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000001', 'First post', 'groups');
 select is((select body from public.posts where id = '40000000-0000-4000-8000-000000000004'), 'First post', 'owner creates a post');
 
 insert into public.events (

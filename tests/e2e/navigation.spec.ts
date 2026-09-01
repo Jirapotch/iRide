@@ -21,10 +21,10 @@ test("mobile navigation has the new five destinations and an icon-only create ac
   const nav = page.getByRole("navigation", { name: "Primary navigation" });
   await expect(nav.getByRole("link")).toHaveCount(5);
   for (const item of [
-    { name: "Discover", href: "/" },
-    { name: "Search", href: "/search" },
+    { name: "Home", href: "/" },
+    { name: "Maps", href: "/maps" },
     { name: "Create", href: "/create" },
-    { name: "Community", href: "/community" },
+    { name: "Search", href: "/search" },
     { name: "Profile", href: "/login?intent=profile" },
   ])
     await expect(nav.getByRole("link", { name: item.name })).toHaveAttribute(
@@ -44,7 +44,7 @@ test("mobile create control aligns with the other bottom navigation destinations
 
   const nav = page.getByRole("navigation", { name: "Primary navigation" });
   const create = nav.getByRole("link", { name: "Create" });
-  const discover = nav.getByRole("link", { name: "Discover" });
+  const discover = nav.getByRole("link", { name: "Home" });
 
   expect(
     await create.evaluate(
@@ -84,4 +84,22 @@ test("settings contains theme and language without account settings", async ({
   await expect(drawer.getByRole("button", { name: "Light" })).toBeVisible();
   await expect(drawer.getByRole("button", { name: "Dark" })).toBeVisible();
   await expect(drawer.getByText("Account settings")).toHaveCount(0);
+});
+
+test("active administrators can open the user management list", async ({ page }) => {
+  await page.goto("/login?next=%2F");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("link", { name: "Manage users" }).click();
+  await expect(page.getByRole("heading", { name: "Manage users" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /E2E Rider/ })).toBeVisible();
+});
+
+test("administrators can unlock a locked user", async ({ page }) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByRole("link", { name: /Locked Rider/ }).click();
+  await expect(page.getByText("user · locked", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Unlock", exact: true }).click();
+  await expect(page.getByText("user · active", { exact: true })).toBeVisible();
 });

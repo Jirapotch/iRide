@@ -12,22 +12,26 @@ import {
 } from "./index";
 
 describe("content validation", () => {
-  it("normalizes a non-empty post body", () => {
-    expect(createPostSchema.parse({ body: "  Sunday meetup  " })).toEqual({
+  it("normalizes a non-empty post body with a supported community category", () => {
+    expect(createPostSchema.parse({ body: "  Sunday meetup  ", communityCategory: "motorcycle" })).toEqual({
       body: "Sunday meetup",
+      communityCategory: "motorcycle",
     });
-    expect(() => createPostSchema.parse({ body: "   " })).toThrow();
+    expect(() => createPostSchema.parse({ body: "   ", communityCategory: "groups" })).toThrow();
+    expect(() => createPostSchema.parse({ body: "Sunday meetup", communityCategory: "boats" })).toThrow();
   });
 
   it("accepts up to five marker tags and rejects duplicates", () => {
     const tag = { kind: "event" as const, id: "10000000-0000-4000-8000-000000000001" };
-    expect(createPostSchema.parse({ body: "Meet here", markerTags: [tag] })).toEqual({
+    expect(createPostSchema.parse({ body: "Meet here", communityCategory: "groups", markerTags: [tag] })).toEqual({
       body: "Meet here",
+      communityCategory: "groups",
       markerTags: [tag],
     });
-    expect(() => createPostSchema.parse({ body: "Meet here", markerTags: [tag, tag] })).toThrow();
+    expect(() => createPostSchema.parse({ body: "Meet here", communityCategory: "groups", markerTags: [tag, tag] })).toThrow();
     expect(() => createPostSchema.parse({
       body: "Too many",
+      communityCategory: "groups",
       markerTags: Array.from({ length: 6 }, (_, index) => ({
         kind: "event" as const,
         id: `10000000-0000-4000-8000-00000000000${index}`,

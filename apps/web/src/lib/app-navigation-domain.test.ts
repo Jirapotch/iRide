@@ -2,44 +2,67 @@ import type { SearchResultDto } from "@iride/types";
 import { describe, expect, it } from "vitest";
 
 import {
-  communityDataNeeds,
-  communityRooms,
+  communityCategoryHref,
+  communityTalkHref,
+  legacyCommunityHref,
   mapStyle,
-  resolveCommunityRoom,
+  primaryNavigation,
+  publicSearchResults,
   resolveTheme,
   searchResultHref,
 } from "./app-navigation-domain";
 
 describe("application navigation domain", () => {
-  it("keeps community rooms ordered and extensible", () => {
-    expect(communityRooms.map((room) => room.id)).toEqual([
-      "talk",
-      "market",
-      "photographers",
-      "groups",
+  it("keeps primary navigation in the requested order", () => {
+    expect(primaryNavigation("maya").map((item) => item.key)).toEqual([
+      "home",
+      "maps",
+      "create",
+      "search",
+      "profile",
     ]);
   });
 
-  it.each([
-    [undefined, { posts: true, products: false, spots: true, events: true }],
-    ["talk", { posts: true, products: false, spots: true, events: true }],
-    ["market", { posts: false, products: true, spots: false, events: false }],
-    [
-      "photographers",
-      { posts: false, products: false, spots: true, events: false },
-    ],
-    ["groups", { posts: false, products: false, spots: false, events: false }],
-    ["unknown", { posts: true, products: false, spots: true, events: true }],
-  ] as const)("loads only the data needed by room %s", (room, expected) => {
-    expect(communityDataNeeds(room)).toEqual(expected);
+  it("removes market products from public search results", () => {
+    expect(publicSearchResults([
+      { id: "p", kind: "post", title: "Post", subtitle: "Maya", username: "maya", communityCategory: "groups" },
+      { id: "m", kind: "marketProduct", title: "Helmet", subtitle: "Maya", username: "maya" },
+    ]).map((item) => item.id)).toEqual(["p"]);
   });
 
   it.each([
-    [undefined, "talk"],
-    ["market", "market"],
-    ["unknown", "talk"],
-  ] as const)("resolves room %s to %s", (requested, expected) => {
-    expect(resolveCommunityRoom(requested)).toBe(expected);
+    ["car", "/community/car"],
+    ["motorcycle", "/community/motorcycle"],
+    ["bicycle", "/community/bicycle"],
+    ["photographers", "/community/photographers"],
+    ["groups", "/community/groups"],
+  ] as const)("routes category %s to %s", (category, expected) => {
+    expect(communityCategoryHref(category)).toBe(expected);
+  });
+
+  it.each([
+    ["car", "/community/car/talk"],
+    ["photographers", "/community/photographers"],
+    ["groups", "/community/groups"],
+  ] as const)("routes talk category %s to %s", (category, expected) => {
+    expect(communityTalkHref(category)).toBe(expected);
+  });
+
+  it.each([
+    [undefined, "/community/groups"],
+    ["talk", "/community/groups"],
+    ["market", "/community/motorcycle/market"],
+    ["photographers", "/community/photographers"],
+    ["groups", "/community/groups"],
+    ["unknown", "/community/groups"],
+  ] as const)("redirects legacy room %s to %s", (room, expected) => {
+    expect(legacyCommunityHref(room)).toBe(expected);
+  });
+
+  it("preserves legacy post and edit selections", () => {
+    expect(legacyCommunityHref("talk", { post: "p1", modal: "edit" })).toBe(
+      "/community/groups?post=p1&modal=edit",
+    );
   });
 
   it.each([
@@ -60,8 +83,9 @@ describe("application navigation domain", () => {
         title: "Hello",
         subtitle: "Maya",
         username: "maya",
+        communityCategory: "car",
       },
-      "/community?room=talk&post=p1",
+      "/community/car/talk?post=p1",
     ],
     [
       {
@@ -71,7 +95,7 @@ describe("application navigation domain", () => {
         subtitle: "Bangkok",
         username: null,
       },
-      "/?marker=e1",
+      "/maps?marker=e1",
     ],
     [
       {
@@ -81,17 +105,7 @@ describe("application navigation domain", () => {
         subtitle: "Khao Yai",
         username: "maya",
       },
-      "/?marker=s1",
-    ],
-    [
-      {
-        id: "m1",
-        kind: "marketProduct",
-        title: "Helmet",
-        subtitle: "Maya",
-        username: "maya",
-      },
-      "/community?room=market&product=m1",
+      "/maps?marker=s1",
     ],
   ] satisfies [SearchResultDto, string][])(
     "routes %s to %s",

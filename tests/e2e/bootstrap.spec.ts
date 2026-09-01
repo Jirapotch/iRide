@@ -7,14 +7,14 @@ test("detects Thai and English from the browser without changing the URL", async
   const thaiPage = await thaiContext.newPage();
   await thaiPage.goto("/");
   await expect(thaiPage).toHaveURL(/\/$/);
-  await expect(thaiPage.getByRole("region", { name: "แผนที่ค้นพบ" })).toBeVisible();
+  await expect(thaiPage.getByRole("heading", { name: "เลือกพื้นที่ของคุณ" })).toBeVisible();
   await thaiContext.close();
 
   const englishContext = await browser.newContext({ locale: "en-US" });
   const englishPage = await englishContext.newPage();
   await englishPage.goto("/");
   await expect(englishPage).toHaveURL(/\/$/);
-  await expect(englishPage.getByRole("region", { name: "Discover map" })).toBeVisible();
+  await expect(englishPage.getByRole("heading", { name: "Choose your space" })).toBeVisible();
   await englishContext.close();
 });
 
@@ -25,7 +25,7 @@ test("persists a language switch on the same clean path", async ({ page }) => {
     name: /เปลี่ยนเป็นภาษาไทย/,
   });
   if (await switchToThai.isVisible()) await switchToThai.click();
-  await expect(page.getByRole("region", { name: "แผนที่ค้นพบ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "เลือกพื้นที่ของคุณ" })).toBeVisible();
 
   await page.getByRole("button", { name: "ตั้งค่า" }).click();
   await page
@@ -33,7 +33,7 @@ test("persists a language switch on the same clean path", async ({ page }) => {
     .click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByRole("region", { name: "Discover map" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Choose your space" })).toBeVisible();
 
   await page.goto("/login");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sign in");

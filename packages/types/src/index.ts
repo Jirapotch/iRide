@@ -19,6 +19,12 @@ export const profileVisibilities = ["public", "followers", "private"] as const;
 
 export type ProfileVisibility = (typeof profileVisibilities)[number];
 
+export const accountRoles = ["user", "admin"] as const;
+export type AccountRole = (typeof accountRoles)[number];
+
+export const accountStatuses = ["locked", "active", "suspended"] as const;
+export type AccountStatus = (typeof accountStatuses)[number];
+
 export interface PublicProfileDto {
   readonly id: string;
   readonly username: string;
@@ -43,6 +49,10 @@ export interface OwnProfileDto {
   readonly latitude: number | null;
   readonly longitude: number | null;
   readonly visibility: ProfileVisibility;
+  readonly role: AccountRole;
+  readonly status: AccountStatus;
+  readonly canWrite: boolean;
+  readonly canManage: boolean;
   readonly isComplete: boolean;
   readonly usernameChangeAvailableAt: string | null;
   readonly createdAt: string;
@@ -79,6 +89,15 @@ export type VehicleKind = (typeof vehicleKinds)[number];
 export const eventKinds = ["meeting", "event", "trip"] as const;
 export type EventKind = (typeof eventKinds)[number];
 
+export const communityCategories = [
+  "car",
+  "motorcycle",
+  "bicycle",
+  "photographers",
+  "groups",
+] as const;
+export type CommunityCategory = (typeof communityCategories)[number];
+
 export interface ContentAuthorDto {
   readonly id: string;
   readonly username: string;
@@ -88,6 +107,7 @@ export interface ContentAuthorDto {
 export interface PostDto {
   readonly id: string;
   readonly body: string;
+  readonly communityCategory: CommunityCategory;
   readonly author: ContentAuthorDto;
   readonly canEdit: boolean;
   readonly commentCount: number;
@@ -98,6 +118,7 @@ export interface PostDto {
 
 export interface CreatePostInput {
   readonly body: string;
+  readonly communityCategory: CommunityCategory;
   readonly markerTags?: readonly MarkerTagInput[];
 }
 
@@ -323,4 +344,5 @@ export interface SearchResultDto {
   readonly title: string;
   readonly subtitle: string;
   readonly username: string | null;
+  readonly communityCategory?: CommunityCategory;
 }

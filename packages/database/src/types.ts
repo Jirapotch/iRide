@@ -14,6 +14,81 @@ export type Database = {
   };
   public: {
     Tables: {
+      account_access: {
+        Row: {
+          created_at: string;
+          role: Database["public"]["Enums"]["account_role"];
+          status: Database["public"]["Enums"]["account_status"];
+          transition_action: string | null;
+          transition_actor_id: string | null;
+          transition_id: string | null;
+          transition_previous_role: Database["public"]["Enums"]["account_role"] | null;
+          transition_previous_status: Database["public"]["Enums"]["account_status"] | null;
+          transition_started_at: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          role?: Database["public"]["Enums"]["account_role"];
+          status?: Database["public"]["Enums"]["account_status"];
+          transition_action?: string | null;
+          transition_actor_id?: string | null;
+          transition_id?: string | null;
+          transition_previous_role?: Database["public"]["Enums"]["account_role"] | null;
+          transition_previous_status?: Database["public"]["Enums"]["account_status"] | null;
+          transition_started_at?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          role?: Database["public"]["Enums"]["account_role"];
+          status?: Database["public"]["Enums"]["account_status"];
+          transition_action?: string | null;
+          transition_actor_id?: string | null;
+          transition_id?: string | null;
+          transition_previous_role?: Database["public"]["Enums"]["account_role"] | null;
+          transition_previous_status?: Database["public"]["Enums"]["account_status"] | null;
+          transition_started_at?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      admin_audit_log: {
+        Row: {
+          action: string;
+          admin_id: string;
+          after_state: Json | null;
+          before_state: Json | null;
+          created_at: string;
+          id: number;
+          target_id: string | null;
+          target_table: string;
+        };
+        Insert: {
+          action: string;
+          admin_id: string;
+          after_state?: Json | null;
+          before_state?: Json | null;
+          created_at?: string;
+          id?: never;
+          target_id?: string | null;
+          target_table: string;
+        };
+        Update: {
+          action?: string;
+          admin_id?: string;
+          after_state?: Json | null;
+          before_state?: Json | null;
+          created_at?: string;
+          id?: never;
+          target_id?: string | null;
+          target_table?: string;
+        };
+        Relationships: [];
+      };
       comments: {
         Row: {
           author_id: string;
@@ -425,6 +500,7 @@ export type Database = {
         Row: {
           author_id: string;
           body: string;
+          community_category: Database["public"]["Enums"]["community_category"];
           created_at: string;
           deleted_at: string | null;
           id: string;
@@ -433,6 +509,7 @@ export type Database = {
         Insert: {
           author_id: string;
           body: string;
+          community_category: Database["public"]["Enums"]["community_category"];
           created_at?: string;
           deleted_at?: string | null;
           id?: string;
@@ -441,6 +518,7 @@ export type Database = {
         Update: {
           author_id?: string;
           body?: string;
+          community_category?: Database["public"]["Enums"]["community_category"];
           created_at?: string;
           deleted_at?: string | null;
           id?: string;
@@ -613,6 +691,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      begin_account_access_transition: {
+        Args: { actor_id: string; requested_action: string; target_user_id: string };
+        Returns: { previous_status: Database["public"]["Enums"]["account_status"]; role: Database["public"]["Enums"]["account_role"]; status: Database["public"]["Enums"]["account_status"]; transition_token: string; updated_at: string }[];
+      };
+      begin_bootstrap_account_promotion: {
+        Args: { target_user_id: string };
+        Returns: { previous_status: Database["public"]["Enums"]["account_status"]; role: Database["public"]["Enums"]["account_role"]; status: Database["public"]["Enums"]["account_status"]; transition_token: string; updated_at: string }[];
+      };
       archive_job: {
         Args: { message_id: number; queue_name: string };
         Returns: boolean;
@@ -628,6 +714,10 @@ export type Database = {
       delete_vehicle_permanently: {
         Args: { target_vehicle_id: string };
         Returns: string;
+      };
+      delete_admin_moderated_resource: {
+        Args: { moderator_id: string; resource_kind: string; target_resource_id: string };
+        Returns: undefined;
       };
       enqueue_job: {
         Args: { delay_seconds?: number; message: Json; queue_name: string };
@@ -664,6 +754,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      finalize_account_access_transition: {
+        Args: { actor_id: string; target_user_id: string; transition_token: string };
+        Returns: { role: Database["public"]["Enums"]["account_role"]; status: Database["public"]["Enums"]["account_status"]; updated_at: string }[];
+      };
       read_jobs: {
         Args: {
           batch_size?: number;
@@ -679,8 +773,21 @@ export type Database = {
           vt: string;
         }[];
       };
+      rollback_account_access_transition: {
+        Args: { actor_id: string; target_user_id: string; transition_token: string };
+        Returns: { role: Database["public"]["Enums"]["account_role"]; status: Database["public"]["Enums"]["account_status"]; updated_at: string }[];
+      };
+      recover_stale_account_access_transition: {
+        Args: { recovery_actor_id: string; stale_after_seconds?: number; target_user_id: string; transition_token: string };
+        Returns: { role: Database["public"]["Enums"]["account_role"]; status: Database["public"]["Enums"]["account_status"]; updated_at: string }[];
+      };
       save_post_with_markers: {
-        Args: { marker_tags: Json; post_body: string; target_post_id: string };
+        Args: {
+          marker_tags: Json;
+          post_body: string;
+          post_community_category: Database["public"]["Enums"]["community_category"];
+          target_post_id: string;
+        };
         Returns: string;
       };
       save_vehicle_with_media: {
@@ -693,6 +800,9 @@ export type Database = {
       };
     };
     Enums: {
+      account_role: "user" | "admin";
+      account_status: "locked" | "active" | "suspended";
+      community_category: "car" | "motorcycle" | "bicycle" | "photographers" | "groups";
       event_kind: "meeting" | "event" | "trip";
       media_purpose: "avatar" | "cover" | "vehicle" | "market";
       media_status: "uploading" | "processing" | "ready" | "failed" | "deleted";
@@ -827,6 +937,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_role: ["user", "admin"],
+      account_status: ["locked", "active", "suspended"],
+      community_category: ["car", "motorcycle", "bicycle", "photographers", "groups"],
       event_kind: ["meeting", "event", "trip"],
       media_purpose: ["avatar", "cover", "vehicle", "market"],
       media_status: ["uploading", "processing", "ready", "failed", "deleted"],
