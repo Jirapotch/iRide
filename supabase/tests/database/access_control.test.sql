@@ -68,11 +68,14 @@ select is((select body from public.posts where id = '40000000-0000-4000-8000-000
 insert into public.posts(id, author_id, body, community_category)
 values ('41000000-0000-4000-8000-000000000014', '10000000-0000-4000-8000-000000000001', 'Owner-only deletion', 'groups');
 update public.posts set deleted_at = now() where id = '41000000-0000-4000-8000-000000000014';
+reset role;
 select is(
   (select count(*)::integer from public.admin_audit_log where target_id = '41000000-0000-4000-8000-000000000014'),
   0,
   'generic owner deletes are never recorded as administrator moderation'
 );
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', true);
 insert into public.events(id, organizer_id, kind, title, location_label, latitude, longitude, starts_at, timezone, vehicle_kinds)
 values ('50000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000001', 'meeting', 'Owner event', 'Bangkok', 13.75, 100.5, now() + interval '1 day', 'Asia/Bangkok', array['car']::public.vehicle_kind[]);
 insert into public.photographer_spots(id, owner_id, title, location_label, latitude, longitude, starts_at, ends_at, timezone)
