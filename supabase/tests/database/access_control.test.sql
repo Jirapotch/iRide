@@ -161,10 +161,10 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', true);
 insert into public.posts(id, author_id, body, community_category)
 values ('42000000-0000-4000-8000-000000000016', '10000000-0000-4000-8000-000000000001', 'Generic admin post', 'groups');
-insert into public.events(id, organizer_id, kind, title, location_label, latitude, longitude, starts_at, timezone, vehicle_kinds)
+insert into public.events(id, organizer_id, kind, title, location_label, latitude, longitude, destination_label, destination_latitude, destination_longitude, starts_at, timezone, vehicle_kinds)
 values
-  ('52000000-0000-4000-8000-000000000017', '10000000-0000-4000-8000-000000000001', 'event', 'Generic admin event', 'Bangkok', 13.75, 100.5, now() + interval '1 day', 'Asia/Bangkok', array['car']::public.vehicle_kind[]),
-  ('53000000-0000-4000-8000-000000000018', '10000000-0000-4000-8000-000000000001', 'trip', 'Generic admin trip', 'Bangkok', 13.75, 100.5, now() + interval '1 day', 'Asia/Bangkok', array['car']::public.vehicle_kind[]);
+  ('52000000-0000-4000-8000-000000000017', '10000000-0000-4000-8000-000000000001', 'event', 'Generic admin event', 'Bangkok', 13.75, 100.5, null, null, null, now() + interval '1 day', 'Asia/Bangkok', array['car']::public.vehicle_kind[]),
+  ('53000000-0000-4000-8000-000000000018', '10000000-0000-4000-8000-000000000001', 'trip', 'Generic admin trip', 'Bangkok', 13.75, 100.5, 'Chiang Mai', 18.79, 98.98, now() + interval '1 day', 'Asia/Bangkok', array['car']::public.vehicle_kind[]);
 insert into public.photographer_spots(id, owner_id, title, location_label, latitude, longitude, starts_at, ends_at, timezone)
 values ('62000000-0000-4000-8000-000000000019', '10000000-0000-4000-8000-000000000001', 'Generic admin spot', 'Bangkok', 13.75, 100.5, now() + interval '1 day', now() + interval '1 day 1 hour', 'Asia/Bangkok');
 reset role;
