@@ -35,8 +35,33 @@ const generated = (await format(result.stdout, { filepath: destination }))
   .trimEnd();
 
 if (committed !== generated) {
+  const committedLines = committed.split("\n");
+  const generatedLines = generated.split("\n");
+  const mismatchIndex = Array.from(
+    { length: Math.max(committedLines.length, generatedLines.length) },
+    (_, index) => index,
+  ).find((index) => committedLines[index] !== generatedLines[index]);
+  const functionOrder = (source) => {
+    const functions = source.match(
+      /    Functions: \{([\s\S]*?)\n    Enums: \{/,
+    );
+    return functions
+      ? [...functions[1].matchAll(/^      ([a-zA-Z0-9_]+): \{/gm)].map(
+          (match) => match[1],
+        )
+      : [];
+  };
+
   process.stderr.write(
-    "Generated Supabase types have drifted. Run `pnpm db:types` and commit the result.\n",
+    [
+      "Generated Supabase types have drifted. Run `pnpm db:types` and commit the result.",
+      `First mismatch at line ${(mismatchIndex ?? 0) + 1}.`,
+      `Committed: ${JSON.stringify(committedLines[mismatchIndex ?? 0] ?? "<eof>")}`,
+      `Generated: ${JSON.stringify(generatedLines[mismatchIndex ?? 0] ?? "<eof>")}`,
+      `Committed function order: ${functionOrder(committed).join(", ")}`,
+      `Generated function order: ${functionOrder(generated).join(", ")}`,
+      "",
+    ].join("\n"),
   );
   process.exit(1);
 }
