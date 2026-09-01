@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(37);
+select plan(38);
 
 select ok(exists(select 1 from pg_extension where extname = 'pgcrypto'), 'pgcrypto is enabled');
 select ok(exists(select 1 from pg_extension where extname = 'postgis'), 'postgis is enabled');
@@ -66,6 +66,21 @@ select is(
   (select count(*)::integer from auth.users where raw_user_meta_data ->> 'seed' = 'foundation' and encrypted_password is null),
   2,
   'foundation identities have no password'
+);
+select is(
+  (select count(*)::integer
+   from auth.users
+   where raw_user_meta_data ->> 'seed' = 'foundation'
+     and instance_id = '00000000-0000-0000-0000-000000000000'::uuid
+     and aud = 'authenticated'
+     and role = 'authenticated'
+     and raw_app_meta_data = '{}'::jsonb
+     and confirmation_token = ''
+     and email_change = ''
+     and email_change_token_new = ''
+     and recovery_token = ''),
+  2,
+  'foundation identities contain the metadata required by GoTrue'
 );
 
 set local role service_role;

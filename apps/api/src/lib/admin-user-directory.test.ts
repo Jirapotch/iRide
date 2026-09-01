@@ -119,4 +119,22 @@ describe("admin user directory", () => {
       expect.objectContaining({ id: profiles[2].id, email: "city+team@example.test" }),
     ]);
   });
+
+  it("keeps the directory available when Auth cannot resolve a seeded user", async () => {
+    const page = searchAdminUserDirectory({
+      profiles: profiles.slice(0, 1),
+      access: access.slice(0, 1),
+      authUsers: [],
+      q: "",
+      page: 1,
+      pageSize: 25,
+    }).data;
+
+    await expect(enrichAdminUsersWithEmails(page, async () => ({
+      data: { user: null },
+      error: { name: "AuthApiError", status: 404, code: "user_not_found", message: "User not found" },
+    }))).resolves.toEqual([
+      expect.objectContaining({ id: profiles[0].id, email: null }),
+    ]);
+  });
 });

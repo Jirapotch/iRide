@@ -1,19 +1,60 @@
-insert into auth.users (id, email, raw_user_meta_data)
+insert into auth.users (
+  instance_id,
+  id,
+  aud,
+  role,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  confirmation_token,
+  recovery_token,
+  email_change_token_new,
+  email_change,
+  raw_app_meta_data,
+  raw_user_meta_data
+)
 values
   (
+    '00000000-0000-0000-0000-000000000000',
     '10000000-0000-4000-8000-000000000001',
+    'authenticated',
+    'authenticated',
     'foundation.owner@iride.test',
+    null,
+    null,
+    '',
+    '',
+    '',
+    '',
+    '{}'::jsonb,
     '{"seed": "foundation", "persona": "owner"}'::jsonb
   ),
   (
+    '00000000-0000-0000-0000-000000000000',
     '20000000-0000-4000-8000-000000000002',
+    'authenticated',
+    'authenticated',
     'foundation.viewer@iride.test',
+    null,
+    null,
+    '',
+    '',
+    '',
+    '',
+    '{}'::jsonb,
     '{"seed": "foundation", "persona": "viewer"}'::jsonb
   )
 on conflict (id) do update
-set email = excluded.email,
+set instance_id = excluded.instance_id,
+    aud = excluded.aud,
+    role = excluded.role,
+    email = excluded.email,
     encrypted_password = null,
     email_confirmed_at = null,
-    raw_app_meta_data = '{}'::jsonb,
+    confirmation_token = excluded.confirmation_token,
+    recovery_token = excluded.recovery_token,
+    email_change_token_new = excluded.email_change_token_new,
+    email_change = excluded.email_change,
+    raw_app_meta_data = excluded.raw_app_meta_data,
     raw_user_meta_data = excluded.raw_user_meta_data,
     updated_at = now();

@@ -335,9 +335,10 @@ function productionDependencies(): AdminUsersDependencies {
       if (profileError) throw profileError;
       if (accessError) throw accessError;
       if (!profile || !access) return null;
-      const { data: authData, error: authError } = await admin.auth.admin.getUserById(userId);
-      if (authError) throw authError;
-      return { id: profile.id, username: profile.username, displayName: profile.display_name, email: authData.user?.email ?? null, role: access.role, status: access.status, createdAt: profile.created_at, updatedAt: access.updated_at };
+      const [enriched] = await enrichAdminUsersWithEmails([
+        { id: profile.id, username: profile.username, displayName: profile.display_name, email: null, role: access.role, status: access.status, createdAt: profile.created_at, updatedAt: access.updated_at },
+      ], (id) => admin.auth.admin.getUserById(id));
+      return enriched ?? null;
     },
     async listContent(userId) {
       const [posts, events, spots, vehicles] = await Promise.all([

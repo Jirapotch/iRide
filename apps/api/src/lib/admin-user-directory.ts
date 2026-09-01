@@ -95,9 +95,15 @@ export async function enrichAdminUsersWithEmails(
   for (let offset = 0; offset < users.length; offset += 5) {
     enriched.push(...await Promise.all(users.slice(offset, offset + 5).map(async (user) => {
       const result = await getUserById(user.id);
-      if (result.error) throw result.error;
+      if (result.error && !isMissingAuthUser(result.error)) throw result.error;
       return { ...user, email: result.data.user?.email ?? null };
     })));
   }
   return enriched;
+}
+
+function isMissingAuthUser(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const authError = error as { readonly status?: unknown; readonly code?: unknown };
+  return authError.status === 404 || authError.code === "user_not_found";
 }
