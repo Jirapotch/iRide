@@ -7,11 +7,6 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5";
-  };
   public: {
     Tables: {
       account_access: {
@@ -697,6 +692,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      archive_job: {
+        Args: { message_id: number; queue_name: string };
+        Returns: boolean;
+      };
       begin_account_access_transition: {
         Args: {
           actor_id: string;
@@ -721,10 +720,6 @@ export type Database = {
           updated_at: string;
         }[];
       };
-      archive_job: {
-        Args: { message_id: number; queue_name: string };
-        Returns: boolean;
-      };
       complete_media_upload: {
         Args: {
           expected_owner_id: string;
@@ -733,10 +728,6 @@ export type Database = {
         };
         Returns: number;
       };
-      delete_vehicle_permanently: {
-        Args: { target_vehicle_id: string };
-        Returns: string;
-      };
       delete_admin_moderated_resource: {
         Args: {
           moderator_id: string;
@@ -744,6 +735,10 @@ export type Database = {
           target_resource_id: string;
         };
         Returns: undefined;
+      };
+      delete_vehicle_permanently: {
+        Args: { target_vehicle_id: string };
+        Returns: string;
       };
       enqueue_job: {
         Args: { delay_seconds?: number; message: Json; queue_name: string };
@@ -771,15 +766,6 @@ export type Database = {
           title: string;
         }[];
       };
-      finish_media_processing: {
-        Args: {
-          source_height: number;
-          source_width: number;
-          target_media_id: string;
-          variants: Json;
-        };
-        Returns: undefined;
-      };
       finalize_account_access_transition: {
         Args: {
           actor_id: string;
@@ -791,6 +777,15 @@ export type Database = {
           status: Database["public"]["Enums"]["account_status"];
           updated_at: string;
         }[];
+      };
+      finish_media_processing: {
+        Args: {
+          source_height: number;
+          source_width: number;
+          target_media_id: string;
+          variants: Json;
+        };
+        Returns: undefined;
       };
       read_jobs: {
         Args: {
@@ -807,9 +802,10 @@ export type Database = {
           vt: string;
         }[];
       };
-      rollback_account_access_transition: {
+      recover_stale_account_access_transition: {
         Args: {
-          actor_id: string;
+          recovery_actor_id: string;
+          stale_after_seconds?: number;
           target_user_id: string;
           transition_token: string;
         };
@@ -819,10 +815,9 @@ export type Database = {
           updated_at: string;
         }[];
       };
-      recover_stale_account_access_transition: {
+      rollback_account_access_transition: {
         Args: {
-          recovery_actor_id: string;
-          stale_after_seconds?: number;
+          actor_id: string;
           target_user_id: string;
           transition_token: string;
         };

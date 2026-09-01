@@ -43,10 +43,10 @@ if (committed !== generated) {
   ).find((index) => committedLines[index] !== generatedLines[index]);
   const functionOrder = (source) => {
     const functions = source.match(
-      /    Functions: \{([\s\S]*?)\n    Enums: \{/,
+      / {4}Functions: \{([\s\S]*?)\n {4}Enums: \{/,
     );
     return functions
-      ? [...functions[1].matchAll(/^      ([a-zA-Z0-9_]+): \{/gm)].map(
+      ? [...functions[1].matchAll(/^ {6}([a-zA-Z0-9_]+): \{/gm)].map(
           (match) => match[1],
         )
       : [];
