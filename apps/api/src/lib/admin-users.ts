@@ -7,6 +7,11 @@ import {
 import { createAdminDatabaseClient } from "@iride/database/admin";
 import type { AccountRole, AccountStatus, CommunityCategory } from "@iride/types";
 
+import {
+  enrichAdminUsersWithEmails,
+  loadAllAuthUsers,
+  searchAdminUserDirectory,
+} from "./admin-user-directory";
 import { createCorsDecision } from "./cors";
 
 const pageSize = 25;
@@ -284,8 +289,28 @@ function productionDependencies(): AdminUsersDependencies {
       return data ? { role: data.role, status: data.status, transitionId: data.transition_id } : null;
     },
     async listUsers({ q, page, pageSize: limit }) {
-      let query = admin.from("profiles").select("id,username,display_name,created_at,updated_at", { count: "exact" }).order("created_at", { ascending: false }).range((page - 1) * limit, page * limit - 1);
-      if (q) query = query.or(`username.ilike.%${escapeLike(q)}%,display_name.ilike.%${escapeLike(q)}%`);
+      if (q) {
+        const [profileRows, accessRows, authUsers] = await Promise.all([
+          loadAllRows<DirectoryProfileRow>(async (from, to) => {
+            const result = await admin.from("profiles").select("id,username,display_name,created_at").range(from, to);
+            return { data: result.data, error: result.error };
+          }),
+          loadAllRows<DirectoryAccessRow>(async (from, to) => {
+            const result = await admin.from("account_access").select("user_id,role,status,updated_at").range(from, to);
+            return { data: result.data, error: result.error };
+          }),
+          loadAllAuthUsers((params) => admin.auth.admin.listUsers(params)),
+        ]);
+        return searchAdminUserDirectory({
+          profiles: profileRows.map((profile) => ({ id: profile.id, username: profile.username, displayName: profile.display_name, createdAt: profile.created_at })),
+          access: accessRows.map((account) => ({ userId: account.user_id, role: account.role, status: account.status, updatedAt: account.updated_at })),
+          authUsers,
+          q,
+          page,
+          pageSize: limit,
+        });
+      }
+      const query = admin.from("profiles").select("id,username,display_name,created_at,updated_at", { count: "exact" }).order("created_at", { ascending: false }).range((page - 1) * limit, page * limit - 1);
       const { data: profiles, error, count } = await query;
       if (error) throw error;
       const ids = (profiles ?? []).map((profile) => profile.id);
@@ -295,10 +320,10 @@ function productionDependencies(): AdminUsersDependencies {
       if (accessError) throw accessError;
       const byId = new Map((access ?? []).map((row) => [row.user_id, row]));
       return {
-        data: (profiles ?? []).flatMap((profile) => {
+        data: await enrichAdminUsersWithEmails((profiles ?? []).flatMap((profile) => {
           const account = byId.get(profile.id);
           return account ? [{ id: profile.id, username: profile.username, displayName: profile.display_name, email: null, role: account.role, status: account.status, createdAt: profile.created_at, updatedAt: account.updated_at }] : [];
-        }),
+        }), (userId) => admin.auth.admin.getUserById(userId)),
         total: count ?? 0,
       };
     },
@@ -309,7 +334,10 @@ function productionDependencies(): AdminUsersDependencies {
       ]);
       if (profileError) throw profileError;
       if (accessError) throw accessError;
-      return profile && access ? { id: profile.id, username: profile.username, displayName: profile.display_name, email: null, role: access.role, status: access.status, createdAt: profile.created_at, updatedAt: access.updated_at } : null;
+      if (!profile || !access) return null;
+      const { data: authData, error: authError } = await admin.auth.admin.getUserById(userId);
+      if (authError) throw authError;
+      return { id: profile.id, username: profile.username, displayName: profile.display_name, email: authData.user?.email ?? null, role: access.role, status: access.status, createdAt: profile.created_at, updatedAt: access.updated_at };
     },
     async listContent(userId) {
       const [posts, events, spots, vehicles] = await Promise.all([
@@ -401,9 +429,20 @@ function productionDependencies(): AdminUsersDependencies {
   };
 }
 
-function escapeLike(value: string): string {
-  return value.replaceAll("%", "\\%").replaceAll("_", "\\_").replaceAll(",", "\\,").replaceAll(".", "\\.");
+async function loadAllRows<T>(readPage: (from: number, to: number) => Promise<{ readonly data: readonly T[] | null; readonly error: unknown }>): Promise<T[]> {
+  const rows: T[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const result = await readPage(from, from + pageSize - 1);
+    if (result.error) throw result.error;
+    const page = result.data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
 }
+
+interface DirectoryProfileRow { readonly id: string; readonly username: string | null; readonly display_name: string | null; readonly created_at: string }
+interface DirectoryAccessRow { readonly user_id: string; readonly role: AccountRole; readonly status: AccountStatus; readonly updated_at: string }
 
 function normalizeTransitionError(error: unknown): AdminRequestError {
   const message = error instanceof Error ? error.message : "";

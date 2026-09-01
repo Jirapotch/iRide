@@ -2292,8 +2292,10 @@ button:disabled {
 .coming-soon-page svg, .coming-soon-page strong { color: var(--primary); }
 .access-wait-note, .access-wait-state { padding: 1rem; border: 1px solid var(--border); border-radius: 1rem; background: color-mix(in srgb, var(--primary) 7%, var(--surface)); color: var(--muted-foreground); }
 .admin-users-page > header, .admin-user-detail section > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
-.admin-user-search { display: flex; gap: .6rem; margin: 1.25rem 0; }
+.admin-user-search { display: flex; align-items: center; gap: .6rem; margin: 1.25rem 0; }
 .admin-user-search input { flex: 1; }
+.admin-search-clear { color: var(--muted-foreground); font-size: .86rem; font-weight: 700; white-space: nowrap; }
+.admin-search-clear:hover { color: var(--foreground); }
 .admin-user-list { display: grid; gap: .6rem; }
 .admin-user-list > a { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: .9rem; background: var(--surface); color: inherit; }
 .admin-user-list strong, .admin-user-list small { display: block; }

@@ -99,6 +99,23 @@ export function startMockSupabaseAuth() {
       return postgrestJson(response, postgrestBody(request, rows, rows[0] ?? null));
     }
 
+    if (request.method === "GET" && url.pathname === "/auth/v1/admin/users") {
+      const users = [mockAuthUser(), mockTargetAuthUser()];
+      const page = Math.max(1, Number(url.searchParams.get("page") ?? "1"));
+      const perPage = Math.max(1, Number(url.searchParams.get("per_page") ?? "50"));
+      const from = (page - 1) * perPage;
+      return json(response, 200, { users: users.slice(from, from + perPage), aud: "authenticated" }, {
+        Link: `<${MOCK_SUPABASE_URL}/auth/v1/admin/users?page=${String(Math.max(1, Math.ceil(users.length / perPage)))}>; rel="last"`,
+        "x-total-count": String(users.length),
+      });
+    }
+
+    if (request.method === "GET" && url.pathname.startsWith("/auth/v1/admin/users/")) {
+      const id = url.pathname.split("/").at(-1);
+      const user = [mockAuthUser(), mockTargetAuthUser()].find((item) => item.id === id);
+      return user ? json(response, 200, { user }) : json(response, 404, { message: "User not found" });
+    }
+
     if (request.method === "PUT" && url.pathname.startsWith("/auth/v1/admin/users/")) {
       await readJsonBody(request);
       return json(response, 200, { user: { id: url.pathname.split("/").at(-1) } });
@@ -366,6 +383,14 @@ function targetProfile() {
   return { ...completeProfile(), id: MOCK_TARGET_USER_ID, username: "locked_rider", display_name: "Locked Rider" };
 }
 
+function mockAuthUser() {
+  return { id: MOCK_USER_ID, email: "oauth-user@iride.test" };
+}
+
+function mockTargetAuthUser() {
+  return { id: MOCK_TARGET_USER_ID, email: "locked@iride.test" };
+}
+
 function transitionRow(access, previousStatus) {
   return { role: access.role, status: access.status, updated_at: access.updated_at, transition_token: access.transition_id, previous_status: previousStatus };
 }
@@ -421,12 +446,13 @@ function postgrestError(response, status, code, message) {
   return json(response, status, { code, details: null, hint: null, message });
 }
 
-function json(response, status, body) {
+function json(response, status, body, headers = {}) {
   const value = JSON.stringify(body);
   response.writeHead(status, {
     "Cache-Control": "no-store",
     "Content-Length": Buffer.byteLength(value),
     "Content-Type": "application/json",
+    ...headers,
   });
   response.end(value);
 }

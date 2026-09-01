@@ -93,6 +93,14 @@ test("active administrators can open the user management list", async ({ page })
   await page.getByRole("link", { name: "Manage users" }).click();
   await expect(page.getByRole("heading", { name: "Manage users" })).toBeVisible();
   await expect(page.getByRole("link", { name: /E2E Rider/ })).toBeVisible();
+  await expect(page.getByText("oauth-user@iride.test")).toBeVisible();
+
+  await page.getByRole("textbox", { name: "Search users" }).fill("locked@iride.test");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page.getByRole("link", { name: /Locked Rider/ })).toBeVisible();
+  await page.getByRole("link", { name: "Clear search" }).click();
+  await expect(page).toHaveURL(/\/settings\/users$/);
+  await expect(page.getByRole("link", { name: /E2E Rider/ })).toBeVisible();
 });
 
 test("administrators can unlock a locked user", async ({ page }) => {
