@@ -1,4 +1,4 @@
-import { buttonVariants } from "@iride/ui/button";
+import { Button } from "antd";
 
 import type { Locale } from "@/lib/locale";
 
@@ -17,15 +17,9 @@ export function LanguageSwitcher({
     <form action={setLocale}>
       <input name="locale" type="hidden" value={alternateLocale} />
       <input name="returnTo" type="hidden" value={returnTo} />
-      <button
-        className={buttonVariants({
-          variant: "outline",
-          className: "h-10 px-4 text-xs tracking-[0.08em]",
-        })}
-        type="submit"
-      >
+      <Button htmlType="submit" size="large">
         {locale === "th" ? "English" : "ภาษาไทย"}
-      </button>
+      </Button>
     </form>
   );
 }

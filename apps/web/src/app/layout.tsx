@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { Geist, Noto_Sans_Thai } from "next/font/google";
 import Script from "next/script";
 import type { ReactNode } from "react";
+import { AntdRegistry } from "@ant-design/nextjs-registry";
 
 import { getRequestLocale } from "@/lib/request-locale";
+import { StoreProvider } from "@/store/provider";
 import { ThemeProvider } from "./_components/theme-provider";
 
 import "./globals.css";
@@ -32,6 +35,12 @@ export const metadata: Metadata = {
   },
 };
 
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+const notoThai = Noto_Sans_Thai({
+  subsets: ["thai"],
+  variable: "--font-noto-thai",
+});
+
 export default async function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
@@ -39,7 +48,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body>
+      <body className={`${geist.variable} ${notoThai.variable}`}>
         <Script id="iride-theme" strategy="beforeInteractive">{`
           try {
             var stored = localStorage.getItem('iride-theme');
@@ -50,7 +59,11 @@ export default async function RootLayout({
             document.documentElement.style.colorScheme = theme;
           } catch (_) {}
         `}</Script>
-        <ThemeProvider>{children}</ThemeProvider>
+        <AntdRegistry>
+          <StoreProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </StoreProvider>
+        </AntdRegistry>
       </body>
     </html>
   );

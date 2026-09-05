@@ -5,37 +5,36 @@ import {
   type ReactNode,
   useContext,
   useEffect,
-  useState,
 } from "react";
+import { ConfigProvider } from "antd";
 
-import { resolveTheme, type AppTheme } from "@/lib/app-navigation-domain";
+import { themeChanged, type AppTheme } from "@/features/preferences/preferences.slice";
+import { resolveTheme } from "@/lib/app-navigation-domain";
+import { createThemeConfig } from "@/shared/theme/tokens";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
-const STORAGE_KEY = "iride-theme";
 const ThemeContext = createContext<{
   readonly theme: AppTheme;
   readonly setTheme: (theme: AppTheme) => void;
 } | null>(null);
 
 export function ThemeProvider({ children }: { readonly children: ReactNode }) {
-  const [theme, setThemeState] = useState<AppTheme>(() =>
-    typeof document === "undefined"
-      ? "light"
-      : resolveTheme(document.documentElement.dataset.theme, false),
-  );
+  const theme = useAppSelector((state) => state.preferences.theme);
+  const dispatch = useAppDispatch();
 
   function setTheme(value: AppTheme) {
-    setThemeState(value);
-    window.localStorage.setItem(STORAGE_KEY, value);
+    dispatch(themeChanged(value));
   }
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-  }, [theme]);
+    dispatch(
+      themeChanged(resolveTheme(document.documentElement.dataset.theme, false)),
+    );
+  }, [dispatch]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
-      {children}
+      <ConfigProvider theme={createThemeConfig(theme)}>{children}</ConfigProvider>
     </ThemeContext.Provider>
   );
 }

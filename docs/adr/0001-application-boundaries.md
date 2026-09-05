@@ -5,9 +5,9 @@
 
 ## Decision
 
-Use a pnpm/Turborepo monorepo with a Next.js UI (`apps/web`), a Next.js API-only service (`apps/api`), and a long-running Node service (`apps/worker`). Shared code is exposed only through the eight `@iride/*` package exports. Browser code may not import worker infrastructure or server/worker configuration.
+Use a pnpm/Turborepo monorepo with a Next.js App Router UI (`apps/web`) and a NestJS modular monolith (`apps/api`). The API package exposes an HTTP bootstrap, a Vercel adapter, and an optional continuous worker bootstrap. Shared code is exposed through `@iride/*` package exports. Browser code may not import worker infrastructure or server configuration.
 
-The API owns `/api/v1` business endpoints. The web app owns presentation and browser-safe orchestration. The worker owns retryable asynchronous work. Step 01 health endpoints remain outside the versioned business API.
+The API owns `/api/v1` business endpoints, `/api/internal` scheduler endpoints, database transactions, and retryable jobs. The web app owns presentation, React Server Component reads, and browser-safe orchestration through same-origin BFF routes. Health endpoints remain outside the versioned business API.
 
 ## Consequences
 

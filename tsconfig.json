@@ -3,14 +3,12 @@
   "references": [
     { "path": "./apps/web" },
     { "path": "./apps/api" },
-    { "path": "./apps/worker" },
     { "path": "./packages/auth" },
     { "path": "./packages/config" },
     { "path": "./packages/database" },
     { "path": "./packages/domain" },
     { "path": "./packages/storage" },
     { "path": "./packages/types" },
-    { "path": "./packages/ui" },
     { "path": "./packages/validation" }
   ]
 }

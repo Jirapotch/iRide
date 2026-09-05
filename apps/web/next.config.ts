@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
     "@iride/config",
     "@iride/database",
     "@iride/types",
-    "@iride/ui",
   ],
   async redirects() {
     return [

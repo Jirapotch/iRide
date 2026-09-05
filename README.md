@@ -15,20 +15,18 @@ iRide is a mobile-first, bilingual community for people who love cars and the st
 ## Repository layout
 
 - `apps/web` — Next.js 16 App Router UI on port 3000
-- `apps/api` — Next.js 16 API-only service on port 3001
-- `apps/worker` — long-running Node.js worker and health server on port 3002
-- `packages/*` — shared auth, config, database, domain, storage, types, UI, and validation boundaries
+- `apps/api` — NestJS API on port 3001, Vercel adapter, and optional worker process on port 3002
+- `packages/*` — shared auth, config, database, domain, storage, types, and validation boundaries
 - `.plans` — version-controlled implementation roadmap
 - `docs/adr` — accepted architecture decisions
 
 ## Prerequisites
 
-- Node.js 22 (the repository includes `.nvmrc` and `.node-version`)
+- Node.js 24 (the repository includes `.nvmrc` and `.node-version`)
 - Corepack with pnpm 11.19.0
 - Docker-compatible runtime with at least 7 GB available for the local Supabase stack
-- Docker for the optional local worker container smoke test
 
-The production images use Node 22. Use Node 22 before treating a local verification as release-equivalent.
+The production images and Vercel projects use Node 24. Use Node 24 before treating a local verification as release-equivalent.
 
 ## Local setup
 
@@ -52,7 +50,7 @@ Open `http://localhost:3000`. The web app detects `th/en` from the browser and s
 - `http://localhost:3001/api/health` — API
 - `http://localhost:3002/health` — worker
 
-The worker validates all server credentials at startup. For local health testing, placeholder values from `.env.example` are sufficient; they do not grant access to external services.
+Run the optional continuous worker with `pnpm --filter @iride/api dev:worker`. It validates all server credentials at startup. Production uses Supabase Cron to call the protected bounded drain endpoint instead of requiring a paid always-on worker host.
 
 ## Quality commands
 
@@ -69,7 +67,7 @@ pnpm check
 
 ## Supabase development
 
-SQL migrations under `supabase/migrations` are the database source of truth. The local stack uses PostgreSQL 17 with Auth, Realtime, PostGIS, pgmq queues, and deny-by-default database privileges. Start and verify it with:
+SQL under `supabase/migrations` is the frozen historical baseline. New schema changes are TypeORM migrations under `apps/api/src/database/migrations`. The local stack uses PostgreSQL 17 with Auth, Realtime, PostGIS, pgmq queues, and deny-by-default database privileges. Start and verify it with:
 
 ```bash
 pnpm db:start
@@ -81,9 +79,9 @@ pnpm db:advisors
 pnpm db:stop
 ```
 
-`pnpm db:reset` is destructive only to the local Docker database. It replays every migration and the deterministic `supabase/seed.sql`. The two foundation identities have fixed UUIDs and no password or provider identity, so they cannot sign in.
+`pnpm db:reset` is destructive only to the local Docker database. It resets without seed, validates/applies TypeORM migrations, loads `supabase/seed.sql`, then runs pgTAP. Runtime connections use pooled `DATABASE_URL`; migration commands use direct `MIGRATION_DATABASE_URL`; `synchronize` is always disabled.
 
-Applications import Supabase through `@iride/database/browser`, `@iride/database/server`, or `@iride/database/admin`. Admin clients are restricted to trusted API and worker runtimes. Browser and authenticated roles have no direct queue privileges; trusted services use the service-role-only queue RPC functions.
+Legacy compatibility modules still import Supabase through `@iride/database/server` or `@iride/database/admin` while they are migrated. The Nest profiles module is the first actor-aware TypeORM slice and runs owner writes with transaction-local JWT claims. Admin clients are restricted to trusted API and worker runtimes. Browser and authenticated roles have no direct queue privileges; trusted services use the service-role-only queue RPC functions.
 
 ### Google authentication
 
@@ -101,16 +99,17 @@ The API exposes `GET/PATCH /api/v1/profile/me` and `GET /api/v1/users/<username>
 
 There is currently no staging Supabase project. Production project `bgflnssilreepfzxoqpc` is protected by the manual `Supabase Production` GitHub workflow and its `production` environment approval. Its one-time `bootstrap-reset` operation requires typing the project ref, uploads a backup artifact before mutation, and is intentionally separate from the normal forward-only `deploy` operation. Never run a linked reset from a developer shell.
 
-## Worker container
+## Jobs and Supabase Cron
 
-Build from the repository root:
+The API exposes `POST /api/internal/jobs/drain` for trusted scheduling only. It requires `Authorization: Bearer $WORKER_CRON_SECRET`, accepts no application payload, starts at most two jobs per queue, and stops starting work before 45 seconds. Configure these Supabase Vault secrets before applying the cron migration:
 
-```bash
-docker build -f apps/worker/Dockerfile -t iride-worker .
+```sql
+select vault.create_secret('https://<api-host>/api/internal/jobs/drain', 'iride_job_drain_url');
+select vault.create_secret('<same value as WORKER_CRON_SECRET>', 'iride_worker_cron_secret');
 ```
 
-Run it with the server-only variables listed in `.env.example`. The image uses Node 22, runs as the unprivileged `node` user, and exposes port 3002. When changing the worker or its container configuration, build the image and smoke-test `/health` locally before merging.
+For non-serverless environments, `pnpm --filter @iride/api start:worker` runs the same services continuously with a two-second poll interval and graceful shutdown.
 
 ## Deployment targets
 
-The deployment targets are Vercel for `web` and `api`, Railway for the worker container, Supabase for PostgreSQL/Auth/Realtime/Queues, and private Cloudflare R2 buckets for media.
+The deployment targets are Vercel for `web` and the Nest API, Supabase for PostgreSQL/Auth/Realtime/pgmq/Cron, and private Cloudflare R2 buckets for media. Production application deployment and database migration execution remain separately approved release actions.

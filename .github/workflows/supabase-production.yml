@@ -27,11 +27,12 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_CI_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: bgflnssilreepfzxoqpc
+      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - run: corepack enable
       - run: corepack prepare pnpm@11.19.0 --activate
       - run: pnpm install --frozen-lockfile
@@ -87,16 +88,18 @@ jobs:
           pnpm exec supabase db reset --linked
           --project-ref "$SUPABASE_PROJECT_REF" --yes
 
-      - name: Preview forward-only production migration
+      - name: Preview forward-only TypeORM migrations
         if: inputs.operation == 'deploy'
-        run: pnpm exec supabase db push --linked --include-seed --dry-run
+        run: pnpm --filter @iride/api db:migrate:show
 
-      - name: Apply forward-only production migration and seed
+      - name: Apply forward-only TypeORM migrations
         if: inputs.operation == 'deploy'
-        run: pnpm exec supabase db push --linked --include-seed --yes
+        run: pnpm --filter @iride/api db:migrate:run
 
       - name: Verify production migrations
-        run: pnpm exec supabase migration list --linked
+        run: |
+          pnpm exec supabase migration list --linked
+          pnpm --filter @iride/api db:migrate:show
 
       - name: Verify production database contracts
         run: >-

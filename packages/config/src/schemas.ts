@@ -24,6 +24,16 @@ export const serverEnvSchema = z.object({
   OPN_WEBHOOK_SECRET: secret,
 });
 
+export const apiEnvSchema = serverEnvSchema.extend({
+  DATABASE_URL: url,
+  WORKER_CRON_SECRET: secret,
+});
+
+export const migrationEnvSchema = z.object({
+  MIGRATION_DATABASE_URL: url,
+});
+
 export const workerEnvSchema = serverEnvSchema.extend({
+  DATABASE_URL: url,
   WORKER_PORT: z.coerce.number().int().min(1).max(65_535).default(3002),
 });

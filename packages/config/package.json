@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./api": "./src/api.ts",
     "./public": "./src/public.ts",
     "./server": "./src/server.ts",
     "./worker": "./src/worker.ts"
@@ -19,7 +20,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^22.19.1",
+    "@types/node": "^24.13.3",
     "typescript": "^5.9.2",
     "vitest": "^4.1.11"
   }

@@ -11,7 +11,7 @@ import {
   Trash,
   UsersThree,
 } from "@phosphor-icons/react";
-import { buttonVariants } from "@iride/ui/button";
+import { Button } from "antd";
 import type {
   ExploreFeatureDto,
   OwnProfileDto,
@@ -187,13 +187,12 @@ export function UserProfileScreen({
                 </p>
               </div>
               {ownerProfile ? (
-                <button
-                  className={buttonVariants()}
+                <Button
                   onClick={() => setEditing(true)}
-                  type="button"
+                  type="primary"
                 >
                   {text.edit}
-                </button>
+                </Button>
               ) : null}
             </div>
             <p className="leading-7 text-muted-foreground">
@@ -362,7 +361,7 @@ function GaragePanel({
         </div>
         {canCreate ? (
           <Link
-            className={buttonVariants()}
+            className="primary-link-button"
             href={`/users/${username}?tab=garage&modal=create-vehicle`}
           >
             <Plus size={17} />

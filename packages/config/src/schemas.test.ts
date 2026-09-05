@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { publicEnvSchema, serverEnvSchema, workerEnvSchema } from "./schemas";
+import {
+  apiEnvSchema,
+  migrationEnvSchema,
+  publicEnvSchema,
+  serverEnvSchema,
+  workerEnvSchema,
+} from "./schemas";
 
 const serverConfig = {
   SUPABASE_URL: "https://foundation.supabase.co",
@@ -33,6 +39,41 @@ describe("environment schemas", () => {
   });
 
   it("defaults the worker health port", () => {
-    expect(workerEnvSchema.parse(serverConfig).WORKER_PORT).toBe(3002);
+    expect(
+      workerEnvSchema.parse({
+        ...serverConfig,
+        DATABASE_URL: "postgresql://runtime.example/iride",
+      }).WORKER_PORT,
+    ).toBe(3002);
+  });
+
+  it("requires runtime database and cron credentials for the API", () => {
+    expect(() =>
+      apiEnvSchema.parse({
+        ...serverConfig,
+        DATABASE_URL: "postgresql://runtime.example/iride",
+      }),
+    ).toThrow();
+
+    expect(
+      apiEnvSchema.parse({
+        ...serverConfig,
+        DATABASE_URL: "postgresql://runtime.example/iride",
+        WORKER_CRON_SECRET: "cron-secret",
+      }),
+    ).toMatchObject({
+      DATABASE_URL: "postgresql://runtime.example/iride",
+      WORKER_CRON_SECRET: "cron-secret",
+    });
+  });
+
+  it("validates the direct migration URL separately from API runtime", () => {
+    expect(
+      migrationEnvSchema.parse({
+        MIGRATION_DATABASE_URL: "postgresql://direct.example/iride",
+      }),
+    ).toEqual({
+      MIGRATION_DATABASE_URL: "postgresql://direct.example/iride",
+    });
   });
 });

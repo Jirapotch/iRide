@@ -18,7 +18,7 @@ export default defineConfig([
   ...tseslint.configs.recommended,
   ...[...nextVitals, ...nextTypescript].map((config) => ({
     ...config,
-    files: ["apps/web/**/*.{js,jsx,ts,tsx}", "apps/api/**/*.{js,jsx,ts,tsx}"],
+    files: ["apps/web/**/*.{js,jsx,ts,tsx}"],
   })),
   {
     files: ["apps/web/**/*.{ts,tsx}"],
@@ -32,8 +32,6 @@ export default defineConfig([
                 "@iride/config/server",
                 "@iride/config/worker",
                 "@iride/database/admin",
-                "@iride/worker",
-                "@iride/worker/*",
               ],
               message:
                 "The web app may only import browser-safe configuration and must not import admin or worker infrastructure.",

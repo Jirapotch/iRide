@@ -12,6 +12,7 @@ async function createOwnerActivity(page: Page) {
   await page.getByLabel("Title").fill("Owner meeting");
   await page.getByLabel("Location name").fill("Bangkok");
   await page.getByLabel("Starts").fill("2026-09-01T06:00");
+  await page.getByLabel("Ends").fill("2026-09-01T08:00");
   await page.getByRole("button", { name: "Publish" }).click();
   await expect(page).toHaveURL(/\/maps\?marker=/);
 }
@@ -88,7 +89,7 @@ test("post category is required and changing it on edit redirects to the new fee
   await page.getByRole("button", { name: /Google/ }).click();
   const category = page.getByLabel("Community category");
   await expect(category).toHaveAttribute("required", "");
-  await expect(category.locator("option")).toHaveCount(5);
+  await expect(category.locator("option")).toHaveCount(4);
   await page.getByLabel("Post text").fill("Category route test");
   await category.selectOption("car");
   await page.getByRole("button", { name: "Publish" }).click();
@@ -105,7 +106,7 @@ test("legacy community routes preserve their closest destination", async ({ page
   await page.goto("/community?room=talk&post=p1&modal=edit");
   await expect(page).toHaveURL(/\/community\/groups\?post=p1&modal=edit$/);
   await page.goto("/community?room=market");
-  await expect(page).toHaveURL(/\/community\/motorcycle\/market$/);
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test("locked owners cannot open garage or profile media write controls", async ({ page, request }) => {
@@ -156,7 +157,7 @@ test("maps renders the full map and marker filter FAB without list mode", async 
   await expect(canvas).toHaveCSS("filter", "none");
   await expect(page.getByRole("button", { name: "List" })).toHaveCount(0);
   await page.getByRole("button", { name: "Filter markers" }).click();
-  for (const label of ["Meeting", "Event", "Trip", "Photographer spot"])
+  for (const label of ["Meeting", "Event", "Trip"])
     await expect(
       page.getByRole("checkbox", { name: label, exact: true }),
     ).toBeVisible();
@@ -167,14 +168,13 @@ test("maps renders the full map and marker filter FAB without list mode", async 
   await expect(marker).toHaveCSS("clip-path", /polygon\(50% 100%/);
 });
 
-test("home categories lead to nested talk and coming-soon market pages", async ({ page }) => {
+test("home categories lead to their nested talk pages", async ({ page }) => {
   await page.goto("/");
-  for (const category of ["Cars", "Motorcycles", "Bicycles", "Photographers", "Groups"])
+  for (const category of ["Cars", "Motorcycles", "Bicycles", "Groups"])
     await expect(page.getByRole("link", { name: category, exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Motorcycles", exact: true }).click();
   await expect(page.getByRole("link", { name: /^Talk/ })).toBeVisible();
-  await page.getByRole("link", { name: /^Market/ }).click();
-  await expect(page.getByText("Coming soon", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Market/ })).toHaveCount(0);
 });
 
 test("theme selection survives reload", async ({ page }) => {
@@ -217,16 +217,18 @@ test("map chrome follows theme without replacing the map canvas", async ({
   await expect(canvas).toHaveCSS("filter", "none");
 });
 
-test("legacy routes return 404", async ({ page }) => {
+test("removed product routes redirect home while unknown legacy routes return 404", async ({ page }) => {
   for (const route of [
     "/profile",
     "/profile/edit",
     "/account",
-    "/market",
-    "/photographers/maya",
   ]) {
     const response = await page.goto(route);
     expect(response?.status()).toBe(404);
+  }
+  for (const route of ["/market", "/photographers/maya"]) {
+    await page.goto(route);
+    await expect(page).toHaveURL(/\/$/);
   }
 });
 

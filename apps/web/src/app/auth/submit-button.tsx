@@ -1,7 +1,7 @@
 "use client";
 
 import { GoogleLogo } from "@phosphor-icons/react";
-import { Button } from "@iride/ui/button";
+import { Button } from "antd";
 import { useFormStatus } from "react-dom";
 
 export function AuthSubmitButton({
@@ -15,13 +15,13 @@ export function AuthSubmitButton({
 
   return (
     <Button
-      aria-busy={pending}
-      className="h-12 w-full gap-3 text-base"
-      disabled={pending}
-      type="submit"
-      variant="default"
+      block
+      htmlType="submit"
+      icon={<GoogleLogo aria-hidden size={22} weight="bold" />}
+      loading={pending}
+      size="large"
+      type="primary"
     >
-      <GoogleLogo aria-hidden size={22} weight="bold" />
       {pending ? pendingLabel : idleLabel}
     </Button>
   );

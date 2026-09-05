@@ -12,8 +12,8 @@ import {
   Sun,
   UserCircle,
   UsersThree,
-  X,
 } from "@phosphor-icons/react";
+import { Button, Drawer } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -107,58 +107,39 @@ export function HeaderActions({
           <SlidersHorizontal size={20} />
         </button>
       </div>
-      {drawerOpen ? (
-        <div
-          className="drawer-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setDrawerOpen(false);
-          }}
-        >
-          <aside
-            className="settings-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-label={text.settings}
-          >
-            <header>
-              <div>
-                <p className="premium-kicker">iRide</p>
-                <h2>{text.settings}</h2>
-              </div>
-              <button
-                aria-label={text.close}
-                className="header-icon"
-                onClick={() => setDrawerOpen(false)}
-                type="button"
-              >
-                <X size={21} />
-              </button>
-            </header>
-            <div className="drawer-content">
+      <Drawer
+        aria-label={text.settings}
+        className="settings-drawer"
+        destroyOnHidden
+        onClose={() => setDrawerOpen(false)}
+        open={drawerOpen}
+        placement="right"
+        size="default"
+        title={
+          <div>
+            <p className="premium-kicker">iRide</p>
+            <strong>{text.settings}</strong>
+          </div>
+        }
+      >
+        <div className="drawer-content">
               <section>
                 <p className="drawer-label">{text.theme}</p>
-                <div
-                  className="theme-options"
-                  role="group"
-                  aria-label={text.theme}
-                >
-                  <button
+                <div className="theme-options" role="group" aria-label={text.theme}>
+                  <Button
                     aria-pressed={theme === "light"}
+                    icon={<Sun size={18} />}
                     onClick={() => setTheme("light")}
-                    type="button"
                   >
-                    <Sun size={19} />
                     {text.light}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     aria-pressed={theme === "dark"}
+                    icon={<Moon size={18} />}
                     onClick={() => setTheme("dark")}
-                    type="button"
                   >
-                    <Moon size={19} />
                     {text.dark}
-                  </button>
+                  </Button>
                 </div>
               </section>
               {canManage ? (
@@ -212,10 +193,8 @@ export function HeaderActions({
                   </Link>
                 )}
               </section>
-            </div>
-          </aside>
         </div>
-      ) : null}
+      </Drawer>
     </>
   );
 }

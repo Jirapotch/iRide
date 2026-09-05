@@ -4,14 +4,16 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "dev": "node --env-file-if-exists=.env.local node_modules/turbo/bin/turbo run dev",
     "build": "turbo run build",
     "db:advisors": "supabase db advisors --local --type all --fail-on error",
-    "db:reset": "supabase db reset --local",
+    "db:reset": "node --env-file-if-exists=.env.local scripts/reset-database.mjs",
+    "db:migrate:show": "pnpm --filter @iride/api db:migrate:show",
+    "db:migrate": "pnpm --filter @iride/api db:migrate:run",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:test": "supabase test db --local",
@@ -29,7 +31,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.62.1",
-    "@types/node": "^22.19.1",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "eslint": "^9.39.1",
