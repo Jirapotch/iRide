@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -10,7 +10,9 @@ describe("configure migration database URL command", () => {
   it("writes an encoded pooler URL to GitHub Actions without logging the password", () => {
     const temporaryDirectory = mkdtempSync(join(tmpdir(), "iride-migration-url-"));
     const githubEnv = join(temporaryDirectory, "github-env");
+    const caCertificate = join(temporaryDirectory, "supabase-ca.crt");
     const password = "p@ss:/?#[]";
+    writeFileSync(caCertificate, "test certificate", "utf8");
 
     try {
       const result = spawnSync(
@@ -24,6 +26,7 @@ describe("configure migration database URL command", () => {
             GITHUB_ENV: githubEnv,
             MIGRATION_POOLER_URL:
               "postgresql://postgres.project@pooler.example.com:5432/postgres?sslmode=require",
+            SUPABASE_CA_CERT_PATH: caCertificate,
             SUPABASE_DB_PASSWORD: password,
           },
         },
@@ -31,7 +34,7 @@ describe("configure migration database URL command", () => {
 
       expect(result.status).toBe(0);
       expect(readFileSync(githubEnv, "utf8")).toBe(
-        "MIGRATION_DATABASE_URL=postgresql://postgres.project:p%40ss%3A%2F%3F%23%5B%5D@pooler.example.com:5432/postgres?sslmode=require\n",
+        `MIGRATION_DATABASE_URL=postgresql://postgres.project:p%40ss%3A%2F%3F%23%5B%5D@pooler.example.com:5432/postgres?sslmode=require\nNODE_EXTRA_CA_CERTS=${caCertificate}\n`,
       );
       expect(`${result.stdout}${result.stderr}`).not.toContain(password);
     } finally {
