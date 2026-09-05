@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(14);
+select plan(13);
 select has_table('public', 'posts', 'posts table exists');
 select has_table('public', 'events', 'events table exists');
 select ok((select relrowsecurity from pg_class where oid = 'public.posts'::regclass), 'posts have RLS');

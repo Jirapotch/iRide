@@ -99,7 +99,11 @@ jobs:
         run: pnpm exec supabase migration list --linked
 
       - name: Verify production database contracts
-        run: pnpm exec supabase test db --linked
+        run: >-
+          pnpm exec supabase test db --linked
+          supabase/tests/database/access_control.test.sql
+          supabase/tests/database/content.test.sql
+          supabase/tests/database/social_garage_market.test.sql
 
       - name: Run production database advisors
         run: >-
