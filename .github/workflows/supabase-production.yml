@@ -28,7 +28,7 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: bgflnssilreepfzxoqpc
       MIGRATION_POOLER_URL: postgresql://postgres.bgflnssilreepfzxoqpc@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=verify-full
-      SUPABASE_CA_CERT_PATH: ${{ github.workspace }}/supabase/.temp/pgdelta/pgdelta-target-ca.crt
+      SUPABASE_CA_CERT_PATH: ${{ github.workspace }}/apps/api/certs/supabase-root-ca-bundle.crt
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -64,9 +64,7 @@ jobs:
           --password "$SUPABASE_DB_PASSWORD"
 
       - name: Configure TypeORM migration connection
-        run: |
-          pnpm exec supabase migration list --linked
-          node scripts/configure-migration-database-url.mjs
+        run: node scripts/configure-migration-database-url.mjs
 
       - name: Back up pre-launch production
         if: inputs.operation == 'bootstrap-reset'
