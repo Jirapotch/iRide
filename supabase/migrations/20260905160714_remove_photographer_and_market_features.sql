@@ -76,10 +76,15 @@ drop type public.community_category;
 alter type public.community_category_new rename to community_category;
 
 create type public.media_purpose_new as enum ('avatar', 'cover', 'vehicle');
+drop policy if exists vehicle_media_owner_update on public.vehicle_media;
 alter table public.media alter column purpose type public.media_purpose_new
   using purpose::text::public.media_purpose_new;
 drop type public.media_purpose;
 alter type public.media_purpose_new rename to media_purpose;
+create policy vehicle_media_owner_update on public.vehicle_media for update to authenticated
+using (private.is_admin() or (private.can_write() and exists (select 1 from public.vehicles where vehicles.id = vehicle_media.vehicle_id and vehicles.owner_id = (select auth.uid()))))
+with check (private.is_admin() or (private.can_write() and exists (select 1 from public.vehicles where vehicles.id = vehicle_media.vehicle_id and vehicles.owner_id = (select auth.uid()))
+  and exists (select 1 from public.media where media.id = vehicle_media.media_id and media.owner_id = (select auth.uid()) and media.status = 'ready' and media.purpose = 'vehicle' and media.deleted_at is null)));
 
 create or replace function public.explore_content(
   west double precision, south double precision, east double precision, north double precision, layers text[]
