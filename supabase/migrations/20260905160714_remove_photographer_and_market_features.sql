@@ -49,6 +49,8 @@ delete from public.posts where id in (select id from removed_photographer_posts)
 delete from public.market_products;
 delete from public.photographer_spots;
 delete from public.media where id in (select id from removed_market_media);
+drop table public.market_products;
+drop table public.photographer_spots;
 
 drop function if exists public.save_post_with_markers(uuid, text, jsonb, public.community_category);
 drop function if exists public.explore_content(double precision, double precision, double precision, double precision, text[]);
