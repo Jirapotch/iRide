@@ -3,7 +3,6 @@
 import {
   createVehicleSchema,
   createEventSchema,
-  createPhotographerSpotSchema,
   createPostSchema,
   updatePostSchema,
 } from "@iride/validation";
@@ -21,16 +20,13 @@ import { createContentTypes, postDestination, type CreateContentType } from "@/l
 import { resolveGoogleMapsCoordinates } from "@/lib/google-maps-resolver";
 import {
   createEvent,
-  createPhotographerSpot,
   createPost,
   deleteContent,
   updateEvent,
-  updatePhotographerSpot,
   updatePost,
   createVehicle,
   updateVehicle,
   deleteVehicle,
-  deleteMarketProduct,
 } from "@/lib/content-api";
 
 export async function saveContent(formData: FormData) {
@@ -58,24 +54,6 @@ export async function saveContent(formData: FormData) {
           createPostSchema.parse(raw) as CreatePostInput,
         );
     redirect(postDestination(result.communityCategory, result.id));
-  }
-
-  if (type === "photographer-spot") {
-    const raw = {
-      title: String(formData.get("title") ?? ""),
-      description: nullable(formData, "description"),
-      locationLabel: String(formData.get("locationLabel") ?? ""),
-      latitude: Number(formData.get("latitude")),
-      longitude: Number(formData.get("longitude")),
-      startsAt: iso(formData, "startsAt"),
-      endsAt: iso(formData, "endsAt"),
-      timezone: String(formData.get("timezone") ?? "Asia/Bangkok"),
-    };
-    const input = createPhotographerSpotSchema.parse(raw);
-    const result = editId
-      ? await updatePhotographerSpot(session.accessToken, editId, input)
-      : await createPhotographerSpot(session.accessToken, input);
-    redirect(`/maps?marker=${result.id}`);
   }
 
   const kind =
@@ -133,23 +111,13 @@ export async function removeVehicleAction(formData: FormData) {
   await deleteVehicle(session.accessToken, id);
   redirect(`/users/${encodeURIComponent(username)}?tab=garage`);
 }
-export async function removeMarketAction(formData: FormData) {
-  const session = await getVerifiedWebSession();
-  if (!session) redirect("/login");
-  await deleteMarketProduct(
-    session.accessToken,
-    String(formData.get("id") ?? ""),
-  );
-  redirect("/community/motorcycle/market");
-}
-
 export async function removeContent(formData: FormData) {
   const session = await getVerifiedWebSession();
   if (!session) redirect("/login");
   const id = String(formData.get("id") ?? "");
   const domain = String(formData.get("domain") ?? "") as
-    "posts" | "events" | "photographer-spots";
-  if (!id || !["posts", "events", "photographer-spots"].includes(domain))
+    "posts" | "events";
+  if (!id || !["posts", "events"].includes(domain))
     throw new Error("INVALID_DELETE");
   await deleteContent(session.accessToken, domain, id);
   revalidatePath(domain === "posts" ? "/community" : "/maps");
@@ -183,7 +151,7 @@ function iso(data: FormData, key: string) {
 function markerTags(data: FormData): MarkerTagInput[] {
   return data.getAll("markerTags").flatMap((value) => {
     const [kind, id] = String(value).split(":");
-    return (kind === "event" || kind === "photographerSpot") && id
+    return kind === "event" && id
       ? [{ kind, id }]
       : [];
   });

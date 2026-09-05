@@ -93,7 +93,6 @@ export const communityCategories = [
   "car",
   "motorcycle",
   "bicycle",
-  "photographers",
   "groups",
 ] as const;
 export type CommunityCategory = (typeof communityCategories)[number];
@@ -124,7 +123,7 @@ export interface CreatePostInput {
 
 export type UpdatePostInput = CreatePostInput;
 
-export type MarkerTagKind = "event" | "photographerSpot";
+export type MarkerTagKind = "event";
 
 export interface MarkerTagInput {
   readonly kind: MarkerTagKind;
@@ -198,37 +197,7 @@ export interface CreateEventInput {
 
 export type UpdateEventInput = Partial<CreateEventInput>;
 
-export interface PhotographerSpotDto {
-  readonly id: string;
-  readonly title: string;
-  readonly description: string | null;
-  readonly locationLabel: string;
-  readonly latitude: number;
-  readonly longitude: number;
-  readonly startsAt: string;
-  readonly endsAt: string;
-  readonly timezone: string;
-  readonly photographer: ContentAuthorDto;
-  readonly canEdit: boolean;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
-
-export interface CreatePhotographerSpotInput {
-  readonly title: string;
-  readonly description: string | null;
-  readonly locationLabel: string;
-  readonly latitude: number;
-  readonly longitude: number;
-  readonly startsAt: string;
-  readonly endsAt: string;
-  readonly timezone: string;
-}
-
-export type UpdatePhotographerSpotInput =
-  Partial<CreatePhotographerSpotInput>;
-
-export type ExploreFeatureKind = EventKind | "photographerSpot";
+export type ExploreFeatureKind = EventKind;
 
 export const vehicleVisibilities = ["public", "private"] as const;
 export type VehicleVisibility = (typeof vehicleVisibilities)[number];
@@ -262,32 +231,7 @@ export interface CreateVehicleInput {
 
 export type UpdateVehicleInput = Partial<CreateVehicleInput>;
 
-export interface MarketProductDto {
-  readonly id: string;
-  readonly owner: ContentAuthorDto;
-  readonly name: string;
-  readonly priceSatang: number;
-  readonly currency: "THB";
-  readonly category: string;
-  readonly vehicleKinds: readonly VehicleKind[];
-  readonly coverMediaId: string | null;
-  readonly canEdit: boolean;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
-
-export interface CreateMarketProductInput {
-  readonly name: string;
-  readonly priceSatang: number;
-  readonly currency?: "THB";
-  readonly category: string;
-  readonly vehicleKinds: readonly VehicleKind[];
-  readonly coverMediaId: string | null;
-}
-
-export type UpdateMarketProductInput = Partial<CreateMarketProductInput>;
-
-export const mediaPurposes = ["avatar", "cover", "vehicle", "market"] as const;
+export const mediaPurposes = ["avatar", "cover", "vehicle"] as const;
 export type MediaPurpose = (typeof mediaPurposes)[number];
 export const mediaStatuses = ["uploading", "processing", "ready", "failed", "deleted"] as const;
 export type MediaStatus = (typeof mediaStatuses)[number];
@@ -334,9 +278,7 @@ export interface ExploreFeatureDto {
 export type SearchResultKind =
   | "profile"
   | "post"
-  | "event"
-  | "photographerSpot"
-  | "marketProduct";
+  | "event";
 
 export interface SearchResultDto {
   readonly id: string;

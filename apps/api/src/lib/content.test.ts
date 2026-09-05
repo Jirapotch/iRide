@@ -2,7 +2,6 @@ import { AuthenticationError } from "@iride/auth";
 import type {
   EventDto,
   ExploreFeatureDto,
-  PhotographerSpotDto,
   PostDto,
   SearchResultDto,
 } from "@iride/types";
@@ -44,11 +43,6 @@ function setup() {
     createEvent: vi.fn(),
     updateEvent: vi.fn(),
     deleteEvent: vi.fn(),
-    listPhotographerSpots: vi.fn().mockResolvedValue([] as PhotographerSpotDto[]),
-    getPhotographerSpot: vi.fn().mockResolvedValue(null),
-    createPhotographerSpot: vi.fn(),
-    updatePhotographerSpot: vi.fn(),
-    deletePhotographerSpot: vi.fn(),
     explore: vi.fn().mockResolvedValue([] as ExploreFeatureDto[]),
     search: vi.fn().mockResolvedValue([] as SearchResultDto[]),
   };
@@ -162,28 +156,17 @@ describe("content API handlers", () => {
     );
   });
 
-  it("keeps generic post, event, and photographer-spot deletes on their existing authenticated endpoints", async () => {
+  it("keeps generic post and event deletes on their existing authenticated endpoints", async () => {
     const { dependencies, repository } = setup();
     const id = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-
     const responses = await Promise.all(
-      (["posts", "events", "photographer-spots"] as const).map((domain) =>
-        handleContentItem(
-          new Request(`http://localhost:3001/api/v1/${domain}/${id}`, {
-            method: "DELETE",
-            headers: { authorization: "Bearer signed.jwt" },
-          }),
-          domain,
-          id,
-          dependencies,
-        ),
+      (["posts", "events"] as const).map((domain) =>
+        handleContentItem(new Request(`http://localhost:3001/api/v1/${domain}/${id}`, { method: "DELETE", headers: { authorization: "Bearer signed.jwt" } }), domain, id, dependencies),
       ),
     );
-
-    expect(responses.map((response) => response.status)).toEqual([204, 204, 204]);
+    expect(responses.map((response) => response.status)).toEqual([204, 204]);
     expect(repository.deletePost).toHaveBeenCalledWith(userId, "signed.jwt", id);
     expect(repository.deleteEvent).toHaveBeenCalledWith(userId, "signed.jwt", id);
-    expect(repository.deletePhotographerSpot).toHaveBeenCalledWith(userId, "signed.jwt", id);
   });
 
   it("maps missing and forbidden records to stable errors", async () => {
@@ -220,7 +203,7 @@ describe("content API handlers", () => {
     const { dependencies, repository } = setup();
     const response = await handleExplore(
       new Request(
-        "http://localhost:3001/api/v1/explore?bbox=100,13,101,14&layers=events,trips,photographer-spots",
+        "http://localhost:3001/api/v1/explore?bbox=100,13,101,14&layers=events,trips",
       ),
       dependencies,
     );
@@ -228,7 +211,7 @@ describe("content API handlers", () => {
     expect(response.status).toBe(200);
     expect(repository.explore).toHaveBeenCalledWith(
       { west: 100, south: 13, east: 101, north: 14 },
-      ["events", "trips", "photographer-spots"],
+      ["events", "trips"],
       null,
     );
 
@@ -293,7 +276,7 @@ describe("content API handlers", () => {
     expect(response.status).toBe(200);
     expect(repository.search).toHaveBeenCalledWith(
       "road",
-      ["profiles", "posts", "events", "photographer-spots"],
+      ["profiles", "posts", "events"],
       null,
     );
   });

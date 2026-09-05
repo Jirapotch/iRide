@@ -1,7 +1,7 @@
 import type { CommunityCategory } from "@iride/types";
 import { communityTalkHref } from "./app-navigation-domain";
 
-export const createContentTypes = ["post", "activity", "trip", "photographer-spot"] as const;
+export const createContentTypes = ["post", "activity", "trip"] as const;
 export type CreateContentType = (typeof createContentTypes)[number];
 
 export function postDestination(category: CommunityCategory, id: string): string {

@@ -13,9 +13,8 @@ describe("Natural Mist map palette", () => {
       meeting: "#168568",
       event: "#8e55ad",
       trip: "#536fc3",
-      photographerSpot: "#a86a28",
     });
-    expect(new Set(Object.values(contentKindColors))).toHaveLength(4);
+    expect(new Set(Object.values(contentKindColors))).toHaveLength(3);
   });
 
   it("uses the approved Soft Mint vector palette in both app themes", () => {

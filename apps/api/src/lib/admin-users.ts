@@ -30,7 +30,7 @@ export interface AdminUserDto {
 }
 export interface AdminUserContentDto {
   readonly id: string;
-  readonly kind: "post" | "event" | "photographerSpot" | "vehicle";
+  readonly kind: "post" | "event" | "vehicle";
   readonly title: string;
   readonly communityCategory?: CommunityCategory;
 }
@@ -341,17 +341,15 @@ function productionDependencies(): AdminUsersDependencies {
       return enriched ?? null;
     },
     async listContent(userId) {
-      const [posts, events, spots, vehicles] = await Promise.all([
+      const [posts, events, vehicles] = await Promise.all([
         admin.from("posts").select("id,body,community_category").eq("author_id", userId).is("deleted_at", null),
         admin.from("events").select("id,title").eq("organizer_id", userId).is("deleted_at", null),
-        admin.from("photographer_spots").select("id,title").eq("owner_id", userId).is("deleted_at", null),
         admin.from("vehicles").select("id,brand,model").eq("owner_id", userId),
       ]);
-      for (const result of [posts, events, spots, vehicles]) if (result.error) throw result.error;
+      for (const result of [posts, events, vehicles]) if (result.error) throw result.error;
       return [
         ...(posts.data ?? []).map((row) => ({ id: row.id, kind: "post" as const, title: row.body.slice(0, 80), communityCategory: row.community_category })),
         ...(events.data ?? []).map((row) => ({ id: row.id, kind: "event" as const, title: row.title })),
-        ...(spots.data ?? []).map((row) => ({ id: row.id, kind: "photographerSpot" as const, title: row.title })),
         ...(vehicles.data ?? []).map((row) => ({ id: row.id, kind: "vehicle" as const, title: `${row.brand} ${row.model}` })),
       ];
     },

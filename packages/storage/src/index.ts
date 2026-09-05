@@ -9,7 +9,6 @@ export const variantSpecs:Readonly<Record<MediaPurpose,readonly VariantSpec[]>>=
   avatar:[{kind:"thumbnail",width:256,height:256,fit:"cover"},{kind:"preview",width:512,height:512,fit:"cover"}],
   cover:[{kind:"thumbnail",width:600,height:200,fit:"cover"},{kind:"preview",width:1600,height:534,fit:"cover"}],
   vehicle:[{kind:"thumbnail",width:480,height:320,fit:"cover"},{kind:"preview",width:1280,height:960,fit:"inside"}],
-  market:[{kind:"thumbnail",width:480,height:480,fit:"cover"},{kind:"preview",width:1280,height:1280,fit:"inside"}],
 };
 
 export function mediaObjectKey(userId:string,purpose:MediaPurpose,_filename:string,mediaId:string){

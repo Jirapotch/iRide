@@ -7,15 +7,12 @@ import {
   LinkSimple,
   MapPin,
   Motorcycle,
-  Storefront,
   X,
 } from "@phosphor-icons/react";
 import type {
   EventDto,
   CommunityCategory,
   MarkerTagInput,
-  MarketProductDto,
-  PhotographerSpotDto,
   PostDto,
   VehicleKind,
 } from "@iride/types";
@@ -36,14 +33,12 @@ import {
   type MarkerMentionQuery,
 } from "@/lib/marker-mention-domain";
 import { resolveGoogleMapsLocation, saveContent } from "../create/actions";
-import { MediaUploader } from "../../users/[username]/media-uploader";
 import { ActionSubmitButton } from "./action-submit-button";
 
-type CreateType = "post" | "activity" | "trip" | "photographer-spot";
-export type InitialContent =
-  PostDto | EventDto | PhotographerSpotDto | MarketProductDto | null;
+type CreateType = "post" | "activity" | "trip";
+export type InitialContent = PostDto | EventDto | null;
 export interface MarkerOption {
-  readonly kind: "event" | "photographerSpot";
+  readonly kind: "event";
   readonly id: string;
   readonly title: string;
   readonly subtitle: string;
@@ -66,10 +61,6 @@ export function CreateContentScreen({
     { type: "post", label: locale === "th" ? "โพสต์" : "Post" },
     { type: "activity", label: locale === "th" ? "กิจกรรม" : "Activity" },
     { type: "trip", label: locale === "th" ? "ทริป" : "Trip" },
-    {
-      type: "photographer-spot",
-      label: locale === "th" ? "landmark ช่างภาพ" : "Photographer spot",
-    },
   ];
   return (
     <main className="create-page">
@@ -109,11 +100,10 @@ export function BackendForm({
   readonly defaultCommunityCategory?: CommunityCategory;
 }) {
   const event = initial && "organizer" in initial ? initial : null;
-  const spot = initial && "photographer" in initial ? initial : null;
   const post = initial && "body" in initial ? initial : null;
   const [coordinates, setCoordinates] = useState({
-    latitude: event?.latitude ?? spot?.latitude ?? 13.7563,
-    longitude: event?.longitude ?? spot?.longitude ?? 100.5018,
+    latitude: event?.latitude ?? 13.7563,
+    longitude: event?.longitude ?? 100.5018,
   });
   const isTrip = type === "trip";
   const hasLocation = type !== "post";
@@ -147,20 +137,20 @@ export function BackendForm({
         <>
           <Field label={locale === "th" ? "ชื่อ" : "Title"}>
             <input
-              defaultValue={event?.title ?? spot?.title ?? ""}
+              defaultValue={event?.title ?? ""}
               name="title"
               required
             />
           </Field>
           <Field label={locale === "th" ? "รายละเอียด" : "Description"}>
             <textarea
-              defaultValue={event?.description ?? spot?.description ?? ""}
+              defaultValue={event?.description ?? ""}
               name="description"
             />
           </Field>
           <Field label={locale === "th" ? "ชื่อสถานที่" : "Location name"}>
             <input
-              defaultValue={event?.locationLabel ?? spot?.locationLabel ?? ""}
+              defaultValue={event?.locationLabel ?? ""}
               name="locationLabel"
               required
             />
@@ -175,7 +165,7 @@ export function BackendForm({
           <Field label={locale === "th" ? "เริ่ม" : "Starts"}>
             <div className="datetime-input-shell">
               <input
-                defaultValue={dateInput(event?.startsAt ?? spot?.startsAt)}
+                defaultValue={dateInput(event?.startsAt)}
                 name="startsAt"
                 required
                 type="datetime-local"
@@ -185,9 +175,9 @@ export function BackendForm({
           <Field label={locale === "th" ? "สิ้นสุด" : "Ends"}>
             <div className="datetime-input-shell">
               <input
-                defaultValue={dateInput(event?.endsAt ?? spot?.endsAt)}
+                defaultValue={dateInput(event?.endsAt)}
                 name="endsAt"
-                required={type === "photographer-spot"}
+                required
                 type="datetime-local"
               />
             </div>
@@ -337,7 +327,6 @@ function PostFields({
           <option value="car">{locale === "th" ? "รถยนต์" : "Cars"}</option>
           <option value="motorcycle">{locale === "th" ? "มอเตอร์ไซค์" : "Motorcycles"}</option>
           <option value="bicycle">{locale === "th" ? "จักรยาน" : "Bicycles"}</option>
-          <option value="photographers">{locale === "th" ? "ช่างภาพ" : "Photographers"}</option>
           <option value="groups">{locale === "th" ? "กลุ่ม" : "Groups"}</option>
         </select>
       </Field>
@@ -846,87 +835,6 @@ function MiniMap({
   );
 }
 
-export function MarketForm({
-  locale,
-  initial = null,
-}: {
-  readonly locale: Locale;
-  readonly initial?: MarketProductDto | null;
-}) {
-  const [coverMediaId, setCoverMediaId] = useState<string | null>(
-    initial?.coverMediaId ?? null,
-  );
-  return (
-    <form action={saveContent} className="form-stack">
-      <input name="type" type="hidden" value="market" />
-      <input name="coverMediaId" type="hidden" value={coverMediaId ?? ""} />
-      {initial ? (
-        <input name="editId" type="hidden" value={initial.id} />
-      ) : null}
-      <Field label={locale === "th" ? "ชื่อสินค้า" : "Product name"}>
-        <input defaultValue={initial?.name ?? ""} name="name" required />
-      </Field>
-      <Field label={locale === "th" ? "ราคา (บาท)" : "Price (THB)"}>
-        <input
-          defaultValue={initial ? initial.priceSatang / 100 : ""}
-          min="0"
-          name="price"
-          required
-          step="0.01"
-          type="number"
-        />
-      </Field>
-      <Field label={locale === "th" ? "หมวดหมู่" : "Category"}>
-        <input
-          defaultValue={initial?.category ?? ""}
-          name="category"
-          required
-        />
-      </Field>
-      <fieldset>
-        <legend>Vehicle compatibility</legend>
-        <div className="vehicle-checks">
-          {(["car", "motorcycle", "bicycle"] as VehicleKind[]).map((kind) => (
-            <label key={kind}>
-              <input
-                defaultChecked={
-                  initial?.vehicleKinds.includes(kind) ?? kind === "motorcycle"
-                }
-                name="vehicleKinds"
-                type="checkbox"
-                value={kind}
-              />
-              {vehicleIcon(kind)}
-              {kind}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <MediaUploader
-        locale={locale}
-        onReady={(id) => setCoverMediaId(id)}
-        purpose="market"
-      />
-      {coverMediaId ? (
-        <p>
-          {locale === "th" ? "เลือกรูปสินค้าแล้ว" : "Product image selected"}
-        </p>
-      ) : null}
-      <ActionSubmitButton
-        pendingLabel={locale === "th" ? "กำลังบันทึก…" : "Saving…"}
-      >
-        {initial
-          ? locale === "th"
-            ? "บันทึกการแก้ไข"
-            : "Save changes"
-          : locale === "th"
-            ? "ลงขายสินค้า"
-            : "Publish item"}
-      </ActionSubmitButton>
-    </form>
-  );
-}
-
 function Field({
   label,
   children,
@@ -945,7 +853,7 @@ function vehicleIcon(kind: VehicleKind) {
   if (kind === "car") return <Car size={17} />;
   if (kind === "motorcycle") return <Motorcycle size={17} />;
   if (kind === "bicycle") return <Bicycle size={17} />;
-  return <Storefront size={17} />;
+  return <MapPin size={17} />;
 }
 function dateInput(value?: string | null) {
   return value ? new Date(value).toISOString().slice(0, 16) : "";

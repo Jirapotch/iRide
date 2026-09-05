@@ -25,7 +25,7 @@ export async function removeAdminContent(formData: FormData) {
   const userId = String(formData.get("userId") ?? "");
   const id = String(formData.get("id") ?? "");
   const kind = String(formData.get("kind") ?? "");
-  if (kind !== "post" && kind !== "event" && kind !== "photographerSpot" && kind !== "vehicle") throw new Error("INVALID_ADMIN_CONTENT");
+  if (kind !== "post" && kind !== "event" && kind !== "vehicle") throw new Error("INVALID_ADMIN_CONTENT");
   await deleteAdminModeratedContent(session.accessToken, id, kind);
   revalidatePath(`/settings/users/${userId}`);
   redirect(`/settings/users/${userId}?moderated=1`);

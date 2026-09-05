@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Camera,
   ChatCircle,
   DotsThreeVertical,
   MapPin,
@@ -12,7 +11,6 @@ import type {
   CommentDto,
   CommunityCategory,
   ContentAuthorDto,
-  PhotographerSpotDto,
   PostDto,
 } from "@iride/types";
 import dynamic from "next/dynamic";
@@ -38,7 +36,6 @@ interface Props {
   readonly markerOptions: readonly MarkerOption[];
   readonly posts: readonly PostDto[];
   readonly room: CommunityRoomId;
-  readonly spots: readonly PhotographerSpotDto[];
   readonly viewer: ContentAuthorDto | null;
   readonly category: CommunityCategory;
   readonly heading: string;
@@ -51,7 +48,6 @@ export function CommunityScreen({
   markerOptions,
   posts,
   room,
-  spots,
   viewer,
   category,
   heading,
@@ -66,7 +62,7 @@ export function CommunityScreen({
       <header className="community-heading">
         <h1>{heading}</h1>
       </header>
-      {room === "talk" || room === "groups" || room === "photographers" ? (
+      {room === "talk" || room === "groups" ? (
         <TalkRoom
           authenticated={authenticated}
           canWrite={canWrite}
@@ -76,9 +72,6 @@ export function CommunityScreen({
           talkHref={talkHref}
           viewer={viewer}
         />
-      ) : null}
-      {room === "photographers" ? (
-        <PhotographerRoom locale={locale} spots={spots} />
       ) : null}
       {editPost ? (
         <EditModal
@@ -554,44 +547,6 @@ function CommentBody({
   );
 }
 
-function PhotographerRoom({
-  locale,
-  spots,
-}: {
-  readonly locale: Locale;
-  readonly spots: readonly PhotographerSpotDto[];
-}) {
-  const people = Array.from(
-    new Map(
-      spots.map((spot) => [spot.photographer.username, spot.photographer]),
-    ).values(),
-  );
-  return (
-    <section className="room-card-grid">
-      {people.length ? (
-        people.map((person) => (
-          <Link
-            className="premium-card room-person-card"
-            href={`/users/${person.username}`}
-            key={person.username}
-          >
-            <Camera size={24} />
-            <strong>{person.displayName}</strong>
-            <span>@{person.username}</span>
-          </Link>
-        ))
-      ) : (
-        <Empty
-          text={
-            locale === "th"
-              ? "ยังไม่มีช่างภาพที่ลง landmark"
-              : "No photographers have published a landmark yet."
-          }
-        />
-      )}
-    </section>
-  );
-}
 function Empty({ text }: { readonly text: string }) {
   return (
     <div className="empty-state">

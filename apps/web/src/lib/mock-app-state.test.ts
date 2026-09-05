@@ -8,23 +8,13 @@ import {
 } from "./mock-app-state";
 
 describe("mock app state", () => {
-  it("follows photographers without mutating the previous state", () => {
-    const initial = defaultMockAppState();
-    const selected = reduceMockAppState(initial, { type: "toggle-follow", photographerId: "maya" });
-    expect(selected.followedPhotographerIds).toEqual(["maya"]);
-    expect(initial.followedPhotographerIds).toEqual([]);
-    expect(reduceMockAppState(selected, { type: "toggle-follow", photographerId: "maya" }).followedPhotographerIds).toEqual([]);
-  });
-
-  it("persists non-market local UI state", () => {
+  it("persists remaining local UI state", () => {
     const actions = [
-      { type: "toggle-follow", photographerId: "maya" },
       { type: "read-notification", notificationId: "comment-1" },
     ] as const;
     const state = actions.reduce(reduceMockAppState, defaultMockAppState());
     expect(parseMockAppState(serializeMockAppState(state))).toEqual({
-      version: 4,
-      followedPhotographerIds: ["maya"],
+      version: 5,
       readNotificationIds: ["comment-1"],
     });
   });
@@ -37,8 +27,7 @@ describe("mock app state", () => {
       followedPhotographerIds: ["wander-lens"],
       readNotificationIds: ["comment-1"],
     }))).toEqual({
-      version: 4,
-      followedPhotographerIds: ["wander-lens"],
+      version: 5,
       readNotificationIds: ["comment-1"],
     });
   });

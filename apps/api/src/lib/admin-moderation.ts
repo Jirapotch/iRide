@@ -11,7 +11,7 @@ import { createCorsDecision } from "./cors";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export type ModeratedResourceKind = "post" | "event" | "photographerSpot" | "vehicle";
+export type ModeratedResourceKind = "post" | "event" | "vehicle";
 
 export interface AdminModerationRepository {
   readonly getAccess: (userId: string) => Promise<{ readonly role: AccountRole; readonly status: AccountStatus; readonly transitionId: string | null } | null>;
@@ -67,7 +67,7 @@ async function readInput(request: Request): Promise<{ readonly id: string; reado
   }
   const id = typeof body === "object" && body !== null ? (body as { id?: unknown }).id : null;
   const kind = typeof body === "object" && body !== null ? (body as { kind?: unknown }).kind : null;
-  if (typeof id !== "string" || !uuidPattern.test(id) || (kind !== "post" && kind !== "event" && kind !== "photographerSpot" && kind !== "vehicle")) {
+  if (typeof id !== "string" || !uuidPattern.test(id) || (kind !== "post" && kind !== "event" && kind !== "vehicle")) {
     throw new AdminModerationError("ADMIN_VALIDATION_FAILED", 400);
   }
   return { id, kind };

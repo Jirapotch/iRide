@@ -3,10 +3,8 @@ import { createServerDatabaseClient } from "@iride/database/server";
 import type { Json, Tables, TablesInsert } from "@iride/database/types";
 import type {
   CreateEventInput,
-  CreatePhotographerSpotInput,
   CreatePostInput,
   EventDto,
-  PhotographerSpotDto,
   PostDto,
   SearchResultDto,
   UpdateEventInput,
@@ -144,57 +142,6 @@ export function createContentRepository(
         .maybeSingle();
       ensureWrite(error, data);
     },
-    async listPhotographerSpots(viewerId) {
-      const viewer = await viewerCapabilities(admin, viewerId);
-      const { data, error } = await admin
-        .from("photographer_spots")
-        .select("*")
-        .is("deleted_at", null)
-        .order("starts_at")
-        .limit(100);
-      ensureQuery(error);
-      return spotDtos(admin, data ?? [], viewer);
-    },
-    async getPhotographerSpot(id, viewerId) {
-      const viewer = await viewerCapabilities(admin, viewerId);
-      const row = await findSpot(admin, id);
-      if (!row || (row.deleted_at && row.owner_id !== viewer.userId && !viewer.canManage)) return null;
-      return (await spotDtos(admin, [row], viewer))[0] ?? null;
-    },
-    async createPhotographerSpot(userId, accessToken, input) {
-      const { data, error } = await ownerClient(accessToken)
-        .from("photographer_spots")
-        .insert(spotWrite(input, { owner_id: userId }))
-        .select("*")
-        .single();
-      ensureWrite(error, data);
-      return (await spotDtos(admin, [data!], await viewerCapabilities(admin, userId)))[0]!;
-    },
-    async updatePhotographerSpot(userId, accessToken, id, input) {
-      const viewer = await viewerCapabilities(admin, userId);
-      const current = await findSpot(admin, id);
-      await assertOwner(current, "owner_id", viewer);
-      const { data, error } = await ownerClient(accessToken)
-        .from("photographer_spots")
-        .update(spotWrite({ ...spotInput(current!), ...input }, {}))
-        .eq("id", id)
-        .is("deleted_at", null)
-        .select("*")
-        .maybeSingle();
-      ensureWrite(error, data);
-      return (await spotDtos(admin, [data!], viewer))[0]!;
-    },
-    async deletePhotographerSpot(userId, accessToken, id) {
-      await assertOwner(await findSpot(admin, id), "owner_id", await viewerCapabilities(admin, userId));
-      const { data, error } = await ownerClient(accessToken)
-        .from("photographer_spots")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id)
-        .is("deleted_at", null)
-        .select("id")
-        .maybeSingle();
-      ensureWrite(error, data);
-    },
     async explore(bounds, layers, viewerId) {
       const viewer = await viewerCapabilities(admin, viewerId);
       const { data, error } = await admin.rpc("explore_content", {
@@ -237,11 +184,6 @@ async function findEvent(admin: AdminClient, id: string) {
   return data;
 }
 
-async function findSpot(admin: AdminClient, id: string) {
-  const { data, error } = await admin.from("photographer_spots").select("*").eq("id", id).maybeSingle();
-  ensureQuery(error);
-  return data;
-}
 
 async function authors(admin: AdminClient, ids: readonly string[], includeSuspended = false) {
   const unique = Array.from(new Set(ids));
@@ -306,28 +248,20 @@ async function postMarkerTags(
   const { data, error } = await admin.from("post_marker_tags").select("*").in("post_id", [...postIds]).order("position");
   ensureQuery(error);
   const eventIds=(data??[]).flatMap((row)=>row.event_id?[row.event_id]:[]);
-  const spotIds=(data??[]).flatMap((row)=>row.photographer_spot_id?[row.photographer_spot_id]:[]);
-  const [events,spots]=await Promise.all([
-    eventIds.length?admin.from("events").select("id,title,kind,deleted_at,organizer_id").in("id",eventIds):Promise.resolve({data:[],error:null}),
-    spotIds.length?admin.from("photographer_spots").select("id,title,deleted_at,owner_id").in("id",spotIds):Promise.resolve({data:[],error:null}),
-  ]);
-  ensureQuery(events.error);ensureQuery(spots.error);
-  const eventMap=new Map((events.data??[]).map((row)=>[row.id,row]));
-  const spotMap=new Map((spots.data??[]).map((row)=>[row.id,row]));
-  const people = await authors(admin, [
-    ...(events.data ?? []).map((row) => row.organizer_id),
-    ...(spots.data ?? []).map((row) => row.owner_id),
-  ], viewer.canManage);
+  const { data: events, error: eventsError } = eventIds.length
+    ? await admin.from("events").select("id,title,kind,deleted_at,organizer_id").in("id",eventIds)
+    : { data: [], error: null };
+  ensureQuery(eventsError);
+  const eventMap=new Map((events??[]).map((row)=>[row.id,row]));
+  const people = await authors(admin, (events ?? []).map((row) => row.organizer_id), viewer.canManage);
   for(const row of data??[]){
-    const target=row.event_id?eventMap.get(row.event_id):row.photographer_spot_id?spotMap.get(row.photographer_spot_id):undefined;
+    const target=row.event_id ? eventMap.get(row.event_id) : undefined;
     const targetVisible = Boolean(
       target &&
       !target.deleted_at &&
-      people.has("organizer_id" in target ? target.organizer_id : target.owner_id),
+      people.has(target.organizer_id),
     );
-    const value = row.event_id
-      ? {kind:"event" as const,id:row.event_id,title:targetVisible?target!.title:null,markerKind:targetVisible&&"kind" in target! ?normalizeExploreKind(String(target!.kind)):null,available:targetVisible}
-      : {kind:"photographerSpot" as const,id:row.photographer_spot_id!,title:targetVisible?target!.title:null,markerKind:targetVisible?"photographerSpot" as const:null,available:targetVisible};
+    const value = {kind:"event" as const,id:row.event_id!,title:targetVisible?target!.title:null,markerKind:targetVisible ? normalizeExploreKind(String(target!.kind)) : null,available:targetVisible};
     result.set(row.post_id,[...(result.get(row.post_id)??[]),value]);
   }
   return result;
@@ -335,13 +269,11 @@ async function postMarkerTags(
 
 async function validateMarkerTags(admin:AdminClient,tags:NonNullable<CreatePostInput["markerTags"]>){
   const eventIds=tags.filter((tag)=>tag.kind==="event").map((tag)=>tag.id);
-  const spotIds=tags.filter((tag)=>tag.kind==="photographerSpot").map((tag)=>tag.id);
-  const [events,spots]=await Promise.all([
-    eventIds.length?admin.from("events").select("id").in("id",eventIds).is("deleted_at",null):Promise.resolve({data:[],error:null}),
-    spotIds.length?admin.from("photographer_spots").select("id").in("id",spotIds).is("deleted_at",null):Promise.resolve({data:[],error:null}),
-  ]);
-  ensureQuery(events.error);ensureQuery(spots.error);
-  if((events.data??[]).length!==eventIds.length||(spots.data??[]).length!==spotIds.length)throw repositoryError("CONTENT_VALIDATION_FAILED",400);
+  const events = eventIds.length
+    ? await admin.from("events").select("id").in("id",eventIds).is("deleted_at",null)
+    : { data: [], error: null };
+  ensureQuery(events.error);
+  if((events.data??[]).length!==eventIds.length)throw repositoryError("CONTENT_VALIDATION_FAILED",400);
 }
 
 async function eventDtos(admin: AdminClient, rows: Tables<"events">[], viewer: ViewerCapabilities): Promise<EventDto[]> {
@@ -359,18 +291,6 @@ async function eventDtos(admin: AdminClient, rows: Tables<"events">[], viewer: V
   });
 }
 
-async function spotDtos(admin: AdminClient, rows: Tables<"photographer_spots">[], viewer: ViewerCapabilities): Promise<PhotographerSpotDto[]> {
-  const people = await authors(admin, rows.map((row) => row.owner_id), viewer.canManage);
-  return rows.flatMap((row) => {
-    const photographer = people.get(row.owner_id);
-    return photographer ? [{
-      id: row.id, title: row.title, description: row.description, locationLabel: row.location_label,
-      latitude: row.latitude, longitude: row.longitude, startsAt: row.starts_at, endsAt: row.ends_at,
-      timezone: row.timezone, photographer, canEdit: viewer.canManage || (viewer.canWrite && row.owner_id === viewer.userId),
-      createdAt: row.created_at, updatedAt: row.updated_at,
-    }] : [];
-  });
-}
 
 function eventWrite(
   input: CreateEventInput,
@@ -413,36 +333,6 @@ function mergeEvent(row: Tables<"events">, input: UpdateEventInput): CreateEvent
   };
 }
 
-function spotWrite(
-  input: CreatePhotographerSpotInput,
-  extra: Partial<TablesInsert<"photographer_spots">>,
-): TablesInsert<"photographer_spots"> {
-  return {
-    ...extra,
-    title: input.title,
-    description: input.description,
-    location_label: input.locationLabel,
-    latitude: input.latitude,
-    longitude: input.longitude,
-    starts_at: input.startsAt,
-    ends_at: input.endsAt,
-    timezone: input.timezone,
-    owner_id: extra.owner_id!,
-  };
-}
-
-function spotInput(row: Tables<"photographer_spots">): CreatePhotographerSpotInput {
-  return {
-    title: row.title,
-    description: row.description,
-    locationLabel: row.location_label,
-    latitude: row.latitude,
-    longitude: row.longitude,
-    startsAt: row.starts_at,
-    endsAt: row.ends_at,
-    timezone: row.timezone,
-  };
-}
 
 async function assertOwner<Row extends Record<Key, string>, Key extends string>(
   row: Row | null,
@@ -470,8 +360,9 @@ function repositoryError(code: string, status: number, cause?: unknown) {
   return Object.assign(new Error(code, cause ? { cause } : undefined), { code, status });
 }
 
-function normalizeExploreKind(value: string): "meeting" | "event" | "trip" | "photographerSpot" {
-  return value === "meeting" || value === "event" || value === "trip" ? value : "photographerSpot";
+function normalizeExploreKind(value: string): "meeting" | "event" | "trip" {
+  if (value === "meeting" || value === "event" || value === "trip") return value;
+  throw new Error("CONTENT_UNAVAILABLE");
 }
 
 async function searchContent(
@@ -503,12 +394,6 @@ async function searchContent(
     ensureQuery(error);
     const people = await authors(admin, (data ?? []).map((row) => row.organizer_id), viewer.canManage);
     for (const row of data ?? []) if (people.has(row.organizer_id)) results.push({ id: row.id, kind: "event", title: row.title, subtitle: row.location_label, username: null });
-  }
-  if (types.includes("photographer-spots")) {
-    const { data, error } = await admin.from("photographer_spots").select("id,title,location_label,owner_id").is("deleted_at", null).ilike("title", pattern).limit(8);
-    ensureQuery(error);
-    const people = await authors(admin, (data ?? []).map((row) => row.owner_id), viewer.canManage);
-    for (const row of data ?? []) { const owner = people.get(row.owner_id); if (owner) results.push({ id: row.id, kind: "photographerSpot", title: row.title, subtitle: row.location_label, username: owner.username }); }
   }
   return results.slice(0, 30);
 }

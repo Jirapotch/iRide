@@ -3,8 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   createCommentSchema,
   createEventSchema,
-  createMarketProductSchema,
-  createPhotographerSpotSchema,
   createPostSchema,
   createVehicleSchema,
   mediaUploadRequestSchema,
@@ -47,7 +45,7 @@ describe("content validation", () => {
     expect(() => createCommentSchema.parse({ body: "", parentId: null })).toThrow();
   });
 
-  it("validates vehicle and market inputs", () => {
+  it("validates vehicle inputs", () => {
     expect(createVehicleSchema.parse({
       kind: "motorcycle",
       brand: "Honda",
@@ -71,13 +69,6 @@ describe("content validation", () => {
         "10000000-0000-4000-8000-000000000001",
       ],
     })).toThrow();
-    expect(createMarketProductSchema.parse({
-      name: "Touring helmet",
-      priceSatang: 1450000,
-      category: "Protection",
-      vehicleKinds: ["motorcycle"],
-      coverMediaId: null,
-    })).toMatchObject({ currency: "THB", priceSatang: 1450000 });
   });
 
   it("restricts media uploads to supported images under 10 MB", () => {
@@ -150,18 +141,4 @@ describe("content validation", () => {
     });
   });
 
-  it("validates a scheduled photographer spot without realtime claims", () => {
-    expect(
-      createPhotographerSpotSchema.parse({
-        title: "Corner 7 morning session",
-        description: "Published shooting schedule",
-        locationLabel: "Khao Yai",
-        latitude: 14.439,
-        longitude: 101.372,
-        startsAt: "2026-09-05T00:00:00.000Z",
-        endsAt: "2026-09-05T04:00:00.000Z",
-        timezone: "Asia/Bangkok",
-      }),
-    ).toMatchObject({ title: "Corner 7 morning session" });
-  });
 });

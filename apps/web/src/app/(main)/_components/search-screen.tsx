@@ -41,6 +41,6 @@ export function SearchScreen({ locale }: { readonly locale: Locale }) {
 }
 
 function labelFor(kind: SearchResultDto["kind"], locale: Locale) {
-  const labels = locale === "th" ? { profile: "ผู้ใช้", post: "โพสต์", event: "กิจกรรม", photographerSpot: "จุดช่างภาพ", marketProduct: "สินค้า" } : { profile: "Profile", post: "Post", event: "Event", photographerSpot: "Photographer spot", marketProduct: "Market" };
+  const labels = locale === "th" ? { profile: "ผู้ใช้", post: "โพสต์", event: "กิจกรรม" } : { profile: "Profile", post: "Post", event: "Event" };
   return labels[kind];
 }

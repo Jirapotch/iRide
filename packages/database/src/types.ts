@@ -232,63 +232,6 @@ export type Database = {
           },
         ];
       };
-      market_products: {
-        Row: {
-          category: string;
-          cover_media_id: string | null;
-          created_at: string;
-          currency: string;
-          deleted_at: string | null;
-          id: string;
-          name: string;
-          owner_id: string;
-          price_satang: number;
-          updated_at: string;
-          vehicle_kinds: Database["public"]["Enums"]["vehicle_kind"][];
-        };
-        Insert: {
-          category: string;
-          cover_media_id?: string | null;
-          created_at?: string;
-          currency?: string;
-          deleted_at?: string | null;
-          id?: string;
-          name: string;
-          owner_id: string;
-          price_satang: number;
-          updated_at?: string;
-          vehicle_kinds: Database["public"]["Enums"]["vehicle_kind"][];
-        };
-        Update: {
-          category?: string;
-          cover_media_id?: string | null;
-          created_at?: string;
-          currency?: string;
-          deleted_at?: string | null;
-          id?: string;
-          name?: string;
-          owner_id?: string;
-          price_satang?: number;
-          updated_at?: string;
-          vehicle_kinds?: Database["public"]["Enums"]["vehicle_kind"][];
-        };
-        Relationships: [
-          {
-            foreignKeyName: "market_products_cover_media_id_fkey";
-            columns: ["cover_media_id"];
-            isOneToOne: false;
-            referencedRelation: "media";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "market_products_owner_id_fkey";
-            columns: ["owner_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       media: {
         Row: {
           bytes: number;
@@ -392,84 +335,22 @@ export type Database = {
           },
         ];
       };
-      photographer_spots: {
-        Row: {
-          created_at: string;
-          deleted_at: string | null;
-          description: string | null;
-          ends_at: string;
-          id: string;
-          latitude: number;
-          location: unknown;
-          location_label: string;
-          longitude: number;
-          owner_id: string;
-          starts_at: string;
-          timezone: string;
-          title: string;
-          updated_at: string;
-        };
-        Insert: {
-          created_at?: string;
-          deleted_at?: string | null;
-          description?: string | null;
-          ends_at: string;
-          id?: string;
-          latitude: number;
-          location?: unknown;
-          location_label: string;
-          longitude: number;
-          owner_id: string;
-          starts_at: string;
-          timezone: string;
-          title: string;
-          updated_at?: string;
-        };
-        Update: {
-          created_at?: string;
-          deleted_at?: string | null;
-          description?: string | null;
-          ends_at?: string;
-          id?: string;
-          latitude?: number;
-          location?: unknown;
-          location_label?: string;
-          longitude?: number;
-          owner_id?: string;
-          starts_at?: string;
-          timezone?: string;
-          title?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "photographer_spots_owner_id_fkey";
-            columns: ["owner_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       post_marker_tags: {
         Row: {
           created_at: string;
           event_id: string | null;
-          photographer_spot_id: string | null;
           position: number;
           post_id: string;
         };
         Insert: {
           created_at?: string;
           event_id?: string | null;
-          photographer_spot_id?: string | null;
           position: number;
           post_id: string;
         };
         Update: {
           created_at?: string;
           event_id?: string | null;
-          photographer_spot_id?: string | null;
           position?: number;
           post_id?: string;
         };
@@ -479,13 +360,6 @@ export type Database = {
             columns: ["event_id"];
             isOneToOne: false;
             referencedRelation: "events";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "post_marker_tags_photographer_spot_id_fkey";
-            columns: ["photographer_spot_id"];
-            isOneToOne: false;
-            referencedRelation: "photographer_spots";
             referencedColumns: ["id"];
           },
           {
@@ -848,10 +722,9 @@ export type Database = {
     Enums: {
       account_role: "user" | "admin";
       account_status: "locked" | "active" | "suspended";
-      community_category:
-        "car" | "motorcycle" | "bicycle" | "photographers" | "groups";
+      community_category: "car" | "motorcycle" | "bicycle" | "groups";
       event_kind: "meeting" | "event" | "trip";
-      media_purpose: "avatar" | "cover" | "vehicle" | "market";
+      media_purpose: "avatar" | "cover" | "vehicle";
       media_status: "uploading" | "processing" | "ready" | "failed" | "deleted";
       media_variant_kind: "thumbnail" | "preview";
       profile_visibility: "public" | "followers" | "private";
@@ -990,11 +863,10 @@ export const Constants = {
         "car",
         "motorcycle",
         "bicycle",
-        "photographers",
         "groups",
       ],
       event_kind: ["meeting", "event", "trip"],
-      media_purpose: ["avatar", "cover", "vehicle", "market"],
+      media_purpose: ["avatar", "cover", "vehicle"],
       media_status: ["uploading", "processing", "ready", "failed", "deleted"],
       media_variant_kind: ["thumbnail", "preview"],
       profile_visibility: ["public", "followers", "private"],

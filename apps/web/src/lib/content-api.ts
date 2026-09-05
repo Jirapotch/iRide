@@ -1,24 +1,18 @@
 import type {
   CreateEventInput,
   CreateCommentInput,
-  CreateMarketProductInput,
-  CreatePhotographerSpotInput,
   CreatePostInput,
   CreateVehicleInput,
   CommentDto,
   EventDto,
   ExploreFeatureDto,
-  PhotographerSpotDto,
   PostDto,
-  MarketProductDto,
   MediaUploadAuthorizationDto,
   MediaUploadRequest,
   SearchResultDto,
   UpdateEventInput,
-  UpdatePhotographerSpotInput,
   UpdatePostInput,
   UpdateCommentInput,
-  UpdateMarketProductInput,
   UpdateVehicleInput,
   VehicleDto,
 } from "@iride/types";
@@ -42,12 +36,6 @@ export function getEvents(accessToken?: string) {
   return contentGet<EventDto[]>("/api/v1/events", accessToken);
 }
 
-export function getPhotographerSpots(accessToken?: string) {
-  return contentGet<PhotographerSpotDto[]>(
-    "/api/v1/photographer-spots",
-    accessToken,
-  );
-}
 
 export function getComments(postId: string, accessToken?: string) {
   return contentGet<CommentDto[]>(
@@ -129,44 +117,6 @@ export function deleteVehicle(accessToken: string, id: string) {
     accessToken,
   );
 }
-export function getMarketProducts(accessToken?: string) {
-  return contentGet<MarketProductDto[]>("/api/v1/market-products", accessToken);
-}
-export function getMarketProduct(id: string, accessToken?: string) {
-  return contentGet<MarketProductDto>(
-    `/api/v1/market-products/${encodeURIComponent(id)}`,
-    accessToken,
-  );
-}
-export function createMarketProduct(
-  accessToken: string,
-  input: CreateMarketProductInput,
-) {
-  return contentMutation<MarketProductDto>(
-    "/api/v1/market-products",
-    accessToken,
-    "POST",
-    input,
-  );
-}
-export function updateMarketProduct(
-  accessToken: string,
-  id: string,
-  input: UpdateMarketProductInput,
-) {
-  return contentMutation<MarketProductDto>(
-    `/api/v1/market-products/${encodeURIComponent(id)}`,
-    accessToken,
-    "PATCH",
-    input,
-  );
-}
-export function deleteMarketProduct(accessToken: string, id: string) {
-  return contentDelete(
-    `/api/v1/market-products/${encodeURIComponent(id)}`,
-    accessToken,
-  );
-}
 export function authorizeMediaUpload(
   accessToken: string,
   input: MediaUploadRequest,
@@ -207,12 +157,6 @@ export function getEvent(id: string, accessToken?: string) {
   );
 }
 
-export function getPhotographerSpot(id: string, accessToken?: string) {
-  return contentGet<PhotographerSpotDto>(
-    `/api/v1/photographer-spots/${encodeURIComponent(id)}`,
-    accessToken,
-  );
-}
 
 export function createPost(accessToken: string, input: CreatePostInput) {
   return contentMutation<PostDto>("/api/v1/posts", accessToken, "POST", input);
@@ -253,34 +197,9 @@ export function updateEvent(
   );
 }
 
-export function createPhotographerSpot(
-  accessToken: string,
-  input: CreatePhotographerSpotInput,
-) {
-  return contentMutation<PhotographerSpotDto>(
-    "/api/v1/photographer-spots",
-    accessToken,
-    "POST",
-    input,
-  );
-}
-
-export function updatePhotographerSpot(
-  accessToken: string,
-  id: string,
-  input: UpdatePhotographerSpotInput,
-) {
-  return contentMutation<PhotographerSpotDto>(
-    `/api/v1/photographer-spots/${encodeURIComponent(id)}`,
-    accessToken,
-    "PATCH",
-    input,
-  );
-}
-
 export async function deleteContent(
   accessToken: string,
-  domain: "posts" | "events" | "photographer-spots",
+  domain: "posts" | "events",
   id: string,
 ) {
   const response = await fetch(

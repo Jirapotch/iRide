@@ -7,38 +7,32 @@ import {
 } from "@iride/auth";
 import type {
   CreateEventInput,
-  CreatePhotographerSpotInput,
   CreatePostInput,
   EventDto,
   ExploreFeatureDto,
-  PhotographerSpotDto,
   PostDto,
   SearchResultDto,
   UpdateEventInput,
-  UpdatePhotographerSpotInput,
   UpdatePostInput,
   CommunityCategory,
 } from "@iride/types";
 import { communityCategories } from "@iride/types";
 import {
   createEventSchema,
-  createPhotographerSpotSchema,
   createPostSchema,
   updateEventSchema,
-  updatePhotographerSpotSchema,
   updatePostSchema,
 } from "@iride/validation";
 
 import { createCorsDecision } from "./cors";
 import { createContentRepository } from "./content-repository";
 
-export type ContentDomain = "posts" | "events" | "photographer-spots";
-export type ExploreLayer = "events" | "trips" | "photographer-spots";
+export type ContentDomain = "posts" | "events";
+export type ExploreLayer = "events" | "trips";
 export type SearchType =
   | "profiles"
   | "posts"
-  | "events"
-  | "photographer-spots";
+  | "events";
 export interface ExploreBounds {
   readonly west: number;
   readonly south: number;
@@ -57,11 +51,6 @@ export interface ContentRepository {
   readonly createEvent: (userId: string, accessToken: string, input: CreateEventInput) => Promise<EventDto>;
   readonly updateEvent: (userId: string, accessToken: string, id: string, input: UpdateEventInput) => Promise<EventDto>;
   readonly deleteEvent: (userId: string, accessToken: string, id: string) => Promise<void>;
-  readonly listPhotographerSpots: (viewerId: string | null) => Promise<PhotographerSpotDto[]>;
-  readonly getPhotographerSpot: (id: string, viewerId: string | null) => Promise<PhotographerSpotDto | null>;
-  readonly createPhotographerSpot: (userId: string, accessToken: string, input: CreatePhotographerSpotInput) => Promise<PhotographerSpotDto>;
-  readonly updatePhotographerSpot: (userId: string, accessToken: string, id: string, input: UpdatePhotographerSpotInput) => Promise<PhotographerSpotDto>;
-  readonly deletePhotographerSpot: (userId: string, accessToken: string, id: string) => Promise<void>;
   readonly explore: (bounds: ExploreBounds, layers: ExploreLayer[], viewerId: string | null) => Promise<ExploreFeatureDto[]>;
   readonly search: (query: string, types: SearchType[], viewerId: string | null) => Promise<SearchResultDto[]>;
 }
@@ -102,14 +91,11 @@ export async function handleContentCollection(
       if (domain === "posts" && requestedCategory && !communityCategories.includes(requestedCategory as CommunityCategory)) {
         throw new ContentRequestError("CONTENT_VALIDATION_FAILED", 400);
       }
-      const data =
-        domain === "posts"
-          ? requestedCategory
-            ? await dependencies.repository.listPosts(viewerId, requestedCategory as CommunityCategory)
-            : await dependencies.repository.listPosts(viewerId)
-          : domain === "events"
-            ? await dependencies.repository.listEvents(viewerId)
-            : await dependencies.repository.listPhotographerSpots(viewerId);
+      const data = domain === "posts"
+        ? requestedCategory
+          ? await dependencies.repository.listPosts(viewerId, requestedCategory as CommunityCategory)
+          : await dependencies.repository.listPosts(viewerId)
+        : await dependencies.repository.listEvents(viewerId);
       return json({ data });
     }
     if (request.method !== "POST") return methodNotAllowed();
@@ -131,20 +117,7 @@ export async function handleContentCollection(
         201,
       );
     }
-    const input = parseInput<CreatePhotographerSpotInput>(
-      createPhotographerSpotSchema,
-      body,
-    );
-    return json(
-      {
-        data: await dependencies.repository.createPhotographerSpot(
-          userId,
-          accessToken,
-          input,
-        ),
-      },
-      201,
-    );
+    throw new ContentRequestError("CONTENT_NOT_FOUND", 404);
   });
 }
 
@@ -158,12 +131,9 @@ export async function handleContentItem(
     if (!isUuid(id)) throw new ContentRequestError("CONTENT_NOT_FOUND", 404);
     if (request.method === "GET") {
       const viewerId = await optionalViewer(request, dependencies);
-      const data =
-        domain === "posts"
-          ? await dependencies.repository.getPost(id, viewerId)
-          : domain === "events"
-            ? await dependencies.repository.getEvent(id, viewerId)
-            : await dependencies.repository.getPhotographerSpot(id, viewerId);
+      const data = domain === "posts"
+        ? await dependencies.repository.getPost(id, viewerId)
+        : await dependencies.repository.getEvent(id, viewerId);
       if (!data) throw new ContentRequestError("CONTENT_NOT_FOUND", 404);
       return json({ data });
     }
@@ -176,35 +146,14 @@ export async function handleContentItem(
     if (request.method === "DELETE") {
       if (domain === "posts") await dependencies.repository.deletePost(userId, accessToken, id);
       else if (domain === "events") await dependencies.repository.deleteEvent(userId, accessToken, id);
-      else await dependencies.repository.deletePhotographerSpot(userId, accessToken, id);
+      else await dependencies.repository.deleteEvent(userId, accessToken, id);
       return new Response(null, { status: 204 });
     }
 
     const body = await readJson(request);
-    const data =
-      domain === "posts"
-        ? await dependencies.repository.updatePost(
-            userId,
-            accessToken,
-            id,
-            parseInput<UpdatePostInput>(updatePostSchema, body),
-          )
-        : domain === "events"
-          ? await dependencies.repository.updateEvent(
-              userId,
-              accessToken,
-              id,
-              parseInput<UpdateEventInput>(updateEventSchema, body),
-            )
-          : await dependencies.repository.updatePhotographerSpot(
-              userId,
-              accessToken,
-              id,
-              parseInput<UpdatePhotographerSpotInput>(
-                updatePhotographerSpotSchema,
-                body,
-              ),
-            );
+    const data = domain === "posts"
+      ? await dependencies.repository.updatePost(userId, accessToken, id, parseInput<UpdatePostInput>(updatePostSchema, body))
+      : await dependencies.repository.updateEvent(userId, accessToken, id, parseInput<UpdateEventInput>(updateEventSchema, body));
     return json({ data });
   });
 }
@@ -218,8 +167,8 @@ export async function handleExplore(
     const bounds = parseBounds(url.searchParams.get("bbox"));
     const layers = parseValues<ExploreLayer>(
       url.searchParams.get("layers"),
-      ["events", "trips", "photographer-spots"],
-      ["events", "trips", "photographer-spots"],
+      ["events", "trips"],
+      ["events", "trips"],
     );
     const viewerId = await optionalViewer(request, dependencies);
     return json({ data: await dependencies.repository.explore(bounds, layers, viewerId) });
@@ -238,8 +187,8 @@ export async function handleSearch(
     }
     const types = parseValues<SearchType>(
       url.searchParams.get("types"),
-      ["profiles", "posts", "events", "photographer-spots"],
-      ["profiles", "posts", "events", "photographer-spots"],
+      ["profiles", "posts", "events"],
+      ["profiles", "posts", "events"],
     );
     const viewerId = await optionalViewer(request, dependencies);
     return json({ data: await dependencies.repository.search(query, types, viewerId) });

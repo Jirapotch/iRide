@@ -24,17 +24,16 @@ async function isHiddenOwner(admin:ReturnType<typeof createAdminDatabaseClient>,
   const {data,error}=await admin.from("account_access").select("status,transition_id").eq("user_id",ownerId).maybeSingle();ensure(error);return data?.status==="suspended"||data?.transition_id!==null;
 }
 async function publiclyReferenced(admin:ReturnType<typeof createAdminDatabaseClient>,id:string){
-  const [profiles,products,links]=await Promise.all([
+  const [profiles,links]=await Promise.all([
     admin.from("profiles").select("id").or(`avatar_media_id.eq.${id},cover_media_id.eq.${id}`).in("visibility",["public","followers"]).limit(1),
-    admin.from("market_products").select("id,owner_id").eq("cover_media_id",id).is("deleted_at",null).limit(1),
     admin.from("vehicle_media").select("vehicle_id").eq("media_id",id).limit(20),
-  ]);ensure(profiles.error);ensure(products.error);ensure(links.error);
+  ]);ensure(profiles.error);ensure(links.error);
   const vehicleIds=(links.data??[]).map((row)=>row.vehicle_id);
   const {data:vehicles,error}=vehicleIds.length
     ? await admin.from("vehicles").select("id,owner_id").in("id",vehicleIds).eq("visibility","public").is("archived_at",null).limit(1)
     : {data:[],error:null};
   ensure(error);
-  const ownerIds=[...(profiles.data??[]).map((row)=>row.id),...(products.data??[]).map((row)=>row.owner_id),...(vehicles??[]).map((row)=>row.owner_id)];
+  const ownerIds=[...(profiles.data??[]).map((row)=>row.id),...(vehicles??[]).map((row)=>row.owner_id)];
   return hasVisibleOwner(admin,ownerIds);
 }
 async function hasVisibleOwner(admin:ReturnType<typeof createAdminDatabaseClient>,ownerIds:readonly string[]){
