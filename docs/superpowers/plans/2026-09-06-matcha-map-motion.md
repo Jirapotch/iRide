@@ -25,11 +25,13 @@
 ### Task 1: Coherent product and motion tokens
 
 **Files:**
+
 - Modify: `apps/web/src/shared/theme/tokens.ts`
 - Modify: `apps/web/src/app/globals.css`
 - Test: `apps/web/src/shared/theme/tokens.test.ts`
 
 **Interfaces:**
+
 - Consumes: Ant Design `ThemeConfig` and current CSS custom properties.
 - Produces: `matchaPalette`, `motionTokens`, and `createThemeConfig(mode)` values shared by component and CSS styling.
 
@@ -41,16 +43,35 @@ import { createThemeConfig, matchaPalette, motionTokens } from "./tokens";
 
 describe("Matcha design tokens", () => {
   it("exports the approved semantic palette", () => {
-    expect(matchaPalette).toMatchObject({ primary: "#6F8F72", deep: "#4F6F52", cream: "#F6F3E8", ink: "#27322A" });
+    expect(matchaPalette).toMatchObject({
+      primary: "#6F8F72",
+      deep: "#4F6F52",
+      cream: "#F6F3E8",
+      ink: "#27322A",
+    });
   });
 
   it("keeps restrained shared motion timing", () => {
-    expect(motionTokens).toEqual({ fast: 0.16, base: 0.28, slow: 0.45, offsetSmall: 8, offsetMedium: 16, offsetLarge: 24 });
+    expect(motionTokens).toEqual({
+      fast: 0.16,
+      base: 0.28,
+      slow: 0.45,
+      offsetSmall: 8,
+      offsetMedium: 16,
+      offsetLarge: 24,
+    });
   });
 
   it("maps light and dark Ant Design surfaces coherently", () => {
-    expect(createThemeConfig("light").token).toMatchObject({ colorPrimary: "#6F8F72", colorBgBase: "#F6F3E8", colorTextBase: "#27322A" });
-    expect(createThemeConfig("dark").token).toMatchObject({ colorPrimary: "#BFD8C2", colorBgBase: "#18231E" });
+    expect(createThemeConfig("light").token).toMatchObject({
+      colorPrimary: "#6F8F72",
+      colorBgBase: "#F6F3E8",
+      colorTextBase: "#27322A",
+    });
+    expect(createThemeConfig("dark").token).toMatchObject({
+      colorPrimary: "#BFD8C2",
+      colorBgBase: "#18231E",
+    });
   });
 });
 ```
@@ -81,11 +102,13 @@ git commit -m "feat(web): unify matcha design tokens"
 ### Task 2: Calm MapLibre vector and raster styling
 
 **Files:**
+
 - Modify: `apps/web/src/lib/map-palette.ts`
 - Modify: `apps/web/src/lib/map-palette.test.ts`
 - Modify: `apps/web/src/app/globals.css`
 
 **Interfaces:**
+
 - Consumes: `Map.getStyle()` and `Map.setPaintProperty(layerId, property, value)` from the existing live map.
 - Produces: `applyMapPalette(map, theme)` that styles only returned layers, including the real fallback `osm` raster layer.
 
@@ -119,12 +142,14 @@ git commit -m "feat(web): calm MapLibre basemap styling"
 ### Task 3: Responsive camera and motion policy
 
 **Files:**
+
 - Create: `apps/web/src/lib/map-motion.ts`
 - Create: `apps/web/src/lib/map-motion.test.ts`
 - Modify: `apps/web/package.json`
 - Modify: `pnpm-lock.yaml`
 
 **Interfaces:**
+
 - Consumes: `{ longitude, latitude }`, viewport width/height, and `reducedMotion`.
 - Produces: `mapSelectionCamera(feature, viewport, reducedMotion): { center; duration; essential; padding }`, `motionTokens`, and `shouldAnimateMap(reducedMotion)` for `ActivityHub`.
 
@@ -138,15 +163,27 @@ const feature = { longitude: 100.5018, latitude: 13.7563 };
 
 describe("map selection camera", () => {
   it("reserves a desktop side panel", () => {
-    expect(mapSelectionCamera(feature, { width: 1280, height: 900 }, false)).toEqual({ center: [100.5018, 13.7563], duration: 420, essential: false, padding: { top: 80, right: 420, bottom: 80, left: 80 } });
+    expect(
+      mapSelectionCamera(feature, { width: 1280, height: 900 }, false),
+    ).toEqual({
+      center: [100.5018, 13.7563],
+      duration: 420,
+      essential: false,
+      padding: { top: 80, right: 420, bottom: 80, left: 80 },
+    });
   });
 
   it("reserves a mobile bottom sheet", () => {
-    expect(mapSelectionCamera(feature, { width: 390, height: 844 }, false).padding.bottom).toBe(380);
+    expect(
+      mapSelectionCamera(feature, { width: 390, height: 844 }, false).padding
+        .bottom,
+    ).toBe(380);
   });
 
   it("makes camera movement instant for reduced motion", () => {
-    expect(mapSelectionCamera(feature, { width: 1280, height: 900 }, true).duration).toBe(0);
+    expect(
+      mapSelectionCamera(feature, { width: 1280, height: 900 }, true).duration,
+    ).toBe(0);
   });
 });
 ```
@@ -177,11 +214,13 @@ git commit -m "feat(web): add map motion policy"
 ### Task 4: Marker, camera, filter, controls, and responsive panel UX
 
 **Files:**
+
 - Modify: `apps/web/src/app/(main)/_components/activity-hub.tsx`
 - Modify: `apps/web/src/app/globals.css`
 - Modify: `tests/e2e/premium-ui.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `mapSelectionCamera`, MapLibre `easeTo`, real marker elements, existing `FeatureSheet`, and route-scoped `gsap`.
 - Produces: desktop side panel, mobile bottom sheet, camera padding, result-count status, styled MapLibre control cluster, and cleaned-up entrance/selection timelines.
 
@@ -219,6 +258,7 @@ git commit -m "feat(web): coordinate premium map interactions"
 ### Task 5: Global polish, CI workflow, and full verification
 
 **Files:**
+
 - Modify: `apps/web/src/app/(main)/page.tsx`
 - Modify: `apps/web/src/app/globals.css`
 - Modify: `tests/e2e/premium-ui.spec.ts`
@@ -226,6 +266,7 @@ git commit -m "feat(web): coordinate premium map interactions"
 - Modify: `docs/ui-migration-notes.md`
 
 **Interfaces:**
+
 - Consumes: existing home/category markup and root `pnpm` scripts.
 - Produces: refined responsive home hierarchy, documented UX/motion decisions, and deterministic pull-request validation.
 

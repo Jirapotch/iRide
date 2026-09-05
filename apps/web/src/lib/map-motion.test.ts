@@ -29,8 +29,7 @@ describe("map selection camera", () => {
 
   it("makes camera movement instant when reduced motion is requested", () => {
     expect(
-      mapSelectionCamera(feature, { width: 1280, height: 900 }, true)
-        .duration,
+      mapSelectionCamera(feature, { width: 1280, height: 900 }, true).duration,
     ).toBe(0);
   });
 });

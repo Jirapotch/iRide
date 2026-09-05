@@ -16,6 +16,7 @@ import type {
   ExploreFeatureDto,
   ExploreFeatureKind,
 } from "@iride/types";
+import { gsap } from "gsap";
 import * as maplibregl from "maplibre-gl";
 import Link from "next/link";
 import { createPortal } from "react-dom";
@@ -35,16 +36,14 @@ import { getExploreContent } from "@/lib/content-api";
 import { googleMapsSearchUrl } from "@/lib/google-maps-domain";
 import type { Locale } from "@/lib/locale";
 import { applyMapPalette, contentKindColors } from "@/lib/map-palette";
+import { mapSelectionCamera } from "@/lib/map-motion";
+import { motionTokens } from "@/shared/theme/tokens";
 import { removeContent } from "../create/actions";
 import { BackendForm } from "./create-content-screen";
 import { EditModal } from "./edit-modal";
 
 const center: [number, number] = [100.5018, 13.7563];
-const kinds: ExploreFeatureKind[] = [
-  "meeting",
-  "event",
-  "trip",
-];
+const kinds: ExploreFeatureKind[] = ["meeting", "event", "trip"];
 const markerColors = contentKindColors;
 
 export function ActivityHub({
@@ -71,7 +70,9 @@ export function ActivityHub({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [cameraDuration, setCameraDuration] = useState<number | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const rootRef = useRef<HTMLElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markerRefs = useRef<maplibregl.Marker[]>([]);
   const userLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
@@ -100,13 +101,7 @@ export function ActivityHub({
       try {
         const active = enabledRef.current;
         const layers = Array.from(
-          new Set(
-            active.map((kind) =>
-              kind === "trip"
-                ? "trips"
-                : "events",
-            ),
-          ),
+          new Set(active.map((kind) => (kind === "trip" ? "trips" : "events"))),
         );
         const data = await getExploreContent(
           [
@@ -147,9 +142,13 @@ export function ActivityHub({
         attributionControl: false,
       });
       map.addControl(
-        new maplibregl.NavigationControl({ showCompass: false }),
+        new maplibregl.NavigationControl({
+          showCompass: true,
+          visualizePitch: true,
+        }),
         "top-right",
       );
+      map.addControl(new maplibregl.FullscreenControl(), "top-right");
       map.addControl(
         new maplibregl.AttributionControl({ compact: true }),
         "bottom-left",
@@ -195,6 +194,8 @@ export function ActivityHub({
     markerRefs.current = features
       .filter((feature) => enabled.includes(feature.kind))
       .map((feature) => {
+        const anchor = document.createElement("div");
+        anchor.className = "activity-marker-anchor";
         const button = document.createElement("button");
         button.type = "button";
         button.className = `activity-marker marker-${feature.kind} ${feature.id === selectedId ? "is-selected" : ""}`;
@@ -213,7 +214,8 @@ export function ActivityHub({
           markerTriggerRef.current = button;
           setSelectedId(feature.id);
         });
-        return new maplibregl.Marker({ element: button, anchor: "bottom" })
+        anchor.append(button);
+        return new maplibregl.Marker({ element: anchor, anchor: "bottom" })
           .setLngLat([feature.longitude, feature.latitude])
           .addTo(map);
       });
@@ -223,6 +225,115 @@ export function ActivityHub({
     () => features.find((feature) => feature.id === selectedId) ?? null,
     [features, selectedId],
   );
+  const visibleFeatureCount = useMemo(
+    () => features.filter((feature) => enabled.includes(feature.kind)).length,
+    [enabled, features],
+  );
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+      return;
+
+    const context = gsap.context(() => {
+      gsap
+        .timeline({ defaults: { ease: "power3.out" } })
+        .fromTo(
+          ".map-canvas",
+          { autoAlpha: 0 },
+          { autoAlpha: 1, duration: motionTokens.slow },
+        )
+        .fromTo(
+          ".map-actions-stack",
+          { autoAlpha: 0, y: motionTokens.offsetMedium },
+          { autoAlpha: 1, y: 0, duration: motionTokens.base },
+          "-=0.2",
+        )
+        .fromTo(
+          ".map-result-status",
+          { autoAlpha: 0, y: -motionTokens.offsetSmall },
+          { autoAlpha: 1, y: 0, duration: motionTokens.base },
+          "-=0.12",
+        );
+    }, root);
+
+    return () => context.revert();
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selected) return;
+
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const camera = mapSelectionCamera(
+      selected,
+      { width: window.innerWidth, height: window.innerHeight },
+      reducedMotion,
+    );
+    setCameraDuration(camera.duration);
+    map.easeTo(camera);
+
+    let context: gsap.Context | undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const marker = Array.from(
+        document.querySelectorAll<HTMLButtonElement>(".activity-marker"),
+      ).find((button) => button.dataset.featureId === selected.id);
+      const sheet = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-feature-sheet]"),
+      ).find((element) => element.dataset.featureSheet === selected.id);
+      if (!marker || !sheet) return;
+
+      context = gsap.context(() => {
+        if (reducedMotion) {
+          gsap.set(marker, { scale: 1.08 });
+          gsap.set(sheet, { opacity: 1 });
+          return;
+        }
+
+        const desktop = window.innerWidth >= 1024;
+        gsap
+          .timeline({ defaults: { overwrite: "auto" } })
+          .to(marker, {
+            scale: 1.08,
+            duration: motionTokens.fast,
+            ease: "power2.out",
+          })
+          .fromTo(
+            sheet,
+            {
+              opacity: 0,
+              x: desktop ? motionTokens.offsetLarge : 0,
+            },
+            {
+              opacity: 1,
+              x: 0,
+              duration: 0.36,
+              ease: "power3.out",
+            },
+            "-=0.08",
+          )
+          .fromTo(
+            sheet.querySelectorAll(".activity-sheet-body > *"),
+            { opacity: 0, y: motionTokens.offsetSmall },
+            {
+              opacity: 1,
+              y: 0,
+              duration: motionTokens.base,
+              stagger: 0.05,
+              ease: "power2.out",
+            },
+            "-=0.2",
+          );
+      }, sheet);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      context?.revert();
+    };
+  }, [selected]);
   const closeFeatureSheet = useCallback(() => {
     const markerId = selectedId;
     setSelectedId(null);
@@ -285,13 +396,23 @@ export function ActivityHub({
     <section
       className="discover-map on-map"
       aria-label={locale === "th" ? "แผนที่ค้นพบ" : "Discover map"}
+      data-camera-duration={cameraDuration ?? undefined}
+      ref={rootRef}
     >
       <div className="map-canvas" ref={containerRef} />
-      {loading ? (
-        <div className="map-loading" role="status">
-          {locale === "th" ? "กำลังโหลดพื้นที่…" : "Loading area…"}
-        </div>
-      ) : null}
+      <div
+        aria-label={locale === "th" ? "ผลลัพธ์บนแผนที่" : "Map results"}
+        className="map-result-status"
+        role="status"
+      >
+        {loading
+          ? locale === "th"
+            ? "กำลังอัปเดตพื้นที่"
+            : "Updating area"
+          : locale === "th"
+            ? `${visibleFeatureCount} สถานที่`
+            : `${visibleFeatureCount} ${visibleFeatureCount === 1 ? "place" : "places"}`}
+      </div>
       {error ? (
         <div className="map-error-banner" role="alert">
           <WarningCircle size={18} />
@@ -304,6 +425,7 @@ export function ActivityHub({
         <button
           aria-expanded={filtersOpen}
           aria-label={locale === "th" ? "กรอง marker" : "Filter markers"}
+          aria-pressed={filtersOpen}
           className="map-filter-fab"
           onClick={() => setFiltersOpen((value) => !value)}
           type="button"
@@ -394,6 +516,14 @@ function FeatureSheet({
   const domain = "events";
   const sheetRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const update = () => setDesktop(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     const focusableElements = () =>
@@ -407,7 +537,7 @@ function FeatureSheet({
         onClose();
         return;
       }
-      if (event.key !== "Tab") return;
+      if (desktop || event.key !== "Tab") return;
       const focusable = focusableElements();
       const first = focusable[0];
       const last = focusable.at(-1);
@@ -427,7 +557,7 @@ function FeatureSheet({
         first.focus();
       }
     };
-    document.body.style.overflow = "hidden";
+    if (!desktop) document.body.style.overflow = "hidden";
     document.addEventListener("keydown", handleKeyDown);
     const frame = window.requestAnimationFrame(() =>
       closeButtonRef.current?.focus(),
@@ -437,7 +567,7 @@ function FeatureSheet({
       document.removeEventListener("keydown", handleKeyDown);
       window.cancelAnimationFrame(frame);
     };
-  }, [onClose]);
+  }, [desktop, onClose]);
   if (typeof document === "undefined") return null;
   return createPortal(
     <div
@@ -448,8 +578,9 @@ function FeatureSheet({
     >
       <aside
         aria-label={feature.title}
-        aria-modal="true"
+        aria-modal={desktop ? undefined : "true"}
         className="activity-sheet"
+        data-feature-sheet={feature.id}
         ref={sheetRef}
         role="dialog"
       >
