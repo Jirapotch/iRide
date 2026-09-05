@@ -38,7 +38,7 @@ describe("marker mentions", () => {
       id: String(index),
     }));
     expect(
-      toggleMarkerTag(five, { kind: "photographerSpot", id: "extra" }),
+      toggleMarkerTag(five, { kind: "event", id: "extra" }),
     ).toEqual(five);
   });
 });

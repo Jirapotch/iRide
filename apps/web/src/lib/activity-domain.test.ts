@@ -11,10 +11,6 @@ import type { ActivityItem } from "./activity-domain";
 const activities: ActivityItem[] = [
   { id: "riverside-meet", kind: "meeting", title: "Riverside Vehicle Meetup", coordinate: [100.493, 13.768], locationLabel: "Rama VIII Bridge", startsAt: "2026-08-29T18:30", summary: "All vehicles welcome", host: "Bangkok Motion Club", participantCount: 24, vehicleKinds: ["car", "motorcycle", "bicycle"] },
   { id: "khao-yai-drive", kind: "trip", title: "Bangkok to Khao Yai", coordinate: [100.72, 14.132], locationLabel: "Bangkok departure", destinationLabel: "Khao Yai", startsAt: "2026-08-31T05:45", summary: "An early mixed-vehicle trip", host: "Weekend Explorers", participantCount: 18, vehicleKinds: ["car", "motorcycle"] },
-  { id: "maya-photo-session", kind: "photographerSpot", title: "Maya roadside photo session", coordinate: [100.624, 13.806], locationLabel: "Nong Bon curve", startsAt: "2026-08-29T07:00", summary: "Maya Velocity is photographing today", host: "Maya Velocity", participantCount: 12, vehicleKinds: ["car", "motorcycle", "bicycle"] },
-];
-const products = [
-  { id: "helmet", name: "Adventure Helmet", category: "Protection" },
 ];
 const searchProfiles = [
   { id: "maya-velocity", name: "Maya Velocity", handle: "@maya.velocity", role: "Photographer" },
@@ -83,10 +79,9 @@ describe("activity domain", () => {
   );
 
   it("groups global search results across profiles, activities, and products", () => {
-    expect(searchApp("maya", activities, products, searchProfiles)).toEqual({
+    expect(searchApp("maya", activities, searchProfiles)).toEqual({
       profiles: [expect.objectContaining({ id: "maya-velocity" })],
-      activities: [expect.objectContaining({ id: "maya-photo-session" })],
-      products: [],
+      activities: [],
     });
   });
 });

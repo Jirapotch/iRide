@@ -4,10 +4,8 @@ import type { Json, Tables } from "@iride/database/types";
 import type {
   CommentDto,
   ContentAuthorDto,
-  CreateMarketProductInput,
   CreateVehicleInput,
   ExploreFeatureDto,
-  MarketProductDto,
   VehicleDto,
 } from "@iride/types";
 
@@ -137,26 +135,15 @@ export function createSocialRepository(config: Config): SocialRepository {
         (profile.visibility === "private" && profile.id !== viewer.userId && !viewer.canManage)
       )
         return [];
-      const [eventsResult, spotsResult] = await Promise.all([
-        admin
-          .from("events")
-          .select(
-            "id,kind,title,location_label,latitude,longitude,starts_at,ends_at",
-          )
-          .eq("organizer_id", profile.id)
-          .is("deleted_at", null)
-          .limit(100),
-        admin
-          .from("photographer_spots")
-          .select(
-            "id,title,location_label,latitude,longitude,starts_at,ends_at",
-          )
-          .eq("owner_id", profile.id)
-          .is("deleted_at", null)
-          .limit(100),
-      ]);
+      const eventsResult = await admin
+        .from("events")
+        .select(
+          "id,kind,title,location_label,latitude,longitude,starts_at,ends_at",
+        )
+        .eq("organizer_id", profile.id)
+        .is("deleted_at", null)
+        .limit(100);
       ensure(eventsResult.error);
-      ensure(spotsResult.error);
       const author = {
         id: profile.id,
         username: profile.username,
@@ -166,18 +153,6 @@ export function createSocialRepository(config: Config): SocialRepository {
         ...(eventsResult.data ?? []).map((row) => ({
           id: row.id,
           kind: row.kind,
-          title: row.title,
-          subtitle: row.location_label,
-          latitude: row.latitude,
-          longitude: row.longitude,
-          startsAt: row.starts_at,
-          endsAt: row.ends_at,
-          author,
-          canEdit: viewer.canManage || (viewer.canWrite && profile.id === viewer.userId),
-        })),
-        ...(spotsResult.data ?? []).map((row) => ({
-          id: row.id,
-          kind: "photographerSpot" as const,
           title: row.title,
           subtitle: row.location_label,
           latitude: row.latitude,
@@ -273,73 +248,6 @@ export function createSocialRepository(config: Config): SocialRepository {
       );
       ensureWrite(error, data);
     },
-    async listMarketProducts(viewerId) {
-      const viewer = await viewerCapabilities(admin, viewerId);
-      const { data, error } = await admin
-        .from("market_products")
-        .select("*")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      ensure(error);
-      return productDtos(admin, data ?? [], viewer);
-    },
-    async getMarketProduct(id, viewerId) {
-      const viewer = await viewerCapabilities(admin, viewerId);
-      const row = await findProduct(admin, id);
-      if (!row || !(await isVisibleAccount(admin, row.owner_id, viewer.canManage)) || (row.deleted_at && row.owner_id !== viewer.userId && !viewer.canManage)) return null;
-      return (await productDtos(admin, [row], viewer))[0] ?? null;
-    },
-    async createMarketProduct(userId, token, input) {
-      if (input.coverMediaId)
-        await assertReadyMedia(admin, userId, [input.coverMediaId], "market");
-      const { data, error } = await owner(token)
-        .from("market_products")
-        .insert(productWrite(userId, input))
-        .select("*")
-        .single();
-      ensureWrite(error, data);
-      return (await productDtos(admin, [data!], await viewerCapabilities(admin, userId)))[0]!;
-    },
-    async updateMarketProduct(userId, token, id, input) {
-      const viewer = await viewerCapabilities(admin, userId);
-      await assertOwner(await findProduct(admin, id), "owner_id", viewer);
-      if (input.coverMediaId)
-        await assertReadyMedia(admin, userId, [input.coverMediaId], "market");
-      const patch = {
-        ...(input.name === undefined ? {} : { name: input.name }),
-        ...(input.priceSatang === undefined
-          ? {}
-          : { price_satang: input.priceSatang }),
-        ...(input.category === undefined ? {} : { category: input.category }),
-        ...(input.vehicleKinds === undefined
-          ? {}
-          : { vehicle_kinds: [...input.vehicleKinds] }),
-        ...(input.coverMediaId === undefined
-          ? {}
-          : { cover_media_id: input.coverMediaId }),
-      };
-      const { data, error } = await owner(token)
-        .from("market_products")
-        .update(patch)
-        .eq("id", id)
-        .is("deleted_at", null)
-        .select("*")
-        .maybeSingle();
-      ensureWrite(error, data);
-      return (await productDtos(admin, [data!], viewer))[0]!;
-    },
-    async deleteMarketProduct(userId, token, id) {
-      await assertOwner(await findProduct(admin, id), "owner_id", await viewerCapabilities(admin, userId));
-      const { data, error } = await owner(token)
-        .from("market_products")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id)
-        .is("deleted_at", null)
-        .select("id")
-        .maybeSingle();
-      ensureWrite(error, data);
-    },
   };
 }
 
@@ -355,15 +263,6 @@ async function findComment(admin: Admin, id: string) {
 async function findVehicle(admin: Admin, id: string) {
   const { data, error } = await admin
     .from("vehicles")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  ensure(error);
-  return data;
-}
-async function findProduct(admin: Admin, id: string) {
-  const { data, error } = await admin
-    .from("market_products")
     .select("*")
     .eq("id", id)
     .maybeSingle();
@@ -483,35 +382,6 @@ async function vehicleDtos(
   });
 }
 
-async function productDtos(
-  admin: Admin,
-  rows: Tables<"market_products">[],
-  viewer: ViewerCapabilities,
-): Promise<MarketProductDto[]> {
-  const people = await authors(
-    admin,
-    rows.map((row) => row.owner_id), viewer.canManage,
-  );
-  return rows.flatMap((row) => {
-    const owner = people.get(row.owner_id);
-    if (!owner) return [];
-    return [
-      {
-        id: row.id,
-        owner,
-        name: row.name,
-        priceSatang: row.price_satang,
-        currency: "THB" as const,
-        category: row.category,
-        vehicleKinds: row.vehicle_kinds,
-        coverMediaId: row.cover_media_id,
-        canEdit: viewer.canManage || (viewer.canWrite && row.owner_id === viewer.userId),
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      },
-    ];
-  });
-}
 
 function vehicleRpcInput(input: Omit<CreateVehicleInput, "mediaIds">) {
   return {
@@ -537,17 +407,6 @@ function vehiclePatch(input: Partial<CreateVehicleInput>) {
     ...(input.visibility === undefined ? {} : { visibility: input.visibility }),
   };
 }
-function productWrite(ownerId: string, input: CreateMarketProductInput) {
-  return {
-    owner_id: ownerId,
-    name: input.name,
-    price_satang: input.priceSatang,
-    currency: "THB",
-    category: input.category,
-    vehicle_kinds: [...input.vehicleKinds],
-    cover_media_id: input.coverMediaId,
-  };
-}
 
 function orderProfileActivities(
   items: readonly ExploreFeatureDto[],
@@ -570,7 +429,7 @@ async function assertReadyMedia(
   admin: Admin,
   userId: string,
   ids: readonly string[],
-  purpose: "vehicle" | "market",
+  purpose: "vehicle",
 ) {
   if (!ids.length) return;
   const { data, error } = await admin

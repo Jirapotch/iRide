@@ -1,7 +1,7 @@
 import "server-only";
 import type { AccountRole, AccountStatus } from "@iride/types";
 
-export interface AdminUserContentDto { readonly id: string; readonly kind: "post" | "event" | "photographerSpot" | "vehicle"; readonly title: string; readonly communityCategory?: import("@iride/types").CommunityCategory }
+export interface AdminUserContentDto { readonly id: string; readonly kind: "post" | "event" | "vehicle"; readonly title: string; readonly communityCategory?: import("@iride/types").CommunityCategory }
 export interface AdminUserDto { readonly id: string; readonly username: string | null; readonly displayName: string | null; readonly email: string | null; readonly role: AccountRole; readonly status: AccountStatus; readonly createdAt: string; readonly updatedAt: string; readonly content?: readonly AdminUserContentDto[] }
 export interface AdminUsersPage { readonly data: readonly AdminUserDto[]; readonly page: number; readonly pageSize: number; readonly total: number }
 export type AdminUserAction = "lock" | "unlock" | "suspend" | "restore";

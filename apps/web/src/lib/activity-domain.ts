@@ -1,4 +1,4 @@
-export type ActivityKind = "meeting" | "event" | "trip" | "photographerSpot";
+export type ActivityKind = "meeting" | "event" | "trip";
 export type ActivityFilter = "all" | ActivityKind;
 export type VehicleKind = "car" | "motorcycle" | "bicycle";
 export type Coordinate = [longitude: number, latitude: number];
@@ -12,14 +12,13 @@ export interface ActivityItem {
 }
 
 export interface CreateActivityInput {
-  kind: Exclude<ActivityKind, "photographerSpot">; title: string;
+  kind: ActivityKind; title: string;
   locationLabel: string; startsAt: string; summary: string;
   vehicleKinds: VehicleKind[]; destinationLabel?: string; capacity?: number;
 }
 
-export interface SearchableProduct { id: string; name: string; category: string }
 export interface SearchableProfile { id: string; name: string; handle: string; role: string }
-export interface SearchResult { id: string; title: string; subtitle: string; kind: "profile" | "activity" | "product" }
+export interface SearchResult { id: string; title: string; subtitle: string; kind: "profile" | "activity" }
 
 export const BANGKOK_CENTER: Coordinate = [100.5018, 13.7563];
 
@@ -51,13 +50,12 @@ export function createActivity(input: CreateActivityInput, id = `activity-${Date
   return activity;
 }
 
-export function searchApp(query: string, activities: readonly ActivityItem[], products: readonly SearchableProduct[], profiles: readonly SearchableProfile[]): { profiles: SearchResult[]; activities: SearchResult[]; products: SearchResult[] } {
+export function searchApp(query: string, activities: readonly ActivityItem[], profiles: readonly SearchableProfile[]): { profiles: SearchResult[]; activities: SearchResult[] } {
   const needle = query.trim().toLowerCase();
-  if (!needle) return { profiles: [], activities: [], products: [] };
+  if (!needle) return { profiles: [], activities: [] };
   return {
     profiles: profiles.filter((item) => includes(needle, item.name, item.handle, item.role)).map((item) => ({ id: item.id, title: item.name, subtitle: `${item.handle} · ${item.role}`, kind: "profile" as const })),
     activities: activities.filter((item) => includes(needle, item.title, item.locationLabel, item.host)).map((item) => ({ id: item.id, title: item.title, subtitle: `${item.kind} · ${item.locationLabel}`, kind: "activity" as const })),
-    products: products.filter((item) => includes(needle, item.name, item.category)).map((item) => ({ id: item.id, title: item.name, subtitle: item.category, kind: "product" as const })),
   };
 }
 

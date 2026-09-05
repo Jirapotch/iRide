@@ -32,8 +32,6 @@ export const reservedUsernames = [
   "garage",
   "events",
   "communities",
-  "photographers",
-  "marketplace",
   "cart",
   "orders",
   "settings",
@@ -131,7 +129,7 @@ const dateTime = z.iso.datetime({ offset: true });
 const timezone = requiredText(64);
 
 const markerTagSchema = z.object({
-  kind: z.enum(["event", "photographerSpot"]),
+  kind: z.literal("event"),
   id: z.uuid(),
 }).strict();
 
@@ -176,22 +174,6 @@ export const updateVehicleSchema = z.object(
   },
 ).strict().refine((value) => Object.keys(value).length > 0, "empty_update");
 
-const marketFields = {
-  name: requiredText(120),
-  priceSatang: z.number().int().min(0).max(1_000_000_000),
-  currency: z.literal("THB").default("THB"),
-  category: requiredText(80),
-  vehicleKinds: z.array(z.enum(vehicleKinds)).min(1).max(vehicleKinds.length),
-  coverMediaId: z.uuid().nullable(),
-} as const;
-
-export const createMarketProductSchema = z.object(marketFields).strict();
-export const updateMarketProductSchema = z.object(
-  Object.fromEntries(Object.entries(marketFields).map(([key, value]) => [key, value.optional()])) as {
-    [Key in keyof typeof marketFields]: z.ZodOptional<(typeof marketFields)[Key]>;
-  },
-).strict().refine((value) => Object.keys(value).length > 0, "empty_update");
-
 export const mediaUploadRequestSchema = z.object({
   filename: requiredText(255),
   mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
@@ -229,40 +211,6 @@ export const updateEventSchema = z
   .strict()
   .refine((value) => Object.keys(value).length > 0, "empty_update")
   .superRefine(validatePartialEvent);
-
-const photographerSpotFields = {
-  title: requiredText(120),
-  description: nullableText(2_000),
-  locationLabel: requiredText(160),
-  latitude,
-  longitude,
-  startsAt: dateTime,
-  endsAt: dateTime,
-  timezone,
-} as const;
-
-export const createPhotographerSpotSchema = z
-  .object(photographerSpotFields)
-  .strict()
-  .superRefine(validateTimeRange);
-
-export const updatePhotographerSpotSchema = z
-  .object(
-    Object.fromEntries(
-      Object.entries(photographerSpotFields).map(([key, value]) => [
-        key,
-        value.optional(),
-      ]),
-    ) as {
-      [Key in keyof typeof photographerSpotFields]: z.ZodOptional<
-        (typeof photographerSpotFields)[Key]
-      >;
-    },
-  )
-  .strict()
-  .refine((value) => Object.keys(value).length > 0, "empty_update")
-  .superRefine(validatePartialCoordinates)
-  .superRefine(validateTimeRange);
 
 function validateEvent(
   value: z.infer<typeof createEventSchema>,

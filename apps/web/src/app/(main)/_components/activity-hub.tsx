@@ -3,7 +3,6 @@
 import {
   ArrowSquareOut,
   CalendarBlank,
-  Camera,
   Crosshair,
   Funnel,
   Path,
@@ -16,7 +15,6 @@ import type {
   EventDto,
   ExploreFeatureDto,
   ExploreFeatureKind,
-  PhotographerSpotDto,
 } from "@iride/types";
 import * as maplibregl from "maplibre-gl";
 import Link from "next/link";
@@ -46,7 +44,6 @@ const kinds: ExploreFeatureKind[] = [
   "meeting",
   "event",
   "trip",
-  "photographerSpot",
 ];
 const markerColors = contentKindColors;
 
@@ -58,7 +55,7 @@ export function ActivityHub({
 }: {
   readonly locale: Locale;
   readonly initialFeature?: ExploreFeatureDto | null;
-  readonly initialEdit?: EventDto | PhotographerSpotDto | null;
+  readonly initialEdit?: EventDto | null;
   readonly editDenied?: boolean;
 }) {
   const { theme } = useTheme();
@@ -107,9 +104,7 @@ export function ActivityHub({
             active.map((kind) =>
               kind === "trip"
                 ? "trips"
-                : kind === "photographerSpot"
-                  ? "photographer-spots"
-                  : "events",
+                : "events",
             ),
           ),
         );
@@ -332,9 +327,7 @@ export function ActivityHub({
                 ? UsersThree
                 : kind === "event"
                   ? CalendarBlank
-                  : kind === "trip"
-                    ? Path
-                    : Camera;
+                  : Path;
             return (
               <label
                 key={kind}
@@ -374,13 +367,7 @@ export function ActivityHub({
           <BackendForm
             initial={initialEdit}
             locale={locale}
-            type={
-              "photographer" in initialEdit
-                ? "photographer-spot"
-                : initialEdit.kind === "trip"
-                  ? "trip"
-                  : "activity"
-            }
+            type={initialEdit.kind === "trip" ? "trip" : "activity"}
           />
         </EditModal>
       ) : null}
@@ -404,8 +391,7 @@ function FeatureSheet({
   readonly locale: Locale;
   readonly onClose: () => void;
 }) {
-  const domain =
-    feature.kind === "photographerSpot" ? "photographer-spots" : "events";
+  const domain = "events";
   const sheetRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -542,13 +528,11 @@ function label(kind: ExploreFeatureKind, locale: Locale) {
           meeting: "นัดพบ",
           event: "กิจกรรม",
           trip: "ทริป",
-          photographerSpot: "จุดช่างภาพ",
         }
       : {
           meeting: "Meeting",
           event: "Event",
           trip: "Trip",
-          photographerSpot: "Photographer spot",
         };
   return labels[kind];
 }

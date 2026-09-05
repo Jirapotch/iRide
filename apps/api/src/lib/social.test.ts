@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import type {
   CommentDto,
   ExploreFeatureDto,
-  MarketProductDto,
   VehicleDto,
 } from "@iride/types";
 
@@ -12,8 +11,6 @@ import {
   handleCommentsCollection,
   handleGarage,
   handleProfileActivities,
-  handleMarketCollection,
-  handleMarketItem,
   handleVehicleCollection,
   handleVehicleItem,
   type SocialDependencies,
@@ -54,19 +51,6 @@ const vehicle: VehicleDto = {
   createdAt: "2026-08-30T00:00:00Z",
   updatedAt: "2026-08-30T00:00:00Z",
 };
-const product: MarketProductDto = {
-  id: itemId,
-  owner: author,
-  name: "Helmet",
-  priceSatang: 1450000,
-  currency: "THB",
-  category: "Protection",
-  vehicleKinds: ["motorcycle"],
-  coverMediaId: null,
-  canEdit: true,
-  createdAt: "2026-08-30T00:00:00Z",
-  updatedAt: "2026-08-30T00:00:00Z",
-};
 const activity: ExploreFeatureDto = {
   id: itemId,
   kind: "trip",
@@ -96,11 +80,6 @@ function setup(): SocialDependencies {
       createVehicle: vi.fn().mockResolvedValue(vehicle),
       updateVehicle: vi.fn().mockResolvedValue(vehicle),
       deleteVehicle: vi.fn().mockResolvedValue(undefined),
-      listMarketProducts: vi.fn().mockResolvedValue([product]),
-      getMarketProduct: vi.fn().mockResolvedValue(product),
-      createMarketProduct: vi.fn().mockResolvedValue(product),
-      updateMarketProduct: vi.fn().mockResolvedValue(product),
-      deleteMarketProduct: vi.fn().mockResolvedValue(undefined),
     },
   };
 }
@@ -254,56 +233,4 @@ describe("social API handlers", () => {
     );
   });
 
-  it("provides authenticated market CRUD", async () => {
-    const dependencies = setup();
-    expect(
-      (
-        await handleMarketCollection(
-          new Request("https://api.test/market-products"),
-          dependencies,
-        )
-      ).status,
-    ).toBe(200);
-    expect(
-      (
-        await handleMarketCollection(
-          new Request("https://api.test/market-products", {
-            method: "POST",
-            headers: authHeaders,
-            body: JSON.stringify({
-              name: "Helmet",
-              priceSatang: 1450000,
-              category: "Protection",
-              vehicleKinds: ["motorcycle"],
-              coverMediaId: null,
-            }),
-          }),
-          dependencies,
-        )
-      ).status,
-    ).toBe(201);
-    expect(
-      (
-        await handleMarketItem(
-          new Request(`https://api.test/market-products/${itemId}`, {
-            method: "GET",
-          }),
-          itemId,
-          dependencies,
-        )
-      ).status,
-    ).toBe(200);
-    expect(
-      (
-        await handleMarketItem(
-          new Request(`https://api.test/market-products/${itemId}`, {
-            method: "DELETE",
-            headers: authHeaders,
-          }),
-          itemId,
-          dependencies,
-        )
-      ).status,
-    ).toBe(204);
-  });
 });

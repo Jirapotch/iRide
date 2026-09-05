@@ -1,19 +1,16 @@
 export interface MockAppState {
-  version: 4;
-  followedPhotographerIds: string[];
+  version: 5;
   readNotificationIds: string[];
 }
 
 export type MockAppAction =
   | { type: "hydrate"; state: MockAppState }
-  | { type: "toggle-follow"; photographerId: string }
   | { type: "read-notification"; notificationId: string }
   | { type: "read-all-notifications"; notificationIds: string[] };
 
 export function defaultMockAppState(): MockAppState {
   return {
-    version: 4,
-    followedPhotographerIds: [],
+    version: 5,
     readNotificationIds: [],
   };
 }
@@ -21,7 +18,6 @@ export function defaultMockAppState(): MockAppState {
 export function reduceMockAppState(state: MockAppState, action: MockAppAction): MockAppState {
   switch (action.type) {
     case "hydrate": return action.state;
-    case "toggle-follow": return { ...state, followedPhotographerIds: toggle(state.followedPhotographerIds, action.photographerId) };
     case "read-notification": return { ...state, readNotificationIds: addUnique(state.readNotificationIds, action.notificationId) };
     case "read-all-notifications": return { ...state, readNotificationIds: Array.from(new Set([...state.readNotificationIds, ...action.notificationIds])) };
   }
@@ -33,11 +29,10 @@ export function parseMockAppState(value: string | null): MockAppState {
   if (!value) return defaultMockAppState();
   try {
     const candidate = JSON.parse(value) as Record<string, unknown>;
-    if (candidate.version === 1 || candidate.version === 2 || candidate.version === 3) return migrateLegacy(candidate);
-    if (candidate.version !== 4) return defaultMockAppState();
+    if (candidate.version === 1 || candidate.version === 2 || candidate.version === 3 || candidate.version === 4) return migrateLegacy(candidate);
+    if (candidate.version !== 5) return defaultMockAppState();
     return {
-      version: 4,
-      followedPhotographerIds: strings(candidate.followedPhotographerIds),
+      version: 5,
       readNotificationIds: strings(candidate.readNotificationIds),
     };
   } catch { return defaultMockAppState(); }
@@ -46,11 +41,9 @@ export function parseMockAppState(value: string | null): MockAppState {
 function migrateLegacy(candidate: Record<string, unknown>): MockAppState {
   return {
     ...defaultMockAppState(),
-    followedPhotographerIds: strings(candidate.followedPhotographerIds),
     readNotificationIds: strings(candidate.readNotificationIds),
   };
 }
 
-function toggle(values: string[], value: string): string[] { return values.includes(value) ? values.filter((item) => item !== value) : [...values, value]; }
 function addUnique(values: string[], value: string): string[] { return values.includes(value) ? values : [...values, value]; }
 function strings(value: unknown): string[] { return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []; }

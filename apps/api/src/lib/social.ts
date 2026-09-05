@@ -8,21 +8,16 @@ import {
 import type {
   CommentDto,
   CreateCommentInput,
-  CreateMarketProductInput,
   CreateVehicleInput,
   ExploreFeatureDto,
-  MarketProductDto,
   UpdateCommentInput,
-  UpdateMarketProductInput,
   UpdateVehicleInput,
   VehicleDto,
 } from "@iride/types";
 import {
   createCommentSchema,
-  createMarketProductSchema,
   createVehicleSchema,
   updateCommentSchema,
-  updateMarketProductSchema,
   updateVehicleSchema,
 } from "@iride/validation";
 
@@ -75,29 +70,6 @@ export interface SocialRepository {
     input: UpdateVehicleInput,
   ) => Promise<VehicleDto>;
   readonly deleteVehicle: (
-    userId: string,
-    token: string,
-    id: string,
-  ) => Promise<void>;
-  readonly listMarketProducts: (
-    viewerId: string | null,
-  ) => Promise<MarketProductDto[]>;
-  readonly getMarketProduct: (
-    id: string,
-    viewerId: string | null,
-  ) => Promise<MarketProductDto | null>;
-  readonly createMarketProduct: (
-    userId: string,
-    token: string,
-    input: CreateMarketProductInput,
-  ) => Promise<MarketProductDto>;
-  readonly updateMarketProduct: (
-    userId: string,
-    token: string,
-    id: string,
-    input: UpdateMarketProductInput,
-  ) => Promise<MarketProductDto>;
-  readonly deleteMarketProduct: (
     userId: string,
     token: string,
     id: string,
@@ -277,77 +249,6 @@ export function handleVehicleItem(
     );
     return json({
       data: await dependencies.repository.updateVehicle(
-        user.userId,
-        token(request),
-        id,
-        input,
-      ),
-    });
-  });
-}
-
-export function handleMarketCollection(
-  request: Request,
-  dependencies = productionDependencies(),
-) {
-  return execute(request, dependencies, async () => {
-    if (request.method === "GET")
-      return json({
-        data: await dependencies.repository.listMarketProducts(
-          await optionalViewer(request, dependencies),
-        ),
-      });
-    if (request.method !== "POST") return methodNotAllowed();
-    const user = await dependencies.authenticate(request);
-    const input = await validated<CreateMarketProductInput>(
-      request,
-      createMarketProductSchema,
-    );
-    return json(
-      {
-        data: await dependencies.repository.createMarketProduct(
-          user.userId,
-          token(request),
-          input,
-        ),
-      },
-      201,
-    );
-  });
-}
-
-export function handleMarketItem(
-  request: Request,
-  id: string,
-  dependencies = productionDependencies(),
-) {
-  return execute(request, dependencies, async () => {
-    requireUuid(id);
-    if (request.method === "GET") {
-      const data = await dependencies.repository.getMarketProduct(
-        id,
-        await optionalViewer(request, dependencies),
-      );
-      if (!data) throw new SocialRequestError("CONTENT_NOT_FOUND", 404);
-      return json({ data });
-    }
-    if (request.method !== "PATCH" && request.method !== "DELETE")
-      return methodNotAllowed();
-    const user = await dependencies.authenticate(request);
-    if (request.method === "DELETE") {
-      await dependencies.repository.deleteMarketProduct(
-        user.userId,
-        token(request),
-        id,
-      );
-      return new Response(null, { status: 204 });
-    }
-    const input = await validated<UpdateMarketProductInput>(
-      request,
-      updateMarketProductSchema,
-    );
-    return json({
-      data: await dependencies.repository.updateMarketProduct(
         user.userId,
         token(request),
         id,

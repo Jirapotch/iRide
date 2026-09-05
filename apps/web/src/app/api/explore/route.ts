@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   }
   const session = await getVerifiedWebSession().catch(() => null);
   try {
-    const data = await getExploreContent(bbox as [number, number, number, number], (url.searchParams.get("layers") ?? "events,trips,photographer-spots").split(","), undefined, session?.accessToken);
+    const data = await getExploreContent(bbox as [number, number, number, number], (url.searchParams.get("layers") ?? "events,trips").split(","), undefined, session?.accessToken);
     return NextResponse.json({ data });
   } catch {
     return NextResponse.json({ error: "EXPLORE_UNAVAILABLE" }, { status: 503 });

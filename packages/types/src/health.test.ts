@@ -22,7 +22,6 @@ describe("community category contract", () => {
       "car",
       "motorcycle",
       "bicycle",
-      "photographers",
       "groups",
     ]);
   });

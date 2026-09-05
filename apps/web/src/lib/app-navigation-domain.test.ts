@@ -23,10 +23,9 @@ describe("application navigation domain", () => {
     ]);
   });
 
-  it("removes market products from public search results", () => {
+  it("keeps remaining public search results", () => {
     expect(publicSearchResults([
       { id: "p", kind: "post", title: "Post", subtitle: "Maya", username: "maya", communityCategory: "groups" },
-      { id: "m", kind: "marketProduct", title: "Helmet", subtitle: "Maya", username: "maya" },
     ]).map((item) => item.id)).toEqual(["p"]);
   });
 
@@ -34,7 +33,6 @@ describe("application navigation domain", () => {
     ["car", "/community/car"],
     ["motorcycle", "/community/motorcycle"],
     ["bicycle", "/community/bicycle"],
-    ["photographers", "/community/photographers"],
     ["groups", "/community/groups"],
   ] as const)("routes category %s to %s", (category, expected) => {
     expect(communityCategoryHref(category)).toBe(expected);
@@ -42,7 +40,6 @@ describe("application navigation domain", () => {
 
   it.each([
     ["car", "/community/car/talk"],
-    ["photographers", "/community/photographers"],
     ["groups", "/community/groups"],
   ] as const)("routes talk category %s to %s", (category, expected) => {
     expect(communityTalkHref(category)).toBe(expected);
@@ -51,8 +48,8 @@ describe("application navigation domain", () => {
   it.each([
     [undefined, "/community/groups"],
     ["talk", "/community/groups"],
-    ["market", "/community/motorcycle/market"],
-    ["photographers", "/community/photographers"],
+    ["market", "/"],
+    ["photographers", "/"],
     ["groups", "/community/groups"],
     ["unknown", "/community/groups"],
   ] as const)("redirects legacy room %s to %s", (room, expected) => {
@@ -96,16 +93,6 @@ describe("application navigation domain", () => {
         username: null,
       },
       "/maps?marker=e1",
-    ],
-    [
-      {
-        id: "s1",
-        kind: "photographerSpot",
-        title: "Corner",
-        subtitle: "Khao Yai",
-        username: "maya",
-      },
-      "/maps?marker=s1",
     ],
   ] satisfies [SearchResultDto, string][])(
     "routes %s to %s",

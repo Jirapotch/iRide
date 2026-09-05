@@ -45,7 +45,9 @@ export function createMediaWorkerDependencies(env:WorkerEnv):MediaWorkerDependen
 function parseMessage(value:Json):MediaProcessingJob|null{
   if(typeof value!=="object"||value===null||Array.isArray(value))return null;
   const item=value as Record<string,Json|undefined>;
+  const allowedPurposes=["avatar","cover","vehicle"] as const;
   if(item.version!==1||typeof item.jobId!=="string"||typeof item.idempotencyKey!=="string"||typeof item.attempt!=="number"||typeof item.mediaId!=="string"||typeof item.ownerId!=="string"||typeof item.objectKey!=="string"||!(["avatar","cover","vehicle","market"] as const).includes(item.purpose as never))return null;
+  if (!allowedPurposes.includes(item.purpose as never)) return null;
   return{version:1,jobId:item.jobId,idempotencyKey:item.idempotencyKey,attempt:item.attempt,mediaId:item.mediaId,ownerId:item.ownerId,purpose:item.purpose as MediaProcessingJob["purpose"],objectKey:item.objectKey};
 }
 

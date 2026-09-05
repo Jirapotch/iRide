@@ -43,7 +43,6 @@ export const contentKindColors: Record<ExploreFeatureKind, string> = {
   meeting: "#168568",
   event: "#8e55ad",
   trip: "#536fc3",
-  photographerSpot: "#a86a28",
 };
 
 interface MapStyleLayer {

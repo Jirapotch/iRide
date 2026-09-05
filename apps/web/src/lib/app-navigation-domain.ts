@@ -2,7 +2,7 @@ import type { SearchResultDto } from "@iride/types";
 import type { CommunityCategory } from "@iride/types";
 
 export type AppTheme = "light" | "dark";
-export type CommunityRoomId = "talk" | "market" | "photographers" | "groups";
+export type CommunityRoomId = "talk" | "groups";
 
 export function primaryNavigation(username: string | null) {
   return [
@@ -31,8 +31,8 @@ export function legacyCommunityHref(
   room: string | undefined,
   selection: { readonly post?: string; readonly modal?: string } = {},
 ): string {
-  if (room === "market") return "/community/motorcycle/market";
-  const pathname = room === "photographers" ? "/community/photographers" : "/community/groups";
+  if (room === "market" || room === "photographers") return "/";
+  const pathname = "/community/groups";
   const query = new URLSearchParams();
   if (selection.post) query.set("post", selection.post);
   if (selection.modal === "edit") query.set("modal", "edit");
@@ -40,13 +40,11 @@ export function legacyCommunityHref(
 }
 
 export function publicSearchResults(results: readonly SearchResultDto[]): SearchResultDto[] {
-  return results.filter((result) => result.kind !== "marketProduct");
+  return [...results];
 }
 
 export const communityRooms = [
   { id: "talk", label: { th: "พูดคุย", en: "Talk" } },
-  { id: "market", label: { th: "Market", en: "Market" } },
-  { id: "photographers", label: { th: "ช่างภาพ", en: "Photographers" } },
   { id: "groups", label: { th: "กลุ่ม", en: "Groups" } },
 ] as const satisfies readonly {
   readonly id: CommunityRoomId;
@@ -55,8 +53,6 @@ export const communityRooms = [
 
 export interface CommunityDataNeeds {
   readonly posts: boolean;
-  readonly products: boolean;
-  readonly spots: boolean;
   readonly events: boolean;
 }
 
@@ -67,8 +63,6 @@ export function communityDataNeeds(
 
   return {
     posts: room === "talk",
-    products: room === "market",
-    spots: room === "talk" || room === "photographers",
     events: room === "talk",
   };
 }
