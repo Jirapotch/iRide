@@ -10,6 +10,7 @@ export type SemanticMapLayer =
   | "road"
   | "edge"
   | "label"
+  | "poi"
   | "raster";
 
 export interface MapPalette {
@@ -21,28 +22,36 @@ export interface MapPalette {
   readonly road: string;
   readonly label: string;
   readonly veil: string;
+  readonly rasterSaturation: number;
+  readonly rasterContrast: number;
+  readonly rasterBrightnessMax: number;
+  readonly rasterOpacity: number;
 }
 
-export const naturalMistPalette: MapPalette = {
-  ground: "#F2F3ED",
-  block: "#B9DC69",
-  block2: "#E8E9E3",
-  road: "#FFFFFF",
-  edge: "#E4E6E1",
-  water: "#BFE3D8",
-  label: "#89928D",
-  veil: "rgb(242 243 237 / .18)",
+export const matchaLattePalette: MapPalette = {
+  ground: "#F6F3E8",
+  block: "#D9DFC7",
+  block2: "#E7E1D3",
+  road: "#FBFAF5",
+  edge: "#C8D1C3",
+  water: "#BCD7D0",
+  label: "#4B5D51",
+  veil: "rgb(79 111 82 / .08)",
+  rasterSaturation: -0.55,
+  rasterContrast: -0.08,
+  rasterBrightnessMax: 0.92,
+  rasterOpacity: 0.82,
 };
 
 export const mapPalettes: Record<AppTheme, MapPalette> = {
-  light: naturalMistPalette,
-  dark: naturalMistPalette,
+  light: matchaLattePalette,
+  dark: matchaLattePalette,
 };
 
 export const contentKindColors: Record<ExploreFeatureKind, string> = {
-  meeting: "#168568",
-  event: "#8e55ad",
-  trip: "#536fc3",
+  meeting: "#4F6F52",
+  event: "#6B7F5B",
+  trip: "#4F7770",
 };
 
 interface MapStyleLayer {
@@ -62,6 +71,7 @@ const BLOCK2_PATTERN = /building|dense|urban/;
 const ROAD_PATTERN =
   /road|street|transport|motorway|trunk|primary|secondary|tertiary|bridge|tunnel|path/;
 const EDGE_PATTERN = /casing|outline|boundary|admin|border|support/;
+const POI_PATTERN = /poi|point.?of.?interest|amenity|shop|tourism/;
 
 export function classifyMapLayer(
   layer: MapStyleLayer,
@@ -69,7 +79,9 @@ export function classifyMapLayer(
   const id = layer.id.toLowerCase();
   if (layer.type === "background") return "ground";
   if (layer.type === "raster") return "raster";
-  if (layer.type === "symbol") return "label";
+  if (layer.type === "symbol") {
+    return POI_PATTERN.test(id) ? "poi" : "label";
+  }
   if (layer.type === "fill-extrusion" && BLOCK2_PATTERN.test(id)) {
     return "block2";
   }
@@ -130,10 +142,21 @@ export function applyMapPalette(map: MapPaletteTarget, theme: AppTheme): void {
       set("line-color", palette.road);
     } else if (semanticLayer === "edge") {
       set("line-color", palette.edge);
-    } else if (semanticLayer === "label") {
+    } else if (semanticLayer === "label" || semanticLayer === "poi") {
       set("text-color", palette.label);
       set("text-halo-color", palette.road);
       set("text-halo-width", 1.1);
+      if (semanticLayer === "poi") {
+        set("text-opacity", 0.48);
+        set("icon-opacity", 0.38);
+      } else {
+        set("icon-opacity", 0.55);
+      }
+    } else if (semanticLayer === "raster") {
+      set("raster-saturation", palette.rasterSaturation);
+      set("raster-contrast", palette.rasterContrast);
+      set("raster-brightness-max", palette.rasterBrightnessMax);
+      set("raster-opacity", palette.rasterOpacity);
     }
   }
 }
