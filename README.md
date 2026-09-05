@@ -79,7 +79,7 @@ pnpm db:advisors
 pnpm db:stop
 ```
 
-`pnpm db:reset` is destructive only to the local Docker database. It resets without seed, validates/applies TypeORM migrations, loads `supabase/seed.sql`, then runs pgTAP. Runtime connections use pooled `DATABASE_URL`; migration commands use direct `MIGRATION_DATABASE_URL`; `synchronize` is always disabled.
+`pnpm db:reset` is destructive only to the local Docker database. It resets without seed, validates/applies TypeORM migrations, loads `supabase/seed.sql`, then runs pgTAP. Runtime connections use pooled `DATABASE_URL`; migration commands use `MIGRATION_DATABASE_URL` (the production workflow builds it from the existing database-password secret and Supabase session-pooler endpoint); `synchronize` is always disabled.
 
 Legacy compatibility modules still import Supabase through `@iride/database/server` or `@iride/database/admin` while they are migrated. The Nest profiles module is the first actor-aware TypeORM slice and runs owner writes with transaction-local JWT claims. Admin clients are restricted to trusted API and worker runtimes. Browser and authenticated roles have no direct queue privileges; trusted services use the service-role-only queue RPC functions.
 
