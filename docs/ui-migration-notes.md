@@ -28,3 +28,13 @@ These notes capture the behavior and boundaries reviewed before the current mode
 - UI weaknesses addressed: custom button styling is replaced with direct Ant Design components and shared tokens.
 - Changed files: public profile screen, profile Nest module/repository, database runtime service, and application module.
 - Intentionally untouched: garage/content repositories, media object contracts, Supabase Auth, and the public API response shape.
+
+## Matcha map and motion refresh
+
+- Current behavior: Explore keeps the existing activity payloads, filters, marker selection, and details while presenting a calmer MapLibre surface in a unified Mint–Matcha Latte theme.
+- Data flow: the existing server request and marker data remain authoritative. A pure camera-policy helper derives selection padding and duration from the viewport, while GSAP only orchestrates rendered UI transitions.
+- Invariants: activity routes, API contracts, marker categories, search/filter semantics, authentication, and map tile providers do not change.
+- UI weaknesses addressed: saturated raster tiles are softened through MapLibre paint properties; map results are announced visibly and accessibly; selected markers, controls, filters, and details share one visual language; desktop details use a tall side panel; mobile Home choices are denser and keyboard focus is explicit.
+- Motion and accessibility: durations use centralized 160/280/450 ms tokens, transforms stay on compositor-friendly properties, focus is preserved during animation, and `prefers-reduced-motion` makes marker camera and panel transitions immediate.
+- Changed files: shared theme tokens, map palette/style builder, map camera policy, Activity Hub, global styles, focused unit/E2E coverage, and the pull-request quality workflow.
+- Intentionally untouched: clustering and route-line rendering because the current product has neither capability, plus server data, database schema, permissions, and navigation structure.

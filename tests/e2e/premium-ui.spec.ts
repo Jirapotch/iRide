@@ -52,10 +52,9 @@ async function openMarkerSheet(
   await expect(
     page.getByRole("dialog", { name: "Test meeting" }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open in Google Maps" })).toHaveAttribute(
-    "href",
-    /query=13\.7563%2C100\.5018/,
-  );
+  await expect(
+    page.getByRole("link", { name: "Open in Google Maps" }),
+  ).toHaveAttribute("href", /query=13\.7563%2C100\.5018/);
   return { documentHeightBeforeOpen, marker };
 }
 
@@ -73,18 +72,29 @@ test.beforeEach(async ({ context, page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
 });
 
-test("locked accounts see a read-only create state", async ({ page, request }) => {
-  await request.post("http://127.0.0.1:54321/test/account-access", { data: { role: "user", status: "locked" } });
+test("locked accounts see a read-only create state", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:54321/test/account-access", {
+    data: { role: "user", status: "locked" },
+  });
   try {
     await page.goto("/login?next=%2Fcreate");
     await page.getByRole("button", { name: /Google/ }).click();
-    await expect(page.getByRole("heading", { name: "Your account is read-only" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Your account is read-only" }),
+    ).toBeVisible();
   } finally {
-    await request.post("http://127.0.0.1:54321/test/account-access", { data: { role: "admin", status: "active" } });
+    await request.post("http://127.0.0.1:54321/test/account-access", {
+      data: { role: "admin", status: "active" },
+    });
   }
 });
 
-test("post category is required and changing it on edit redirects to the new feed", async ({ page }) => {
+test("post category is required and changing it on edit redirects to the new feed", async ({
+  page,
+}) => {
   await page.goto("/login?next=%2Fcreate%3Ftype%3Dpost%26category%3Dcar");
   await page.getByRole("button", { name: /Google/ }).click();
   const category = page.getByLabel("Community category");
@@ -102,15 +112,22 @@ test("post category is required and changing it on edit redirects to the new fee
   await expect(page).toHaveURL(/\/community\/bicycle\/talk\?post=/);
 });
 
-test("legacy community routes preserve their closest destination", async ({ page }) => {
+test("legacy community routes preserve their closest destination", async ({
+  page,
+}) => {
   await page.goto("/community?room=talk&post=p1&modal=edit");
   await expect(page).toHaveURL(/\/community\/groups\?post=p1&modal=edit$/);
   await page.goto("/community?room=market");
   await expect(page).toHaveURL(/\/$/);
 });
 
-test("locked owners cannot open garage or profile media write controls", async ({ page, request }) => {
-  await request.post("http://127.0.0.1:54321/test/account-access", { data: { role: "user", status: "locked" } });
+test("locked owners cannot open garage or profile media write controls", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:54321/test/account-access", {
+    data: { role: "user", status: "locked" },
+  });
   try {
     await page.goto("/login?next=%2Fusers%2Fe2e_rider");
     await page.getByRole("button", { name: /Google/ }).click();
@@ -119,9 +136,13 @@ test("locked owners cannot open garage or profile media write controls", async (
     await page.goto("/users/e2e_rider?tab=garage");
     await expect(page.getByRole("link", { name: "Add" })).toHaveCount(0);
     await page.goto("/users/e2e_rider?tab=garage&modal=create-vehicle");
-    await expect(page.getByRole("dialog", { name: "Add vehicle" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Add vehicle" })).toHaveCount(
+      0,
+    );
   } finally {
-    await request.post("http://127.0.0.1:54321/test/account-access", { data: { role: "admin", status: "active" } });
+    await request.post("http://127.0.0.1:54321/test/account-access", {
+      data: { role: "admin", status: "active" },
+    });
   }
 });
 
@@ -156,7 +177,21 @@ test("maps renders the full map and marker filter FAB without list mode", async 
   await expect(map).not.toHaveAttribute("data-map-raster", "true");
   await expect(canvas).toHaveCSS("filter", "none");
   await expect(page.getByRole("button", { name: "List" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Filter markers" }).click();
+  await expect(page.getByRole("status", { name: "Map results" })).toContainText(
+    "1 place",
+  );
+  await expect(
+    page.getByRole("button", {
+      name: "Drag to rotate map, click to reset north",
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Enter fullscreen" }),
+  ).toBeVisible();
+  const filterButton = page.getByRole("button", { name: "Filter markers" });
+  await expect(filterButton).toHaveAttribute("aria-pressed", "false");
+  await filterButton.click();
+  await expect(filterButton).toHaveAttribute("aria-pressed", "true");
   for (const label of ["Meeting", "Event", "Trip"])
     await expect(
       page.getByRole("checkbox", { name: label, exact: true }),
@@ -171,7 +206,9 @@ test("maps renders the full map and marker filter FAB without list mode", async 
 test("home categories lead to their nested talk pages", async ({ page }) => {
   await page.goto("/");
   for (const category of ["Cars", "Motorcycles", "Bicycles", "Groups"])
-    await expect(page.getByRole("link", { name: category, exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: category, exact: true }),
+    ).toBeVisible();
   await page.getByRole("link", { name: "Motorcycles", exact: true }).click();
   await expect(page.getByRole("link", { name: /^Talk/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^Market/ })).toHaveCount(0);
@@ -195,7 +232,7 @@ test("map chrome follows theme without replacing the map canvas", async ({
   await canvas.evaluate((element) => {
     element.dataset.mapIdentity = "initial";
   });
-  await expect(map).toHaveCSS("background-color", "rgb(242, 243, 237)");
+  await expect(map).toHaveCSS("background-color", "rgb(246, 243, 232)");
   const initialTheme = await page.locator("html").getAttribute("data-theme");
   const initialPaper = await map.evaluate((element) =>
     getComputedStyle(element).getPropertyValue("--map-paper"),
@@ -212,17 +249,15 @@ test("map chrome follows theme without replacing the map canvas", async ({
     getComputedStyle(element).getPropertyValue("--map-paper"),
   );
   expect(nextPaper).not.toBe(initialPaper);
-  await expect(map).toHaveCSS("background-color", "rgb(242, 243, 237)");
+  await expect(map).toHaveCSS("background-color", "rgb(246, 243, 232)");
   await expect(canvas).toHaveAttribute("data-map-identity", "initial");
   await expect(canvas).toHaveCSS("filter", "none");
 });
 
-test("removed product routes redirect home while unknown legacy routes return 404", async ({ page }) => {
-  for (const route of [
-    "/profile",
-    "/profile/edit",
-    "/account",
-  ]) {
+test("removed product routes redirect home while unknown legacy routes return 404", async ({
+  page,
+}) => {
+  for (const route of ["/profile", "/profile/edit", "/account"]) {
     const response = await page.goto(route);
     expect(response?.status()).toBe(404);
   }
@@ -318,30 +353,79 @@ test("mobile marker detail is a scrollable viewport sheet without document growt
   ).toBeFocused();
 });
 
-test("desktop marker detail is pinned to the viewport bottom without document growth", async ({
+test("desktop marker detail uses a tall side panel without document growth", async ({
   page,
 }) => {
-  const { documentHeightBeforeOpen } = await openMarkerSheet(page, {
+  const { documentHeightBeforeOpen, marker } = await openMarkerSheet(page, {
     width: 1280,
     height: 900,
   });
   const sheet = page.getByRole("dialog", { name: "Test meeting" });
 
   expect(
-    await sheet.evaluate(
-      (element) =>
-        Math.abs(element.getBoundingClientRect().bottom - innerHeight) < 1,
-    ),
-  ).toBe(true);
-  expect(
-    await sheet.evaluate(
-      (element) =>
-        element.getBoundingClientRect().height <= innerHeight * 0.5 + 1,
-    ),
-  ).toBe(true);
+    await sheet.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        clearsHeader: rect.top >= 76,
+        pinnedRight: Math.abs(rect.right - innerWidth) < 25,
+        tallPanel: rect.height >= innerHeight * 0.7,
+      };
+    }),
+  ).toEqual({ clearsHeader: true, pinnedRight: true, tallPanel: true });
+  await expect
+    .poll(() =>
+      marker.evaluate((element) => {
+        const transform = getComputedStyle(element).transform;
+        return transform === "none" ? 1 : new DOMMatrixReadOnly(transform).a;
+      }),
+    )
+    .toBeCloseTo(1.08, 1);
+  await expect(
+    page.getByRole("region", { name: "Discover map" }),
+  ).toHaveAttribute("data-camera-duration", "420");
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(
     documentHeightBeforeOpen,
   );
+});
+
+test("home keeps mobile choices compact, readable, and keyboard visible", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const intro = page.locator(".community-home-heading p");
+  const cars = page.getByRole("link", { name: "Cars", exact: true });
+  expect(
+    await intro.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).fontSize),
+    ),
+  ).toBeGreaterThanOrEqual(16);
+  expect(
+    await cars.evaluate((element) => element.getBoundingClientRect().height),
+  ).toBeLessThanOrEqual(128);
+
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(cars).toBeFocused();
+  await expect(cars).toHaveCSS("outline-style", "solid");
+});
+
+test("reduced motion keeps marker selection instant and understandable", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openMarkerSheet(page, { width: 1280, height: 900 });
+
+  await expect(
+    page.getByRole("region", { name: "Discover map" }),
+  ).toHaveAttribute("data-camera-duration", "0");
+  await expect(
+    page.getByRole("dialog", { name: "Test meeting" }),
+  ).toBeVisible();
 });
 
 test("tablet marker detail clears the visible bottom navigation", async ({
