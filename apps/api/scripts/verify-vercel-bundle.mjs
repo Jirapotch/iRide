@@ -55,6 +55,11 @@ if (!serverSource.includes('import "@nestjs/core"')) {
 if (!serverSource.includes('from "./dist/main.mjs"')) {
   throw new Error("server.mjs must load the ESM production bundle");
 }
+if (serverSource.includes("export default")) {
+  throw new Error(
+    "server.mjs must bootstrap NestJS directly instead of exporting a handler",
+  );
+}
 
 const bundleSource = await readFile(bundlePath, "utf8");
 const internalRuntimeImport =
@@ -77,4 +82,6 @@ if (typeof apiBundle.startApiServer !== "function") {
   throw new Error("dist/main.mjs does not export startApiServer()");
 }
 
-process.stdout.write("Verified Vercel API ESM bundle and entrypoint invariants\n");
+process.stdout.write(
+  "Verified Vercel API ESM bundle and entrypoint invariants\n",
+);
