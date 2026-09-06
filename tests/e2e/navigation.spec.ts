@@ -224,6 +224,42 @@ test("a directly opened admin detail uses its safe fallback", async ({
   await expect(page).toHaveURL(/\/settings\/users\?q=locked$/);
 });
 
+test("browser Back restores the filtered list scroll position", async ({
+  page,
+}) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers%3Fq%3Drider");
+  await page.getByRole("button", { name: /Google/ }).click();
+  const detailLink = page
+    .getByRole("link", { name: /Rider/ })
+    .filter({ visible: true })
+    .first();
+  await page.addStyleTag({
+    content: "html, body { min-height: 2400px !important; }",
+  });
+  await detailLink.evaluate((element) => {
+    const spacer = document.createElement("div");
+    spacer.style.height = "1200px";
+    element.closest(".admin-user-table")?.before(spacer);
+    element.scrollIntoView({ block: "center" });
+  });
+  const before = await page.evaluate(() => window.scrollY);
+  expect(before).toBeGreaterThan(200);
+  await detailLink.click();
+  await page.getByRole("button", { name: "Back to user list" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (target) => {
+          const maximum =
+            document.documentElement.scrollHeight - window.innerHeight;
+          return window.scrollY >= Math.min(target - 2, maximum - 2);
+        },
+        before,
+      ),
+    )
+    .toBe(true);
+});
+
 test("a destination error keeps navigation available", async ({ page }) => {
   await page.goto("/login?next=%2Fsettings%2Fusers%2Fnot-a-user");
   await page.getByRole("button", { name: /Google/ }).click();

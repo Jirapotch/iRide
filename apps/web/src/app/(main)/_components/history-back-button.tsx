@@ -21,7 +21,15 @@ export function HistoryBackButton({
           window.sessionStorage.getItem(originKey) === fallbackHref;
         if (cameFromList) {
           window.sessionStorage.removeItem(originKey);
+          const scrollTop = Number(
+            window.sessionStorage.getItem(
+              `iride:admin-users-scroll:${fallbackHref}`,
+            ) ?? "0",
+          );
           router.back();
+          if (Number.isFinite(scrollTop) && scrollTop > 0) {
+            window.setTimeout(() => window.scrollTo(0, scrollTop), 180);
+          }
         } else {
           router.push(fallbackHref);
         }

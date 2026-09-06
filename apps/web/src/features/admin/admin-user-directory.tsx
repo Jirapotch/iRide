@@ -2,6 +2,7 @@
 
 import { Table, Tag, type TableColumnsType } from "antd";
 import Link from "next/link";
+import { useEffect } from "react";
 
 import type { AdminUserDto } from "@/lib/admin-users-api";
 import { adminUserDetailHref } from "@/lib/app-navigation-domain";
@@ -16,6 +17,17 @@ export function AdminUserDirectory({
   readonly returnHref: string;
   readonly users: readonly AdminUserDto[];
 }) {
+  useEffect(() => {
+    const value = window.sessionStorage.getItem(
+      `iride:admin-users-scroll:${returnHref}`,
+    );
+    if (!value) return;
+    const top = Number(value);
+    if (!Number.isFinite(top)) return;
+    const timeout = window.setTimeout(() => window.scrollTo(0, top), 80);
+    return () => window.clearTimeout(timeout);
+  }, [returnHref]);
+
   const columns: TableColumnsType<AdminUserDto> = [
     {
       title: locale === "th" ? "ผู้ใช้" : "User",
@@ -34,6 +46,10 @@ export function AdminUserDirectory({
               window.sessionStorage.setItem(
                 "iride:admin-users-origin",
                 returnHref,
+              );
+              window.sessionStorage.setItem(
+                `iride:admin-users-scroll:${returnHref}`,
+                String(window.scrollY),
               );
             }
           }}
