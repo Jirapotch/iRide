@@ -9,6 +9,7 @@ export type SemanticMapLayer =
   | "block2"
   | "road"
   | "edge"
+  | "boundary"
   | "label"
   | "poi"
   | "raster";
@@ -18,9 +19,12 @@ export interface MapPalette {
   readonly block: string;
   readonly block2: string;
   readonly edge: string;
+  readonly outline: string;
+  readonly boundary: string;
   readonly water: string;
   readonly road: string;
   readonly label: string;
+  readonly labelHalo: string;
   readonly veil: string;
   readonly rasterSaturation: number;
   readonly rasterContrast: number;
@@ -32,10 +36,13 @@ export const matchaLattePalette: MapPalette = {
   ground: "#F6F3E8",
   block: "#D9DFC7",
   block2: "#E7E1D3",
-  road: "#FBFAF5",
-  edge: "#C8D1C3",
+  road: "#D5D8D2",
+  edge: "#BEC4BC",
+  outline: "#C8D1C3",
+  boundary: "#C8D1C3",
   water: "#BCD7D0",
   label: "#4B5D51",
+  labelHalo: "#FBFAF5",
   veil: "rgb(79 111 82 / .08)",
   rasterSaturation: -0.55,
   rasterContrast: -0.08,
@@ -57,6 +64,8 @@ export const contentKindColors: Record<ExploreFeatureKind, string> = {
 interface MapStyleLayer {
   readonly id: string;
   readonly type: string;
+  readonly "source-layer"?: string;
+  readonly filter?: unknown;
 }
 
 interface MapPaletteTarget {
@@ -68,10 +77,120 @@ interface MapPaletteTarget {
 const WATER_PATTERN = /water|ocean|river|lake|stream|canal|basin/;
 const BLOCK_PATTERN = /park|forest|landcover/;
 const BLOCK2_PATTERN = /building|dense|urban/;
-const ROAD_PATTERN =
-  /road|street|transport|motorway|trunk|primary|secondary|tertiary|bridge|tunnel|path/;
-const EDGE_PATTERN = /casing|outline|boundary|admin|border|support/;
+const ROAD_TOKENS = new Set([
+  "road",
+  "street",
+  "highway",
+  "motorway",
+  "trunk",
+  "primary",
+  "secondary",
+  "tertiary",
+  "minor",
+  "service",
+  "residential",
+  "unclassified",
+  "raceway",
+  "busway",
+  "guideway",
+  "track",
+  "bridge",
+  "tunnel",
+  "path",
+  "pedestrian",
+]);
+const NON_ROAD_TRANSPORT_TOKENS = new Set([
+  "aerialway",
+  "aeroway",
+  "cableway",
+  "ferry",
+  "rail",
+  "railway",
+  "runway",
+  "shipping",
+  "subway",
+  "tram",
+  "transit",
+]);
+const ROAD_EDGE_TOKENS = new Set(["border", "casing", "outline", "support"]);
+const BOUNDARY_TOKENS = new Set([
+  "admin",
+  "administrative",
+  "border",
+  "boundary",
+]);
 const POI_PATTERN = /poi|point.?of.?interest|amenity|shop|tourism/;
+
+function textTokens(value: string): ReadonlySet<string> {
+  return new Set(
+    value
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean),
+  );
+}
+
+function isClassSelector(value: unknown): boolean {
+  return (
+    value === "class" ||
+    (Array.isArray(value) && value[0] === "get" && value[1] === "class")
+  );
+}
+
+function addFilterValueTokens(tokens: Set<string>, value: unknown): void {
+  if (typeof value === "string") {
+    for (const token of textTokens(value)) tokens.add(token);
+  } else if (Array.isArray(value)) {
+    for (const item of value) addFilterValueTokens(tokens, item);
+  }
+}
+
+function positiveRoadClassTokens(filter: unknown): ReadonlySet<string> {
+  const tokens = new Set<string>();
+
+  const visit = (expression: unknown): void => {
+    if (!Array.isArray(expression) || expression.length === 0) return;
+
+    const [operator, selector, ...values] = expression;
+    if (operator === "all" || operator === "any") {
+      for (const child of expression.slice(1)) visit(child);
+      return;
+    }
+
+    // Values in negated predicates are exclusions, not selected layer classes.
+    if (
+      operator === "!" ||
+      operator === "none" ||
+      operator === "!in" ||
+      operator === "!="
+    ) {
+      return;
+    }
+
+    if ((operator === "in" || operator === "==") && isClassSelector(selector)) {
+      for (const value of values) addFilterValueTokens(tokens, value);
+      return;
+    }
+
+    if (operator === "match" && isClassSelector(selector)) {
+      for (let index = 0; index + 1 < values.length; index += 2) {
+        const labels = values[index];
+        const output = values[index + 1];
+        if (output === true) addFilterValueTokens(tokens, labels);
+      }
+    }
+  };
+
+  visit(filter);
+  return tokens;
+}
+
+function hasAnyToken(
+  tokens: ReadonlySet<string>,
+  candidates: ReadonlySet<string>,
+): boolean {
+  return Array.from(candidates).some((candidate) => tokens.has(candidate));
+}
 
 export function classifyMapLayer(
   layer: MapStyleLayer,
@@ -93,8 +212,17 @@ export function classifyMapLayer(
   }
   if (layer.type === "line") {
     if (WATER_PATTERN.test(id)) return "water";
-    if (EDGE_PATTERN.test(id)) return "edge";
-    if (ROAD_PATTERN.test(id)) return "road";
+
+    const idTokens = textTokens(id);
+    if (hasAnyToken(idTokens, NON_ROAD_TRANSPORT_TOKENS)) return null;
+    if (hasAnyToken(idTokens, ROAD_TOKENS)) {
+      return hasAnyToken(idTokens, ROAD_EDGE_TOKENS) ? "edge" : "road";
+    }
+    if (hasAnyToken(idTokens, BOUNDARY_TOKENS)) return "boundary";
+
+    const classTokens = positiveRoadClassTokens(layer.filter);
+    if (hasAnyToken(classTokens, NON_ROAD_TRANSPORT_TOKENS)) return null;
+    if (hasAnyToken(classTokens, ROAD_TOKENS)) return "road";
   }
   return null;
 }
@@ -121,15 +249,15 @@ export function applyMapPalette(map: MapPaletteTarget, theme: AppTheme): void {
         set("background-color", palette.ground);
       } else {
         set("fill-color", palette.ground);
-        set("fill-outline-color", palette.edge);
+        set("fill-outline-color", palette.outline);
       }
     } else if (semanticLayer === "block") {
       set("fill-color", palette.block);
-      set("fill-outline-color", palette.edge);
+      set("fill-outline-color", palette.outline);
     } else if (semanticLayer === "water") {
       if (layer.type === "fill") {
         set("fill-color", palette.water);
-        set("fill-outline-color", palette.edge);
+        set("fill-outline-color", palette.outline);
       } else {
         set("line-color", palette.water);
       }
@@ -137,14 +265,16 @@ export function applyMapPalette(map: MapPaletteTarget, theme: AppTheme): void {
       const prefix =
         layer.type === "fill-extrusion" ? "fill-extrusion" : "fill";
       set(`${prefix}-color`, palette.block2);
-      if (prefix === "fill") set("fill-outline-color", palette.edge);
+      if (prefix === "fill") set("fill-outline-color", palette.outline);
     } else if (semanticLayer === "road") {
       set("line-color", palette.road);
     } else if (semanticLayer === "edge") {
       set("line-color", palette.edge);
+    } else if (semanticLayer === "boundary") {
+      set("line-color", palette.boundary);
     } else if (semanticLayer === "label" || semanticLayer === "poi") {
       set("text-color", palette.label);
-      set("text-halo-color", palette.road);
+      set("text-halo-color", palette.labelHalo);
       set("text-halo-width", 1.1);
       if (semanticLayer === "poi") {
         set("text-opacity", 0.48);
