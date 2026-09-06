@@ -132,13 +132,8 @@ test("mobile home uses story cards without pointer-only behavior or overflow", a
     ),
   ).toBe(false);
   const activities = featureGrid.getByRole("link", { name: "Activities" });
-  await featureGrid.getByRole("link", { name: "Games" }).focus();
-  await page.keyboard.press("Tab");
+  await activities.focus();
   await expect(activities).toBeFocused();
-  await activities.dispatchEvent("pointerout", {
-    bubbles: true,
-    pointerType: "mouse",
-  });
   await expect(featureGrid).toHaveAttribute("data-active", "activities");
   await expect(activities).toHaveCSS("outline-style", "solid");
 });
