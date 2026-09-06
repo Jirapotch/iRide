@@ -13,65 +13,38 @@ import type {
   ContentAuthorDto,
   PostDto,
 } from "@iride/types";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import {
   communityTalkHref,
-  type BreadcrumbItem,
   type CommunityRoomId,
 } from "@/lib/app-navigation-domain";
 import { getComments } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
 import { commentAction } from "../community/actions";
 import { removeContent } from "../create/actions";
-import type { MarkerOption } from "./create-content-screen";
-import { EditModal } from "./edit-modal";
-import { Breadcrumbs } from "./breadcrumbs";
-
-const BackendForm = dynamic(() =>
-  import("./create-content-screen").then((module) => module.BackendForm),
-);
 interface Props {
   readonly authenticated: boolean;
-  readonly breadcrumbs: readonly BreadcrumbItem[];
   readonly canWrite: boolean;
-  readonly editId: string | undefined;
   readonly locale: Locale;
-  readonly markerOptions: readonly MarkerOption[];
   readonly posts: readonly PostDto[];
   readonly room: CommunityRoomId;
   readonly viewer: ContentAuthorDto | null;
   readonly category: CommunityCategory;
-  readonly heading: string;
 }
 export function CommunityScreen({
   authenticated,
-  breadcrumbs,
   canWrite,
-  editId,
   locale,
-  markerOptions,
   posts,
   room,
   viewer,
   category,
-  heading,
 }: Props) {
   const talkHref = communityTalkHref(category);
-  const editPost = editId
-    ? (posts.find((item) => item.id === editId && item.canEdit) ?? null)
-    : null;
-  const editDenied = Boolean(editId && !editPost);
   return (
-    <div className="community-page">
-      <Breadcrumbs items={breadcrumbs} />
-      <header className="community-heading">
-        <h1 data-route-heading tabIndex={-1}>
-          {heading}
-        </h1>
-      </header>
+    <>
       {room === "talk" || room === "groups" ? (
         <TalkRoom
           authenticated={authenticated}
@@ -83,27 +56,7 @@ export function CommunityScreen({
           viewer={viewer}
         />
       ) : null}
-      {editPost ? (
-        <EditModal
-          closeUrl={`${talkHref}?post=${editPost.id}`}
-          title={locale === "th" ? "แก้ไขโพสต์" : "Edit post"}
-        >
-          <BackendForm
-            initial={editPost}
-            locale={locale}
-            markerOptions={markerOptions}
-            type="post"
-          />
-        </EditModal>
-      ) : null}
-      {editDenied ? (
-        <div className="permission-toast" role="alert">
-          {locale === "th"
-            ? "คุณไม่มีสิทธิ์แก้ไขรายการนี้"
-            : "You do not have permission to edit this item."}
-        </div>
-      ) : null}
-    </div>
+    </>
   );
 }
 

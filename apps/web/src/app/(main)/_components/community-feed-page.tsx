@@ -1,10 +1,14 @@
+import { Suspense } from "react";
 import type { CommunityCategory } from "@iride/types";
 import { getVerifiedWebSession } from "@/lib/auth-session";
-import { getEvents, getPosts } from "@/lib/content-api";
-import { getOwnProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
-import { CommunityScreen } from "./community-screen";
+import { Breadcrumbs } from "./breadcrumbs";
+import {
+  CommunityEditRegion,
+  CommunityFeedSection,
+} from "./community-data-sections";
+import { CommunityFeedSkeleton } from "./page-skeletons";
 
 export async function CommunityFeedPage({
   category,
@@ -25,41 +29,36 @@ export async function CommunityFeedPage({
     getVerifiedWebSession().catch(() => null),
     searchParams,
   ]);
-  const accessToken = session?.accessToken;
-  const [allPosts, events, viewer] = await Promise.all([
-    getPosts(accessToken, category).catch(() => []),
-    getEvents(accessToken).catch(() => []),
-    session ? getOwnProfile(session.accessToken).catch(() => null) : null,
-  ]);
-  const markerOptions = events.map((item) => ({
-    kind: "event" as const,
-    id: item.id,
-    title: item.title,
-    subtitle: item.locationLabel,
-  }));
   const pathname =
     room === "groups" ? "/community/groups" : `/community/${category}/talk`;
   return (
-    <CommunityScreen
-      authenticated={Boolean(session)}
-      breadcrumbs={resolveBreadcrumbs(pathname, { locale })}
-      canWrite={viewer?.canWrite ?? false}
-      category={category}
-      editId={query.modal === "edit" ? query.post : undefined}
-      heading={heading[locale]}
-      locale={locale}
-      markerOptions={markerOptions}
-      posts={allPosts}
-      room={room}
-      viewer={
-        viewer?.id && viewer.username && viewer.displayName
-          ? {
-              id: viewer.id,
-              username: viewer.username,
-              displayName: viewer.displayName,
-            }
-          : null
-      }
-    />
+    <div className="community-page">
+      <Breadcrumbs items={resolveBreadcrumbs(pathname, { locale })} />
+      <header className="community-heading">
+        <h1 data-route-heading tabIndex={-1}>
+          {heading[locale]}
+        </h1>
+      </header>
+      <Suspense fallback={<CommunityFeedSkeleton />}>
+        <CommunityFeedSection
+          accessToken={session?.accessToken}
+          category={category}
+          locale={locale}
+          room={room}
+        />
+      </Suspense>
+      {query.modal === "edit" && query.post ? (
+        <Suspense
+          fallback={<div aria-busy="true" className="modal-skeleton" />}
+        >
+          <CommunityEditRegion
+            accessToken={session?.accessToken}
+            category={category}
+            locale={locale}
+            postId={query.post}
+          />
+        </Suspense>
+      ) : null}
+    </div>
   );
 }
