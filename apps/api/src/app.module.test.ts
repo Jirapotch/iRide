@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AppModule } from "./app.module";
+import { AppModule, shouldUseTypeOrmProfiles } from "./app.module";
 
 describe("Nest API compatibility shell", () => {
   let close: (() => Promise<void>) | undefined;
@@ -11,6 +11,21 @@ describe("Nest API compatibility shell", () => {
     await close?.();
     close = undefined;
     vi.unstubAllEnvs();
+  });
+
+  it("falls back to Supabase profiles when DATABASE_URL is unavailable", () => {
+    expect(shouldUseTypeOrmProfiles({})).toBe(false);
+    expect(
+      shouldUseTypeOrmProfiles({
+        DATABASE_URL: "postgresql://runtime.example/iride",
+      }),
+    ).toBe(true);
+    expect(
+      shouldUseTypeOrmProfiles({
+        DATABASE_URL: "postgresql://runtime.example/iride",
+        IRIDE_PROFILE_BACKEND: "supabase-compatibility",
+      }),
+    ).toBe(false);
   });
 
   it("preserves the existing health contract", async () => {

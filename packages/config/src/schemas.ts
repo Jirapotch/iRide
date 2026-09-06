@@ -20,13 +20,13 @@ export const serverEnvSchema = z.object({
   R2_ACCESS_KEY_ID: secret,
   R2_SECRET_ACCESS_KEY: secret,
   R2_BUCKET: secret,
-  OPN_SECRET_KEY: secret,
-  OPN_WEBHOOK_SECRET: secret,
+  OPN_SECRET_KEY: secret.optional(),
+  OPN_WEBHOOK_SECRET: secret.optional(),
 });
 
 export const apiEnvSchema = serverEnvSchema.extend({
-  DATABASE_URL: url,
-  WORKER_CRON_SECRET: secret,
+  DATABASE_URL: url.optional(),
+  WORKER_CRON_SECRET: secret.optional(),
 });
 
 export const migrationEnvSchema = z.object({
