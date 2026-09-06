@@ -17,19 +17,25 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
-import { communityTalkHref, type CommunityRoomId } from "@/lib/app-navigation-domain";
+import {
+  communityTalkHref,
+  type BreadcrumbItem,
+  type CommunityRoomId,
+} from "@/lib/app-navigation-domain";
 import { getComments } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
 import { commentAction } from "../community/actions";
 import { removeContent } from "../create/actions";
 import type { MarkerOption } from "./create-content-screen";
 import { EditModal } from "./edit-modal";
+import { Breadcrumbs } from "./breadcrumbs";
 
 const BackendForm = dynamic(() =>
   import("./create-content-screen").then((module) => module.BackendForm),
 );
 interface Props {
   readonly authenticated: boolean;
+  readonly breadcrumbs: readonly BreadcrumbItem[];
   readonly canWrite: boolean;
   readonly editId: string | undefined;
   readonly locale: Locale;
@@ -42,6 +48,7 @@ interface Props {
 }
 export function CommunityScreen({
   authenticated,
+  breadcrumbs,
   canWrite,
   editId,
   locale,
@@ -59,8 +66,11 @@ export function CommunityScreen({
   const editDenied = Boolean(editId && !editPost);
   return (
     <div className="community-page">
+      <Breadcrumbs items={breadcrumbs} />
       <header className="community-heading">
-        <h1>{heading}</h1>
+        <h1 data-route-heading tabIndex={-1}>
+          {heading}
+        </h1>
       </header>
       {room === "talk" || room === "groups" ? (
         <TalkRoom
@@ -117,11 +127,18 @@ function TalkRoom({
   return (
     <section className="community-feed">
       {canWrite ? (
-        <Link className="community-create-link" href={`/create?type=post&category=${category}`}>
+        <Link
+          className="community-create-link"
+          href={`/create?type=post&category=${category}`}
+        >
           + {locale === "th" ? "เขียนโพสต์" : "Write a post"}
         </Link>
       ) : authenticated ? (
-        <p className="access-wait-note">{locale === "th" ? "บัญชีนี้อ่านได้อย่างเดียว กรุณารอผู้ดูแลระบบปลดล็อก" : "This account is read-only until an administrator unlocks it."}</p>
+        <p className="access-wait-note">
+          {locale === "th"
+            ? "บัญชีนี้อ่านได้อย่างเดียว กรุณารอผู้ดูแลระบบปลดล็อก"
+            : "This account is read-only until an administrator unlocks it."}
+        </p>
       ) : null}
       {posts.length ? (
         posts.map((post) => (
@@ -142,7 +159,11 @@ function TalkRoom({
                   }
                   deleteAction={removeContent}
                   editHref={`${talkHref}?post=${post.id}&modal=edit`}
-                  hidden={{ domain: "posts", id: post.id, communityCategory: post.communityCategory }}
+                  hidden={{
+                    domain: "posts",
+                    id: post.id,
+                    communityCategory: post.communityCategory,
+                  }}
                   locale={locale}
                 />
               ) : null}
@@ -421,9 +442,7 @@ function CommentThread({
               </button>
             </form>
           ) : (
-            <Link
-              href={`/login?next=${encodeURIComponent(returnHref)}`}
-            >
+            <Link href={`/login?next=${encodeURIComponent(returnHref)}`}>
               {locale === "th"
                 ? "เข้าสู่ระบบเพื่อแสดงความคิดเห็น"
                 : "Sign in to comment"}

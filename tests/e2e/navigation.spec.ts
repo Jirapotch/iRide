@@ -74,6 +74,29 @@ test("search is a page and absent from header actions", async ({ page }) => {
   ).toHaveCount(0);
 });
 
+test("nested community routes expose responsive breadcrumbs", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/community/car/talk");
+  const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
+  await expect(breadcrumb.getByRole("link", { name: "Home" })).toBeVisible();
+  await expect(breadcrumb.getByRole("link", { name: "Cars" })).toBeVisible();
+  await expect(breadcrumb.getByText("Talk", { exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(breadcrumb.locator(".breadcrumb-full")).toHaveCSS(
+    "position",
+    "absolute",
+  );
+  await expect(
+    breadcrumb.getByRole("link", { name: "Back to Cars" }),
+  ).toBeVisible();
+});
+
 test("settings contains theme and language without account settings", async ({
   page,
 }) => {
@@ -86,16 +109,22 @@ test("settings contains theme and language without account settings", async ({
   await expect(drawer.getByText("Account settings")).toHaveCount(0);
 });
 
-test("active administrators can open the user management list", async ({ page }) => {
+test("active administrators can open the user management list", async ({
+  page,
+}) => {
   await page.goto("/login?next=%2F");
   await page.getByRole("button", { name: /Google/ }).click();
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("link", { name: "Manage users" }).click();
-  await expect(page.getByRole("heading", { name: "Manage users" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Manage users" }),
+  ).toBeVisible();
   await expect(page.getByRole("link", { name: /E2E Rider/ })).toBeVisible();
   await expect(page.getByText("oauth-user@iride.test")).toBeVisible();
 
-  await page.getByRole("textbox", { name: "Search users" }).fill("locked@iride.test");
+  await page
+    .getByRole("textbox", { name: "Search users" })
+    .fill("locked@iride.test");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page.getByRole("link", { name: /Locked Rider/ })).toBeVisible();
   await page.getByRole("link", { name: "Clear search" }).click();

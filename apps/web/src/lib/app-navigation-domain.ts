@@ -67,9 +67,10 @@ export function resolveBreadcrumbs(
 
   if (pathname === "/") return [home];
 
-  const community = /^\/community\/(car|motorcycle|bicycle|groups)(?:\/(talk))?$/.exec(
-    pathname,
-  );
+  const community =
+    /^\/community\/(car|motorcycle|bicycle|groups)(?:\/(talk))?$/.exec(
+      pathname,
+    );
   if (community) {
     const category = community[1] as keyof typeof vehicleBreadcrumbLabels;
     const categoryHref = `/community/${category}`;
@@ -101,11 +102,17 @@ export function resolveBreadcrumbs(
       key: "profile",
       label: profileLabel,
       ...(context.tab === "garage" || context.tab === "activities"
-        ? { href: `/users/${encodeURIComponent(decodeURIComponent(profile[1]))}` }
+        ? {
+            href: `/users/${encodeURIComponent(decodeURIComponent(profile[1] ?? ""))}`,
+          }
         : {}),
     };
     if (context.tab === "garage") {
-      return [home, profileItem, { key: "profile-garage", label: labels.garage }];
+      return [
+        home,
+        profileItem,
+        { key: "profile-garage", label: labels.garage },
+      ];
     }
     if (context.tab === "activities") {
       return [
@@ -146,7 +153,9 @@ export function primaryNavigation(username: string | null) {
     { href: "/create", key: "create" as const },
     { href: "/search", key: "search" as const },
     {
-      href: username ? `/users/${encodeURIComponent(username)}` : "/login?intent=profile",
+      href: username
+        ? `/users/${encodeURIComponent(username)}`
+        : "/login?intent=profile",
       key: "profile" as const,
     },
   ];
@@ -157,7 +166,9 @@ export function communityCategoryHref(category: CommunityCategory): string {
 }
 
 export function communityTalkHref(category: CommunityCategory): string {
-  return category === "car" || category === "motorcycle" || category === "bicycle"
+  return category === "car" ||
+    category === "motorcycle" ||
+    category === "bicycle"
     ? `/community/${category}/talk`
     : communityCategoryHref(category);
 }
@@ -174,7 +185,9 @@ export function legacyCommunityHref(
   return query.size ? `${pathname}?${query}` : pathname;
 }
 
-export function publicSearchResults(results: readonly SearchResultDto[]): SearchResultDto[] {
+export function publicSearchResults(
+  results: readonly SearchResultDto[],
+): SearchResultDto[] {
   return [...results];
 }
 
