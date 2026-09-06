@@ -1,14 +1,12 @@
+import { CommunityFeedSkeleton } from "../_components/page-skeletons";
+
 export default function CommunityLoading() {
   return (
-    <main className="community-page" aria-busy="true">
+    <main className="community-page">
       <header className="community-heading">
-        <div className="skeleton-line" aria-hidden="true" />
+        <div aria-hidden="true" className="skeleton-heading" />
       </header>
-      <section className="community-feed" role="status">
-        <article className="premium-card community-post">
-          <p>กำลังโหลดชุมชน…</p>
-        </article>
-      </section>
+      <CommunityFeedSkeleton />
     </main>
   );
 }

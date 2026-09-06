@@ -124,6 +124,14 @@ test("a slow destination acknowledges one navigation", async ({ page }) => {
   await expect(page).toHaveURL(/\/community\/car$/);
 });
 
+test("pathname navigation focuses the destination heading", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Cars", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Cars" })).toBeFocused();
+});
+
 test("settings contains theme and language without account settings", async ({
   page,
 }) => {
