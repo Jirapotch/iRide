@@ -17,8 +17,6 @@ const serverConfig = {
   R2_ACCESS_KEY_ID: "test-access-key",
   R2_SECRET_ACCESS_KEY: "test-secret-key",
   R2_BUCKET: "test-bucket",
-  OPN_SECRET_KEY: "skey_test",
-  OPN_WEBHOOK_SECRET: "test-webhook-secret",
 };
 
 describe("environment schemas", () => {
@@ -47,23 +45,14 @@ describe("environment schemas", () => {
     ).toBe(3002);
   });
 
-  it("requires runtime database and cron credentials for the API", () => {
-    expect(() =>
-      apiEnvSchema.parse({
-        ...serverConfig,
-        DATABASE_URL: "postgresql://runtime.example/iride",
-      }),
-    ).toThrow();
-
+  it("allows the API to boot without optional integration credentials", () => {
     expect(
       apiEnvSchema.parse({
         ...serverConfig,
-        DATABASE_URL: "postgresql://runtime.example/iride",
-        WORKER_CRON_SECRET: "cron-secret",
       }),
     ).toMatchObject({
-      DATABASE_URL: "postgresql://runtime.example/iride",
-      WORKER_CRON_SECRET: "cron-secret",
+      SUPABASE_URL: serverConfig.SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY: serverConfig.SUPABASE_PUBLISHABLE_KEY,
     });
   });
 

@@ -6,10 +6,16 @@ import { HealthModule } from "./modules/health/health.module";
 import { JobsModule } from "./modules/jobs/jobs.module";
 import { ProfilesModule } from "./modules/profiles/profiles.module";
 
-const profileModules =
-  process.env.IRIDE_PROFILE_BACKEND === "supabase-compatibility"
-    ? []
-    : [ProfilesModule];
+export function shouldUseTypeOrmProfiles(
+  input: Record<string, string | undefined> = process.env,
+): boolean {
+  return (
+    input.IRIDE_PROFILE_BACKEND !== "supabase-compatibility" &&
+    Boolean(input.DATABASE_URL?.trim())
+  );
+}
+
+const profileModules = shouldUseTypeOrmProfiles() ? [ProfilesModule] : [];
 
 @Module({
   imports: [
