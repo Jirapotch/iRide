@@ -159,6 +159,10 @@ test("pathname navigation focuses the destination heading", async ({
   await page.goto("/");
   await page.getByRole("link", { name: "Cars", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Cars" })).toBeFocused();
+  await page.getByRole("link", { name: "iRide home" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Choose your space" }),
+  ).toBeFocused();
 });
 
 test("settings contains theme and language without account settings", async ({
@@ -227,6 +231,18 @@ test("current main routes expose navigation UX contracts", async ({ page }) => {
   }
 });
 
+test("a selected map record error keeps the map available", async ({
+  page,
+}) => {
+  await page.goto("/maps?marker=missing-marker");
+  await expect(page.locator(".map-canvas")).toBeVisible();
+  const error = page.getByRole("alert").filter({
+    hasText: "The selected place could not load",
+  });
+  await expect(error).toBeVisible();
+  await expect(error.getByRole("button", { name: "Retry" })).toBeVisible();
+});
+
 test("admin detail returns to the exact filtered list", async ({ page }) => {
   await page.goto("/login?next=%2Fsettings%2Fusers%3Fq%3Dlocked%26page%3D1");
   await page.getByRole("button", { name: /Google/ }).click();
@@ -246,6 +262,20 @@ test("a directly opened admin detail uses its safe fallback", async ({
   );
   await page.goto(`/login?next=${next}`);
   await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByRole("button", { name: "Back to user list" }).click();
+  await expect(page).toHaveURL(/\/settings\/users\?q=locked$/);
+});
+
+test("admin detail does not reuse stale list history", async ({ page }) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers%3Fq%3Dlocked");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByRole("link", { name: /Locked Rider/ }).click();
+  await expect(
+    page.getByRole("button", { name: "Back to user list" }),
+  ).toBeVisible();
+  const detailUrl = page.url();
+  await page.getByRole("link", { name: "iRide home" }).click();
+  await page.goto(detailUrl);
   await page.getByRole("button", { name: "Back to user list" }).click();
   await expect(page).toHaveURL(/\/settings\/users\?q=locked$/);
 });

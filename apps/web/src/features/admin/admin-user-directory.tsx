@@ -22,6 +22,7 @@ export function AdminUserDirectory({
       `iride:admin-users-scroll:${returnHref}`,
     );
     if (!value) return;
+    window.sessionStorage.removeItem(`iride:admin-users-scroll:${returnHref}`);
     const top = Number(value);
     if (!Number.isFinite(top)) return;
     const timeout = window.setTimeout(() => window.scrollTo(0, top), 80);

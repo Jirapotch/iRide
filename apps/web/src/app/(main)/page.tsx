@@ -40,7 +40,9 @@ export default async function HomePage() {
   return (
     <main className="community-home">
       <header className="community-home-heading">
-        <h1>{text.heading}</h1>
+        <h1 data-route-heading tabIndex={-1}>
+          {text.heading}
+        </h1>
         <p>{text.intro}</p>
       </header>
       <div className="community-category-grid">

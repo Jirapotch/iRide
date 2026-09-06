@@ -1,10 +1,13 @@
 import type { BreadcrumbItem } from "@/lib/app-navigation-domain";
+import type { Locale } from "@/lib/locale";
 import { PendingLink } from "./pending-link";
 
 export function Breadcrumbs({
   items,
+  locale,
 }: {
   readonly items: readonly BreadcrumbItem[];
+  readonly locale: Locale;
 }) {
   if (items.length < 2) return null;
 
@@ -25,7 +28,7 @@ export function Breadcrumbs({
       </ol>
       {parent?.href ? (
         <PendingLink
-          aria-label={`Back to ${parent.label}`}
+          aria-label={`${locale === "th" ? "กลับไป" : "Back to"} ${parent.label}`}
           className="breadcrumb-compact"
           href={parent.href}
         >

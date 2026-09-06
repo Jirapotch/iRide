@@ -19,7 +19,7 @@ import type {
 import { gsap } from "gsap";
 import * as maplibregl from "maplibre-gl";
 import { createPortal } from "react-dom";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   type CSSProperties,
   useCallback,
@@ -80,13 +80,16 @@ export function ActivityHub({
   initialFeature = null,
   initialEdit = null,
   editDenied = false,
+  selectedFeatureUnavailable = false,
 }: {
   readonly locale: Locale;
   readonly initialFeature?: ExploreFeatureDto | null;
   readonly initialEdit?: EventDto | null;
   readonly editDenied?: boolean;
+  readonly selectedFeatureUnavailable?: boolean;
 }) {
   const { theme } = useTheme();
+  const router = useRouter();
   const params = useSearchParams();
   const [features, setFeatures] = useState<ExploreFeatureDto[]>(
     initialFeature ? [initialFeature] : [],
@@ -507,7 +510,10 @@ export function ActivityHub({
         {locale === "th" ? "แผนที่" : "Maps"}
       </h1>
       <div className="map-breadcrumbs">
-        <Breadcrumbs items={resolveBreadcrumbs("/maps", { locale })} />
+        <Breadcrumbs
+          items={resolveBreadcrumbs("/maps", { locale })}
+          locale={locale}
+        />
       </div>
       <div className="map-canvas" ref={containerRef} />
       <div
@@ -540,6 +546,19 @@ export function ActivityHub({
             type="button"
           >
             {locale === "th" ? "ลองโหลด marker อีกครั้ง" : "Retry markers"}
+          </button>
+        </div>
+      ) : null}
+      {selectedFeatureUnavailable ? (
+        <div className="map-error-banner map-selected-error" role="alert">
+          <WarningCircle size={18} />
+          <span>
+            {locale === "th"
+              ? "โหลดสถานที่ที่เลือกไม่สำเร็จ แผนที่ยังใช้งานได้"
+              : "The selected place could not load. The map is still available."}
+          </span>
+          <button onClick={() => router.refresh()} type="button">
+            {locale === "th" ? "ลองอีกครั้ง" : "Retry"}
           </button>
         </div>
       ) : null}

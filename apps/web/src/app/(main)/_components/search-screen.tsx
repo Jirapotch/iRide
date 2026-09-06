@@ -85,7 +85,10 @@ export function SearchScreen({
 
   return (
     <main className="search-page">
-      <Breadcrumbs items={resolveBreadcrumbs("/search", { locale })} />
+      <Breadcrumbs
+        items={resolveBreadcrumbs("/search", { locale })}
+        locale={locale}
+      />
       <header>
         <p className="premium-kicker">iRide Search</p>
         <h1 data-route-heading tabIndex={-1}>

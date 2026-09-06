@@ -50,6 +50,7 @@ export default async function AdminUserPage({
           locale,
           parentHref: returnHref,
         })}
+        locale={locale}
       />
       <HistoryBackButton
         fallbackHref={returnHref}

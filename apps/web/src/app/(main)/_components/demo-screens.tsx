@@ -17,7 +17,10 @@ export function NotificationsScreen({ locale }: { readonly locale: Locale }) {
   );
   return (
     <main className={`${shell} max-w-3xl`}>
-      <Breadcrumbs items={resolveBreadcrumbs("/notifications", { locale })} />
+      <Breadcrumbs
+        items={resolveBreadcrumbs("/notifications", { locale })}
+        locale={locale}
+      />
       <div className="flex items-end justify-between gap-4">
         <PageHeading
           eyebrow="iRide"

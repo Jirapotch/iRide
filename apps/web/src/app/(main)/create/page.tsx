@@ -1,5 +1,6 @@
 import { getRequestLocale } from "@/lib/request-locale";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getEvents } from "@/lib/content-api";
@@ -13,6 +14,11 @@ import { legacyEditRedirect } from "@/lib/edit-modal-domain";
 import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 import { CreateContentScreen } from "../_components/create-content-screen";
 import { Breadcrumbs } from "../_components/breadcrumbs";
+import {
+  CreateMarkerOptionsHydrator,
+  CreateMarkerOptionsProvider,
+} from "../_components/create-marker-options-context";
+import { captureData } from "@/lib/data-result";
 
 export default async function CreatePage({
   searchParams,
@@ -42,7 +48,10 @@ export default async function CreatePage({
   if (!profile?.canWrite) {
     return (
       <main className="create-page">
-        <Breadcrumbs items={resolveBreadcrumbs("/create", { locale })} />
+        <Breadcrumbs
+          items={resolveBreadcrumbs("/create", { locale })}
+          locale={locale}
+        />
         <section className="create-card premium-card access-wait-state">
           <h1 data-route-heading tabIndex={-1}>
             {locale === "th"
@@ -58,7 +67,32 @@ export default async function CreatePage({
       </main>
     );
   }
-  const eventsResult = await captureData(() => getEvents(session.accessToken));
+  const category = communityCategories.includes(
+    params.category as CommunityCategory,
+  )
+    ? (params.category as CommunityCategory)
+    : "groups";
+  return (
+    <CreateMarkerOptionsProvider>
+      <CreateContentScreen
+        defaultCommunityCategory={category}
+        initial={null}
+        locale={locale}
+        type={type}
+      />
+      <Suspense fallback={null}>
+        <MarkerOptionsLoader accessToken={session.accessToken} />
+      </Suspense>
+    </CreateMarkerOptionsProvider>
+  );
+}
+
+async function MarkerOptionsLoader({
+  accessToken,
+}: {
+  readonly accessToken: string;
+}) {
+  const eventsResult = await captureData(() => getEvents(accessToken));
   const markerOptions =
     eventsResult.status === "success"
       ? eventsResult.data.map((item) => ({
@@ -68,20 +102,10 @@ export default async function CreatePage({
           subtitle: item.locationLabel,
         }))
       : [];
-  const category = communityCategories.includes(
-    params.category as CommunityCategory,
-  )
-    ? (params.category as CommunityCategory)
-    : "groups";
   return (
-    <CreateContentScreen
-      defaultCommunityCategory={category}
-      initial={null}
-      locale={locale}
+    <CreateMarkerOptionsHydrator
       markerOptions={markerOptions}
-      markerOptionsUnavailable={eventsResult.status === "error"}
-      type={type}
+      unavailable={eventsResult.status === "error"}
     />
   );
 }
-import { captureData } from "@/lib/data-result";

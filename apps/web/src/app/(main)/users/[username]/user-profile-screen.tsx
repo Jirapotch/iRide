@@ -385,10 +385,13 @@ export function GaragePanel({
                   >
                     <input name="id" type="hidden" value={vehicle.id} />
                     <input name="username" type="hidden" value={username} />
-                    <button type="submit">
+                    <ActionSubmitButton
+                      className="owner-action-button"
+                      pendingLabel={locale === "th" ? "กำลังลบ…" : "Deleting…"}
+                    >
                       <Trash size={16} />
                       {locale === "th" ? "ลบ" : "Delete"}
-                    </button>
+                    </ActionSubmitButton>
                   </form>
                 </div>
               ) : null}

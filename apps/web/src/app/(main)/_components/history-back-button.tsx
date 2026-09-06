@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 export function HistoryBackButton({
   fallbackHref,
@@ -12,15 +13,19 @@ export function HistoryBackButton({
   readonly originKey: string;
 }) {
   const router = useRouter();
+  const cameFromListRef = useRef(false);
+
+  useEffect(() => {
+    cameFromListRef.current =
+      window.sessionStorage.getItem(originKey) === fallbackHref;
+    window.sessionStorage.removeItem(originKey);
+  }, [fallbackHref, originKey]);
 
   return (
     <button
       className="history-back-button"
       onClick={() => {
-        const cameFromList =
-          window.sessionStorage.getItem(originKey) === fallbackHref;
-        if (cameFromList) {
-          window.sessionStorage.removeItem(originKey);
+        if (cameFromListRef.current) {
           const scrollTop = Number(
             window.sessionStorage.getItem(
               `iride:admin-users-scroll:${fallbackHref}`,

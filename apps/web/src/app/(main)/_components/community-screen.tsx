@@ -281,7 +281,13 @@ function CommentThread({
     [loading, setLoading] = useState(false),
     [error, setError] = useState<string | null>(null),
     [replyTo, setReplyTo] = useState<CommentDto | null>(null),
-    [editing, setEditing] = useState<string | null>(null);
+    [editing, setEditing] = useState<string | null>(null),
+    [submitting, setSubmitting] = useState(false),
+    [pendingMutations, setPendingMutations] = useState<ReadonlySet<string>>(
+      new Set(),
+    );
+  const submittingRef = useRef(false);
+  const pendingMutationRefs = useRef(new Set<string>());
   async function load() {
     setLoading(true);
     try {
@@ -304,10 +310,13 @@ function CommentThread({
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submittingRef.current) return;
     const form = event.currentTarget,
       data = new FormData(form),
       body = String(data.get("body") ?? "").trim();
     if (!body) return;
+    submittingRef.current = true;
+    setSubmitting(true);
     const tempId = `temp-${Date.now()}`;
     if (viewer)
       setItems((current) => [
@@ -333,15 +342,25 @@ function CommentThread({
     } catch {
       setItems((current) => current.filter((item) => item.id !== tempId));
       setError(locale === "th" ? "ส่งความคิดเห็นไม่สำเร็จ" : "Comment failed");
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   }
   async function mutate(data: FormData) {
+    const mutationKey = `${String(data.get("intent"))}:${String(data.get("id"))}`;
+    if (pendingMutationRefs.current.has(mutationKey)) return;
+    pendingMutationRefs.current.add(mutationKey);
+    setPendingMutations(new Set(pendingMutationRefs.current));
     try {
       await commentAction(data);
       setEditing(null);
       await load();
     } catch {
       setError(locale === "th" ? "บันทึกไม่สำเร็จ" : "Update failed");
+    } finally {
+      pendingMutationRefs.current.delete(mutationKey);
+      setPendingMutations(new Set(pendingMutationRefs.current));
     }
   }
   const roots = useMemo(() => items.filter((item) => !item.parentId), [items]);
@@ -374,6 +393,7 @@ function CommentThread({
               key={comment.id}
               locale={locale}
               mutate={mutate}
+              pendingMutations={pendingMutations}
               onEdit={setEditing}
               onReply={setReplyTo}
             />
@@ -400,8 +420,19 @@ function CommentThread({
                 }
                 required
               />
-              <button className="primary-action" type="submit">
-                {locale === "th" ? "ส่ง" : "Send"}
+              <button
+                aria-busy={submitting}
+                className="primary-action"
+                disabled={submitting}
+                type="submit"
+              >
+                {submitting
+                  ? locale === "th"
+                    ? "กำลังส่ง…"
+                    : "Sending…"
+                  : locale === "th"
+                    ? "ส่ง"
+                    : "Send"}
               </button>
             </form>
           ) : (
@@ -423,6 +454,7 @@ interface CommentItemProps {
   readonly items: readonly CommentDto[];
   readonly locale: Locale;
   readonly mutate: (data: FormData) => Promise<void>;
+  readonly pendingMutations: ReadonlySet<string>;
   readonly onEdit: (id: string | null) => void;
   readonly onReply: (item: CommentDto) => void;
 }
@@ -432,6 +464,7 @@ function CommentItem({
   items,
   locale,
   mutate,
+  pendingMutations,
   onEdit,
   onReply,
 }: CommentItemProps) {
@@ -443,6 +476,7 @@ function CommentItem({
         editing={editing}
         locale={locale}
         mutate={mutate}
+        pendingMutations={pendingMutations}
         onEdit={onEdit}
         onReply={onReply}
       />
@@ -453,6 +487,7 @@ function CommentItem({
             editing={editing}
             locale={locale}
             mutate={mutate}
+            pendingMutations={pendingMutations}
             onEdit={onEdit}
             onReply={onReply}
           />
@@ -466,6 +501,7 @@ function CommentBody({
   editing,
   locale,
   mutate,
+  pendingMutations,
   onEdit,
   onReply,
 }: {
@@ -473,9 +509,12 @@ function CommentBody({
   readonly editing: string | null;
   readonly locale: Locale;
   readonly mutate: (data: FormData) => Promise<void>;
+  readonly pendingMutations: ReadonlySet<string>;
   readonly onEdit: (id: string | null) => void;
   readonly onReply: (item: CommentDto) => void;
 }) {
+  const updating = pendingMutations.has(`update:${comment.id}`);
+  const deleting = pendingMutations.has(`delete:${comment.id}`);
   return (
     <div>
       <strong>@{comment.author.username}</strong>
@@ -490,8 +529,20 @@ function CommentBody({
             name="body"
             required
           />
-          <button type="submit">{locale === "th" ? "บันทึก" : "Save"}</button>
-          <button onClick={() => onEdit(null)} type="button">
+          <button aria-busy={updating} disabled={updating} type="submit">
+            {updating
+              ? locale === "th"
+                ? "กำลังบันทึก…"
+                : "Saving…"
+              : locale === "th"
+                ? "บันทึก"
+                : "Save"}
+          </button>
+          <button
+            disabled={updating}
+            onClick={() => onEdit(null)}
+            type="button"
+          >
             {locale === "th" ? "ยกเลิก" : "Cancel"}
           </button>
         </form>
@@ -517,8 +568,14 @@ function CommentBody({
               <form action={mutate}>
                 <input name="intent" type="hidden" value="delete" />
                 <input name="id" type="hidden" value={comment.id} />
-                <button type="submit">
-                  {locale === "th" ? "ลบ" : "Delete"}
+                <button aria-busy={deleting} disabled={deleting} type="submit">
+                  {deleting
+                    ? locale === "th"
+                      ? "กำลังลบ…"
+                      : "Deleting…"
+                    : locale === "th"
+                      ? "ลบ"
+                      : "Delete"}
                 </button>
               </form>
             </>

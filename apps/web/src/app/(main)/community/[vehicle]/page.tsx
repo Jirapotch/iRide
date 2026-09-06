@@ -28,7 +28,7 @@ export default async function VehicleCommunityPage({
   const breadcrumbs = resolveBreadcrumbs(`/community/${vehicle}`, { locale });
   return (
     <main className="community-section-page">
-      <Breadcrumbs items={breadcrumbs} />
+      <Breadcrumbs items={breadcrumbs} locale={locale} />
       <header>
         <Icon size={44} weight="duotone" />
         <h1 data-route-heading tabIndex={-1}>

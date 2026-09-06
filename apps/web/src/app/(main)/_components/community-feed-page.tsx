@@ -33,7 +33,10 @@ export async function CommunityFeedPage({
     room === "groups" ? "/community/groups" : `/community/${category}/talk`;
   return (
     <div className="community-page">
-      <Breadcrumbs items={resolveBreadcrumbs(pathname, { locale })} />
+      <Breadcrumbs
+        items={resolveBreadcrumbs(pathname, { locale })}
+        locale={locale}
+      />
       <header className="community-heading">
         <h1 data-route-heading tabIndex={-1}>
           {heading[locale]}

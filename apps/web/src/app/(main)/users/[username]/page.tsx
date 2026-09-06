@@ -48,6 +48,7 @@ export default async function UserProfilePage({
           locale,
           tab,
         })}
+        locale={locale}
       />
       <UserProfileScreen
         initialTab={tab}

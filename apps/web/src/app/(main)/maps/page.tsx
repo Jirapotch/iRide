@@ -4,6 +4,7 @@ import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getEvent } from "@/lib/content-api";
 import { getRequestLocale } from "@/lib/request-locale";
 import { ActivityHub } from "../_components/activity-hub";
+import { captureData } from "@/lib/data-result";
 
 export default async function MapsPage({
   searchParams,
@@ -16,9 +17,11 @@ export default async function MapsPage({
     getVerifiedWebSession().catch(() => null),
   ]);
   const accessToken = session?.accessToken;
-  const selectedContent = params.marker
-    ? await getEvent(params.marker, accessToken).catch(() => null)
+  const selectedResult = params.marker
+    ? await captureData(() => getEvent(params.marker as string, accessToken))
     : null;
+  const selectedContent =
+    selectedResult?.status === "success" ? selectedResult.data : null;
   const initialFeature = selectedContent
     ? toExploreFeature(selectedContent)
     : null;
@@ -34,6 +37,7 @@ export default async function MapsPage({
       initialEdit={initialEdit}
       initialFeature={initialFeature}
       locale={locale}
+      selectedFeatureUnavailable={selectedResult?.status === "error"}
     />
   );
 }

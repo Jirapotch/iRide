@@ -35,33 +35,27 @@ import {
 import { resolveGoogleMapsLocation, saveContent } from "../create/actions";
 import { ActionSubmitButton } from "./action-submit-button";
 import { Breadcrumbs } from "./breadcrumbs";
+import {
+  useCreateMarkerOptions,
+  type MarkerOption,
+} from "./create-marker-options-context";
 import { PendingLink } from "./pending-link";
 import { SectionError } from "./section-error";
 
 type CreateType = "post" | "activity" | "trip";
 export type InitialContent = PostDto | EventDto | null;
-export interface MarkerOption {
-  readonly kind: "event";
-  readonly id: string;
-  readonly title: string;
-  readonly subtitle: string;
-}
-
 export function CreateContentScreen({
   locale,
   type,
   initial,
-  markerOptions = [],
-  markerOptionsUnavailable = false,
   defaultCommunityCategory = "groups",
 }: {
   readonly locale: Locale;
   readonly type: CreateType;
   readonly initial: InitialContent;
-  readonly markerOptions?: readonly MarkerOption[];
-  readonly markerOptionsUnavailable?: boolean;
   readonly defaultCommunityCategory?: CommunityCategory;
 }) {
+  const { markerOptions, markerOptionsUnavailable } = useCreateMarkerOptions();
   const options: { type: CreateType; label: string }[] = [
     { type: "post", label: locale === "th" ? "โพสต์" : "Post" },
     { type: "activity", label: locale === "th" ? "กิจกรรม" : "Activity" },
@@ -69,7 +63,10 @@ export function CreateContentScreen({
   ];
   return (
     <main className="create-page">
-      <Breadcrumbs items={resolveBreadcrumbs("/create", { locale })} />
+      <Breadcrumbs
+        items={resolveBreadcrumbs("/create", { locale })}
+        locale={locale}
+      />
       <header className="create-intro">
         <p className="premium-kicker">iRide Create</p>
         <h1 data-route-heading tabIndex={-1}>
