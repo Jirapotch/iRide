@@ -32,6 +32,7 @@ const breadcrumbLabels = {
     manageUsers: "จัดการผู้ใช้",
     garage: "Garage",
     activities: "กิจกรรม",
+    games: "เกมส์",
     profile: "โปรไฟล์",
   },
   en: {
@@ -45,6 +46,7 @@ const breadcrumbLabels = {
     manageUsers: "Manage users",
     garage: "Garage",
     activities: "Activities",
+    games: "Games",
     profile: "Profile",
   },
 } as const;
@@ -91,6 +93,7 @@ export function resolveBreadcrumbs(
     "/search": ["search", labels.search],
     "/create": ["create", labels.create],
     "/notifications": ["notifications", labels.notifications],
+    "/games": ["games", labels.games],
   } as const;
   const staticItem = staticRoute[pathname as keyof typeof staticRoute];
   if (staticItem) {

@@ -132,7 +132,7 @@ test("a slow destination acknowledges one navigation", async ({ page }) => {
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route("**/community/car*", async (route) => {
+  await page.route("**/games*", async (route) => {
     if (route.request().headers().rsc === "1") {
       requests += 1;
       await held;
@@ -140,30 +140,30 @@ test("a slow destination acknowledges one navigation", async ({ page }) => {
     await route.continue();
   });
   await page.goto("/");
-  const cars = page.getByRole("link", { name: "Cars", exact: true });
+  const games = page.getByRole("link", { name: "Games", exact: true });
 
   try {
-    await cars.click({ noWaitAfter: true });
-    await expect(cars).toHaveAttribute("aria-busy", "true");
-    await expect(cars.locator(".link-pending-indicator")).toHaveAttribute(
+    await games.click({ noWaitAfter: true });
+    await expect(games).toHaveAttribute("aria-busy", "true");
+    await expect(games.locator(".link-pending-indicator")).toHaveAttribute(
       "data-pending",
       "true",
     );
-    await expect(cars.locator(".link-pending-indicator")).toHaveAttribute(
+    await expect(games.locator(".link-pending-indicator")).toHaveAttribute(
       "data-link-pending",
       "true",
     );
     await page.waitForTimeout(2_700);
-    await expect(cars).toHaveAttribute("aria-busy", "true");
+    await expect(games).toHaveAttribute("aria-busy", "true");
     const requestsBeforeRepeat = requests;
-    await cars.dispatchEvent("click");
+    await games.dispatchEvent("click");
     await page.waitForTimeout(100);
     expect(requests).toBe(requestsBeforeRepeat);
   } finally {
     release?.();
   }
 
-  await expect(page).toHaveURL(/\/community\/car$/);
+  await expect(page).toHaveURL(/\/games$/);
 });
 
 test("create renders its form before optional marker data", async ({
@@ -187,11 +187,13 @@ test("pathname navigation focuses the destination heading", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Cars", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Cars" })).toBeFocused();
+  await page.getByRole("link", { name: "Games", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Traffic Endless Ride" }),
+  ).toBeFocused();
   await page.getByRole("link", { name: "iRide home" }).click();
   await expect(
-    page.getByRole("heading", { name: "Choose your space" }),
+    page.getByRole("heading", { name: "Every road has a story" }),
   ).toBeFocused();
 });
 

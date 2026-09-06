@@ -144,6 +144,16 @@ describe("application navigation domain", () => {
     );
   });
 
+  it("resolves the games showcase without adding it to primary navigation", () => {
+    expect(resolveBreadcrumbs("/games", { locale: "th" })).toEqual([
+      { key: "home", label: "หน้าหลัก", href: "/" },
+      { key: "games", label: "เกมส์" },
+    ]);
+    expect(primaryNavigation(null).some((item) => item.href === "/games")).toBe(
+      false,
+    );
+  });
+
   it("keeps a context-preserving admin parent href", () => {
     expect(
       resolveBreadcrumbs("/settings/users/user-1", {
