@@ -114,7 +114,7 @@ async function run() {
         stdio: "inherit",
       },
     );
-    const apiServer = spawn(process.execPath, ["dist/main.js"], {
+    const apiServer = spawn(process.execPath, ["server.mjs"], {
       cwd: path.join(repositoryRoot, "apps", "api"),
       env: { ...e2eEnvironment, PORT: String(apiPort) },
       stdio: "inherit",

@@ -27,4 +27,4 @@ WORKDIR /app
 COPY --from=build --chown=node:node /prod/api ./
 USER node
 EXPOSE 3001
-CMD ["node", "dist/main.js"]
+CMD ["node", "server.mjs"]
