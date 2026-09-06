@@ -22,6 +22,12 @@ export async function createApiApplication() {
 export async function startApiServer(): Promise<void> {
   const app = await createApiApplication();
   app.enableShutdownHooks();
-  const port = Number(process.env.PORT ?? 3001);
+  const port = resolveApiPort();
   await app.listen(port, "0.0.0.0");
+}
+
+export function resolveApiPort(
+  input: Record<string, string | undefined> = process.env,
+): number {
+  return Number(input.PORT ?? (input.VERCEL ? 3000 : 3001));
 }
