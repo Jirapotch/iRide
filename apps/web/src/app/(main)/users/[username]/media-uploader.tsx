@@ -3,7 +3,10 @@ import { UploadSimple } from "@phosphor-icons/react";
 import type { MediaPurpose } from "@iride/types";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { authorizeMediaAction, completeMediaAction } from "../../media-actions";
+import {
+  authorizeMediaAction,
+  completeMediaAction,
+} from "../../../media-actions";
 import type { Locale } from "@/lib/locale";
 
 export function MediaUploader({
