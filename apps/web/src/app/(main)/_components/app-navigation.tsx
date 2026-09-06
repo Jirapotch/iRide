@@ -25,6 +25,7 @@ import { useMockApp } from "./mock-app-provider";
 import { useTheme } from "../../_components/theme-provider";
 import { SignOutButton } from "../../auth/sign-out-button";
 import { setLocale } from "../../locale-actions";
+import { PendingLink } from "./pending-link";
 
 const labels = {
   th: {
@@ -123,76 +124,81 @@ export function HeaderActions({
         }
       >
         <div className="drawer-content">
-              <section>
-                <p className="drawer-label">{text.theme}</p>
-                <div className="theme-options" role="group" aria-label={text.theme}>
-                  <Button
-                    aria-pressed={theme === "light"}
-                    icon={<Sun size={18} />}
-                    onClick={() => setTheme("light")}
-                  >
-                    {text.light}
-                  </Button>
-                  <Button
-                    aria-pressed={theme === "dark"}
-                    icon={<Moon size={18} />}
-                    onClick={() => setTheme("dark")}
-                  >
-                    {text.dark}
-                  </Button>
-                </div>
-              </section>
-              {canManage ? (
-                <section>
-                  <p className="drawer-label">Admin</p>
-                  <Link className="drawer-row" href="/settings/users" onClick={() => setDrawerOpen(false)}>
-                    <span><UsersThree size={20} />{text.manageUsers}</span>
-                  </Link>
-                </section>
-              ) : null}
-              <section>
-                <p className="drawer-label">{text.language}</p>
-                <form action={setLocale}>
-                  <input
-                    name="locale"
-                    type="hidden"
-                    value={locale === "th" ? "en" : "th"}
-                  />
-                  <input name="returnTo" type="hidden" value={pathname} />
-                  <button className="drawer-row" type="submit">
-                    <span>{locale === "th" ? "ภาษาไทย" : "English"}</span>
-                    <strong>
-                      {locale === "th"
-                        ? "Switch to English"
-                        : "เปลี่ยนเป็นภาษาไทย"}
-                    </strong>
-                  </button>
-                </form>
-              </section>
-              <section>
-                <p className="drawer-label">{text.profile}</p>
-                {authenticated ? (
-                  <>
-                    <Link
-                      className="drawer-row"
-                      href={username ? `/users/${username}` : "/onboarding"}
-                    >
-                      <span>
-                        <UserCircle size={20} />
-                        {text.profile}
-                      </span>
-                    </Link>
-                    <SignOutButton label={text.logout} />
-                  </>
-                ) : (
-                  <Link className="drawer-row" href="/login?intent=profile">
-                    <span>
-                      <SignIn size={20} />
-                      {text.login}
-                    </span>
-                  </Link>
-                )}
-              </section>
+          <section>
+            <p className="drawer-label">{text.theme}</p>
+            <div className="theme-options" role="group" aria-label={text.theme}>
+              <Button
+                aria-pressed={theme === "light"}
+                icon={<Sun size={18} />}
+                onClick={() => setTheme("light")}
+              >
+                {text.light}
+              </Button>
+              <Button
+                aria-pressed={theme === "dark"}
+                icon={<Moon size={18} />}
+                onClick={() => setTheme("dark")}
+              >
+                {text.dark}
+              </Button>
+            </div>
+          </section>
+          {canManage ? (
+            <section>
+              <p className="drawer-label">Admin</p>
+              <Link
+                className="drawer-row"
+                href="/settings/users"
+                onClick={() => setDrawerOpen(false)}
+              >
+                <span>
+                  <UsersThree size={20} />
+                  {text.manageUsers}
+                </span>
+              </Link>
+            </section>
+          ) : null}
+          <section>
+            <p className="drawer-label">{text.language}</p>
+            <form action={setLocale}>
+              <input
+                name="locale"
+                type="hidden"
+                value={locale === "th" ? "en" : "th"}
+              />
+              <input name="returnTo" type="hidden" value={pathname} />
+              <button className="drawer-row" type="submit">
+                <span>{locale === "th" ? "ภาษาไทย" : "English"}</span>
+                <strong>
+                  {locale === "th" ? "Switch to English" : "เปลี่ยนเป็นภาษาไทย"}
+                </strong>
+              </button>
+            </form>
+          </section>
+          <section>
+            <p className="drawer-label">{text.profile}</p>
+            {authenticated ? (
+              <>
+                <Link
+                  className="drawer-row"
+                  href={username ? `/users/${username}` : "/onboarding"}
+                >
+                  <span>
+                    <UserCircle size={20} />
+                    {text.profile}
+                  </span>
+                </Link>
+                <SignOutButton label={text.logout} />
+              </>
+            ) : (
+              <Link className="drawer-row" href="/login?intent=profile">
+                <span>
+                  <SignIn size={20} />
+                  {text.login}
+                </span>
+              </Link>
+            )}
+          </section>
         </div>
       </Drawer>
     </>
@@ -334,7 +340,13 @@ export function BottomNavigation({
 }
 
 function navigationFor(username: string | null) {
-  const icons = { home: House, maps: MapTrifold, create: Plus, search: MagnifyingGlass, profile: UserCircle } as const;
+  const icons = {
+    home: House,
+    maps: MapTrifold,
+    create: Plus,
+    search: MagnifyingGlass,
+    profile: UserCircle,
+  } as const;
   return primaryNavigation(username).map((item) => ({
     ...item,
     icon: icons[item.key],
@@ -363,7 +375,7 @@ function NavLink({
   const isCreate = "create" in item;
   const label = labels[locale][item.key];
   return (
-    <Link
+    <PendingLink
       aria-current={active ? "page" : undefined}
       aria-label={isCreate ? label : undefined}
       className={`${isCreate ? "create-nav" : "nav-item"} ${active ? "is-active" : ""}`}
@@ -376,6 +388,6 @@ function NavLink({
         />
       </span>
       <span className={isCreate ? "sr-only" : undefined}>{label}</span>
-    </Link>
+    </PendingLink>
   );
 }

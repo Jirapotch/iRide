@@ -97,6 +97,33 @@ test("nested community routes expose responsive breadcrumbs", async ({
   ).toBeVisible();
 });
 
+test("a slow destination acknowledges one navigation", async ({ page }) => {
+  let release: (() => void) | undefined;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/community/car*", async (route) => {
+    if (route.request().headers().rsc === "1") await held;
+    await route.continue();
+  });
+  await page.goto("/");
+  const cars = page.getByRole("link", { name: "Cars", exact: true });
+
+  try {
+    await cars.click({ noWaitAfter: true });
+    await expect(cars).toHaveAttribute("aria-busy", "true");
+    await expect(cars.locator(".link-pending-indicator")).toHaveAttribute(
+      "data-pending",
+      "true",
+    );
+    await cars.dispatchEvent("click");
+  } finally {
+    release?.();
+  }
+
+  await expect(page).toHaveURL(/\/community\/car$/);
+});
+
 test("settings contains theme and language without account settings", async ({
   page,
 }) => {

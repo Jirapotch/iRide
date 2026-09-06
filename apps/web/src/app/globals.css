@@ -2668,6 +2668,61 @@ button:disabled {
     height: 56px;
   }
 }
+:where(
+  .nav-item,
+  .create-nav,
+  .community-category-card,
+  .community-room-grid a,
+  .search-result-row,
+  .admin-user-list > a,
+  .admin-user-table a,
+  .drawer-row,
+  .profile-tabs a
+) {
+  position: relative;
+  transition:
+    transform 0.14s ease,
+    opacity 0.14s ease,
+    background-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+:where(
+  .nav-item,
+  .create-nav,
+  .community-category-card,
+  .community-room-grid a,
+  .search-result-row,
+  .admin-user-list > a,
+  .admin-user-table a,
+  .drawer-row,
+  .profile-tabs a
+):active {
+  transform: translateY(1px) scale(0.985);
+  opacity: 0.82;
+}
+.link-pending-indicator {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: currentcolor;
+  opacity: 0;
+  transform: scaleX(0.25);
+  transform-origin: left;
+  visibility: hidden;
+}
+.link-pending-indicator[data-pending="true"] {
+  visibility: visible;
+  animation: pending-link-reveal 0.2s ease 0.1s forwards;
+}
+a[aria-busy="true"] {
+  pointer-events: none;
+}
+@keyframes pending-link-reveal {
+  to {
+    opacity: 0.45;
+    transform: scaleX(0.72);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -4,11 +4,11 @@ import {
   ChatCircle,
   Motorcycle,
 } from "@phosphor-icons/react/dist/ssr";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 import { getRequestLocale } from "@/lib/request-locale";
 import { Breadcrumbs } from "../../_components/breadcrumbs";
+import { PendingLink } from "../../_components/pending-link";
 
 const vehicles = {
   car: { th: "รถยนต์", en: "Cars", icon: Car },
@@ -36,7 +36,7 @@ export default async function VehicleCommunityPage({
         </h1>
       </header>
       <div className="community-room-grid">
-        <Link href={`/community/${vehicle}/talk`}>
+        <PendingLink href={`/community/${vehicle}/talk`}>
           <ChatCircle size={34} weight="duotone" />
           <strong>{locale === "th" ? "พูดคุย" : "Talk"}</strong>
           <span>
@@ -44,7 +44,7 @@ export default async function VehicleCommunityPage({
               ? "แชร์เรื่องราวและประสบการณ์"
               : "Share stories and experience"}
           </span>
-        </Link>
+        </PendingLink>
       </div>
     </main>
   );
