@@ -1,22 +1,12 @@
 "use client";
 
-import {
-  ArrowRight,
-  ChatCircle,
-  GameController,
-  MapPin,
-  RoadHorizon,
-} from "@phosphor-icons/react";
-import type { EventDto, PostDto } from "@iride/types";
+import { ArrowRight } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 import type { Locale } from "@/lib/locale";
 import {
-  selectLatestCommunityPosts,
-  selectUpcomingEvents,
   type HomeFeatureKind,
-  type HomeLoadState,
   type RecentJourneyKind,
 } from "@/lib/home-domain";
 import { PendingLink } from "../pending-link";
@@ -35,7 +25,8 @@ const copy = {
     games: {
       label: "Games",
       title: "เกมส์",
-      detail: "ดูตัวอย่างเกมส์ที่กำลังพัฒนา ระบบเล่นและคะแนนจะตามมาภายหลัง",
+      detail:
+        "เลือกพาหนะแล้วท้าทายถนนที่ไม่มีวันสิ้นสุด เล่นได้ทั้งคีย์บอร์ดและมือถือ",
       action: "ดูเกมส์",
     },
     activities: {
@@ -51,8 +42,8 @@ const copy = {
     comments: "ความคิดเห็น",
     organizedBy: "จัดโดย",
     nextActivity: "กิจกรรมถัดไป",
-    comingSoon: "COMING SOON",
-    gamePreview: "ตัวอย่างเกมส์ ยังไม่มีการบันทึกคะแนนหรือข้อมูลการเล่น",
+    comingSoon: "PLAY NOW",
+    gamePreview: "เล่นได้แล้ว • ไม่มีการบันทึกคะแนนหรือข้อมูลการเล่น",
   },
   en: {
     kicker: "EXPLORE",
@@ -66,7 +57,8 @@ const copy = {
     games: {
       label: "Games",
       title: "Games",
-      detail: "Preview games in development. Gameplay and scores come later.",
+      detail:
+        "Choose a ride and challenge the endless road on keyboard or mobile.",
       action: "View games",
     },
     activities: {
@@ -82,41 +74,29 @@ const copy = {
     comments: "comments",
     organizedBy: "Organized by",
     nextActivity: "NEXT ACTIVITY",
-    comingSoon: "COMING SOON",
-    gamePreview: "Game preview only. No score or gameplay data is stored.",
+    comingSoon: "PLAY NOW",
+    gamePreview: "Playable now • No score or gameplay data is stored",
   },
 } as const;
 
 const features = [
-  { kind: "community", href: "/community/groups", number: "01" },
+  { kind: "community", href: "/community", number: "01" },
   { kind: "games", href: "/games", number: "02" },
   { kind: "activities", href: "/maps", number: "03" },
 ] as const;
 
 export function FeatureSelection({
-  events,
   locale,
   onNavigate,
-  posts,
 }: {
-  readonly events: HomeLoadState<EventDto[]>;
   readonly locale: Locale;
   readonly onNavigate: (kind: RecentJourneyKind, href: string) => void;
-  readonly posts: HomeLoadState<PostDto[]>;
 }) {
   const text = copy[locale];
   const rootRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<number | null>(null);
   const [active, setActive] = useState<HomeFeatureKind | null>(null);
   const [pointerEnabled, setPointerEnabled] = useState(false);
-  const communityPost =
-    posts.status === "ready"
-      ? selectLatestCommunityPosts(posts.data).groups
-      : undefined;
-  const upcomingEvent =
-    events.status === "ready"
-      ? selectUpcomingEvents(events.data)[0]
-      : undefined;
 
   useEffect(() => {
     const query = window.matchMedia(
@@ -216,9 +196,10 @@ export function FeatureSelection({
               data-feature-card={kind}
               href={href}
               key={kind}
-              {...(kind === "games"
-                ? {}
-                : { onClick: () => onNavigate(kind, href) })}
+              // {...(kind === "games"
+              //   ? {}
+              //   : { onClick: () => onNavigate(kind, href) })}
+              onClick={() => onNavigate(kind, href)}
               onBlur={(event) => {
                 if (
                   !event.currentTarget.parentElement?.contains(
@@ -237,16 +218,6 @@ export function FeatureSelection({
               }}
               onPointerMove={movePointer}
             >
-              {kind === "games" ? (
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  className={styles.featureImage}
-                  fill
-                  sizes="(max-width: 759px) 100vw, 50vw"
-                  src="/home/game-road.png"
-                />
-              ) : null}
               <span className={styles.featureLight} aria-hidden="true" />
               <span className={styles.featureNumber}>{number}</span>
               <span className={styles.featureBody}>
@@ -254,14 +225,6 @@ export function FeatureSelection({
                 <strong>{item.title}</strong>
                 <span className={styles.featureDetail}>{item.detail}</span>
               </span>
-              <FeatureVisual
-                communityPost={communityPost}
-                events={events}
-                kind={kind}
-                locale={locale}
-                posts={posts}
-                upcomingEvent={upcomingEvent}
-              />
               <span className={styles.featureAction}>
                 {item.action} <ArrowRight aria-hidden size={18} />
               </span>
@@ -270,93 +233,5 @@ export function FeatureSelection({
         })}
       </div>
     </section>
-  );
-}
-
-function FeatureVisual({
-  communityPost,
-  events,
-  kind,
-  locale,
-  posts,
-  upcomingEvent,
-}: {
-  readonly communityPost: PostDto | undefined;
-  readonly events: HomeLoadState<EventDto[]>;
-  readonly kind: HomeFeatureKind;
-  readonly locale: Locale;
-  readonly posts: HomeLoadState<PostDto[]>;
-  readonly upcomingEvent: EventDto | undefined;
-}) {
-  const text = copy[locale];
-  if (kind === "community") {
-    return (
-      <span className={styles.communityVisual} aria-live="polite">
-        {posts.status === "loading" ? (
-          <span className={styles.featureDataState}>{text.loading}</span>
-        ) : null}
-        {posts.status === "error" ? (
-          <span className={styles.featureDataState}>{text.loadError}</span>
-        ) : null}
-        {posts.status === "ready" && !communityPost ? (
-          <span className={styles.featureDataState}>{text.communityEmpty}</span>
-        ) : null}
-        {communityPost ? (
-          <span className={styles.featureSnapshot}>
-            <small>@{communityPost.author.username}</small>
-            <strong>{communityPost.body}</strong>
-            <span>
-              <ChatCircle aria-hidden size={16} /> {communityPost.commentCount}{" "}
-              {text.comments}
-            </span>
-          </span>
-        ) : null}
-      </span>
-    );
-  }
-  if (kind === "games") {
-    return (
-      <span className={styles.gameVisual} aria-hidden="true">
-        <GameController size={24} weight="fill" />
-        <span>
-          <small>{text.comingSoon}</small>
-          <strong>Traffic Endless Ride</strong>
-          <span>{text.gamePreview}</span>
-        </span>
-        <RoadHorizon size={30} />
-      </span>
-    );
-  }
-  return (
-    <span className={styles.activityVisual} aria-live="polite">
-      {events.status === "loading" ? (
-        <span className={styles.featureDataState}>{text.loading}</span>
-      ) : null}
-      {events.status === "error" ? (
-        <span className={styles.featureDataState}>{text.loadError}</span>
-      ) : null}
-      {events.status === "ready" && !upcomingEvent ? (
-        <span className={styles.featureDataState}>{text.activitiesEmpty}</span>
-      ) : null}
-      {upcomingEvent ? (
-        <>
-          <MapPin aria-hidden size={24} weight="fill" />
-          <span>
-            <small>{text.nextActivity}</small>
-            <strong>{upcomingEvent.title}</strong>
-            <span>
-              {upcomingEvent.locationLabel}
-              {upcomingEvent.destinationLabel
-                ? ` → ${upcomingEvent.destinationLabel}`
-                : ""}
-            </span>
-            <span>
-              {text.organizedBy} {upcomingEvent.organizer.displayName}
-            </span>
-          </span>
-          <span className={styles.routeDot} />
-        </>
-      ) : null}
-    </span>
   );
 }

@@ -6,10 +6,10 @@ export type HomeLoadState<T> =
   | { readonly status: "error" };
 
 export type HomeFeatureKind = "community" | "games" | "activities";
-export type RecentJourneyKind = Exclude<HomeFeatureKind, "games">;
+export type RecentJourneyKind = HomeFeatureKind;
 
 export interface RecentJourneyItem {
-  readonly kind: RecentJourneyKind;
+  readonly kind: HomeFeatureKind;
   readonly href: string;
   readonly visitedAt: string;
 }
@@ -17,9 +17,10 @@ export interface RecentJourneyItem {
 export type TrendingFilter = "all" | Exclude<CommunityCategory, "groups">;
 
 const featureHrefs = {
-  community: "/community/groups",
+  community: "/community",
   activities: "/maps",
-} as const satisfies Record<RecentJourneyKind, string>;
+  games: "/games",
+} as const
 
 export function filterTrendingPosts(
   posts: readonly PostDto[],

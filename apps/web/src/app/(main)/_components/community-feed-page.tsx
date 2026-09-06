@@ -12,12 +12,10 @@ import { CommunityFeedSkeleton } from "./page-skeletons";
 
 export async function CommunityFeedPage({
   category,
-  heading,
   room,
   searchParams,
 }: {
   readonly category: CommunityCategory;
-  readonly heading: { readonly th: string; readonly en: string };
   readonly room: "talk" | "groups";
   readonly searchParams: Promise<{
     readonly modal?: string;
@@ -29,19 +27,8 @@ export async function CommunityFeedPage({
     getVerifiedWebSession().catch(() => null),
     searchParams,
   ]);
-  const pathname =
-    room === "groups" ? "/community/groups" : `/community/${category}/talk`;
   return (
-    <div className="community-page">
-      <Breadcrumbs
-        items={resolveBreadcrumbs(pathname, { locale })}
-        locale={locale}
-      />
-      <header className="community-heading">
-        <h1 data-route-heading tabIndex={-1}>
-          {heading[locale]}
-        </h1>
-      </header>
+    <div>
       <Suspense fallback={<CommunityFeedSkeleton />}>
         <CommunityFeedSection
           accessToken={session?.accessToken}

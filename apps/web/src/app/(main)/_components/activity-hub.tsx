@@ -34,7 +34,6 @@ import {
   mapStateHref,
   mapStyle,
   parseMapKinds,
-  resolveBreadcrumbs,
 } from "@/lib/app-navigation-domain";
 import { getExploreContent } from "@/lib/content-api";
 import { googleMapsSearchUrl } from "@/lib/google-maps-domain";
@@ -44,7 +43,6 @@ import { mapSelectionCamera } from "@/lib/map-motion";
 import { motionTokens } from "@/shared/theme/tokens";
 import { removeContent } from "../create/actions";
 import { ActionSubmitButton } from "./action-submit-button";
-import { Breadcrumbs } from "./breadcrumbs";
 import { BackendForm } from "./create-content-screen";
 import { EditModal } from "./edit-modal";
 import { PendingLink } from "./pending-link";
@@ -509,12 +507,6 @@ export function ActivityHub({
       <h1 className="sr-only" data-route-heading tabIndex={-1}>
         {locale === "th" ? "แผนที่" : "Maps"}
       </h1>
-      <div className="map-breadcrumbs">
-        <Breadcrumbs
-          items={resolveBreadcrumbs("/maps", { locale })}
-          locale={locale}
-        />
-      </div>
       <div className="map-canvas" ref={containerRef} />
       <div
         aria-label={locale === "th" ? "ผลลัพธ์บนแผนที่" : "Map results"}

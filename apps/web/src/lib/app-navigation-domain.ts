@@ -23,6 +23,7 @@ export interface BreadcrumbContext {
 const breadcrumbLabels = {
   th: {
     home: "หน้าหลัก",
+    community: "ชุมชน",
     talk: "พูดคุย",
     groups: "กลุ่ม",
     maps: "แผนที่",
@@ -37,6 +38,7 @@ const breadcrumbLabels = {
   },
   en: {
     home: "Home",
+    community: "Community",
     talk: "Talk",
     groups: "Groups",
     maps: "Maps",
@@ -75,20 +77,35 @@ export function resolveBreadcrumbs(
     /^\/community\/(car|motorcycle|bicycle|groups)(?:\/(talk))?$/.exec(
       pathname,
     );
+
   if (community) {
     const category = community[1] as keyof typeof vehicleBreadcrumbLabels;
     const categoryHref = `/community/${category}`;
+
+    const communityItem: BreadcrumbItem = {
+      key: "community",
+      label: labels.community,
+      href: "/community",
+    };
+
     const categoryItem: BreadcrumbItem = {
       key: `community-${category}`,
       label: vehicleBreadcrumbLabels[category][context.locale],
       ...(community[2] ? { href: categoryHref } : {}),
     };
+
     return community[2]
-      ? [home, categoryItem, { key: "community-talk", label: labels.talk }]
-      : [home, categoryItem];
+      ? [
+        home,
+        communityItem,
+        categoryItem,
+        { key: "community-talk", label: labels.talk },
+      ]
+      : [home, communityItem, categoryItem];
   }
 
   const staticRoute = {
+    "/community": ["community", labels.community],
     "/maps": ["maps", labels.maps],
     "/search": ["search", labels.search],
     "/create": ["create", labels.create],
@@ -100,6 +117,14 @@ export function resolveBreadcrumbs(
     return [home, { key: staticItem[0], label: staticItem[1] }];
   }
 
+  if (pathname === "/games/traffic-endless-ride") {
+    return [
+      home,
+      { key: "games", label: labels.games, href: "/games" },
+      { key: "traffic-endless-ride", label: "Traffic Endless Ride" },
+    ];
+  }
+
   const profile = /^\/users\/([^/]+)$/.exec(pathname);
   if (profile) {
     const profileLabel = context.entityLabel ?? labels.profile;
@@ -108,8 +133,8 @@ export function resolveBreadcrumbs(
       label: profileLabel,
       ...(context.tab === "garage" || context.tab === "activities"
         ? {
-            href: `/users/${canonicalPathSegment(profile[1] ?? "")}`,
-          }
+          href: `/users/${canonicalPathSegment(profile[1] ?? "")}`,
+        }
         : {}),
     };
     if (context.tab === "garage") {
@@ -191,7 +216,7 @@ export function legacyCommunityHref(
   selection: { readonly post?: string; readonly modal?: string } = {},
 ): string {
   if (room === "market" || room === "photographers") return "/";
-  const pathname = "/community/groups";
+  const pathname = "/community";
   const query = new URLSearchParams();
   if (selection.post) query.set("post", selection.post);
   if (selection.modal === "edit") query.set("modal", "edit");
