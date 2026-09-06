@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsx watch src/api-application.ts",
     "dev:worker": "tsx watch src/worker.ts",
     "build": "tsc --noEmit && tsup",
     "start": "node dist/main.js",

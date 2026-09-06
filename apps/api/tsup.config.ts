@@ -2,7 +2,7 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: {
-    main: "src/main.ts",
+    main: "src/api-application.ts",
     worker: "src/worker.ts",
   },
   format: ["cjs"],
