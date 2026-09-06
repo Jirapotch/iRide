@@ -3,7 +3,6 @@
 import Link, { useLinkStatus, type LinkProps } from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
-  useEffect,
   useState,
   type AnchorHTMLAttributes,
   type MouseEvent,
@@ -38,12 +37,11 @@ export function PendingLink({
 }: PendingLinkProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [acknowledged, setAcknowledged] = useState(false);
   const locationKey = `${pathname}?${searchParams.toString()}`;
-
-  useEffect(() => {
-    setAcknowledged(false);
-  }, [locationKey]);
+  const [acknowledgedLocation, setAcknowledgedLocation] = useState<
+    string | null
+  >(null);
+  const acknowledged = acknowledgedLocation === locationKey;
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
     onClick?.(event);
@@ -64,7 +62,7 @@ export function PendingLink({
     }
     if (event.currentTarget.href === window.location.href) return;
 
-    setAcknowledged(true);
+    setAcknowledgedLocation(locationKey);
   }
 
   return (
