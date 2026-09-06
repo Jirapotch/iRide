@@ -4,9 +4,7 @@ import { safeNextPath, safeReturnPath } from "./auth-redirect";
 
 describe("safeNextPath", () => {
   it("accepts a clean local path", () => {
-    expect(safeNextPath("/create?type=post")).toBe(
-      "/create?type=post",
-    );
+    expect(safeNextPath("/create?type=post")).toBe("/create?type=post");
     expect(safeNextPath("/")).toBe("/");
   });
 
@@ -37,5 +35,11 @@ describe("safeNextPath", () => {
     );
     expect(safeReturnPath("/en/account")).toBe("/");
     expect(safeReturnPath("https://evil.example/")).toBe("/");
+  });
+
+  it("uses a caller supplied safe return fallback", () => {
+    expect(safeReturnPath("https://evil.example", "/settings/users")).toBe(
+      "/settings/users",
+    );
   });
 });

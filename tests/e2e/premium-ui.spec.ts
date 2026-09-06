@@ -4,16 +4,18 @@ async function openActivityCreateForm(page: Page) {
   await page.goto("/login?next=%2Fcreate%3Ftype%3Dactivity");
   await page.getByRole("button", { name: /Google/ }).click();
   await expect(page).toHaveURL(/\/create\?type=activity$/);
-  await expect(page.locator("form.form-stack")).toBeVisible();
+  const form = page.locator("form.form-stack:visible");
+  await expect(form).toBeVisible();
+  return form;
 }
 
 async function createOwnerActivity(page: Page) {
-  await openActivityCreateForm(page);
-  await page.getByLabel("Title").fill("Owner meeting");
-  await page.getByLabel("Location name").fill("Bangkok");
-  await page.getByLabel("Starts").fill("2026-09-01T06:00");
-  await page.getByLabel("Ends").fill("2026-09-01T08:00");
-  await page.getByRole("button", { name: "Publish" }).click();
+  const form = await openActivityCreateForm(page);
+  await form.getByLabel("Title").fill("Owner meeting");
+  await form.getByLabel("Location name").fill("Bangkok");
+  await form.getByLabel("Starts").fill("2026-09-01T06:00");
+  await form.getByLabel("Ends").fill("2026-09-01T08:00");
+  await form.getByRole("button", { name: "Publish" }).click();
   await expect(page).toHaveURL(/\/maps\?marker=/);
 }
 
@@ -72,6 +74,30 @@ test.beforeEach(async ({ context, page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
 });
 
+test("route content uses a short entrance without delaying navigation", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Search", exact: true }).click();
+  const content = page.locator('[data-ui="route-content"]');
+  await expect(page).toHaveURL(/\/search$/);
+  await expect(content).toHaveCSS("animation-name", "route-content-enter");
+  await expect(content).toHaveCSS("animation-duration", "0.2s");
+});
+
+test("reduced motion collapses the route animation duration", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/search");
+  const durationSeconds = await page
+    .locator('[data-ui="route-content"]')
+    .evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).animationDuration),
+    );
+  expect(durationSeconds).toBeLessThanOrEqual(0.00001);
+});
+
 test("locked accounts see a read-only create state", async ({
   page,
   request,
@@ -97,12 +123,13 @@ test("post category is required and changing it on edit redirects to the new fee
 }) => {
   await page.goto("/login?next=%2Fcreate%3Ftype%3Dpost%26category%3Dcar");
   await page.getByRole("button", { name: /Google/ }).click();
-  const category = page.getByLabel("Community category");
+  const form = page.locator("form.form-stack:visible");
+  const category = form.getByLabel("Community category");
   await expect(category).toHaveAttribute("required", "");
   await expect(category.locator("option")).toHaveCount(4);
-  await page.getByLabel("Post text").fill("Category route test");
+  await form.getByLabel("Post text").fill("Category route test");
   await category.selectOption("car");
-  await page.getByRole("button", { name: "Publish" }).click();
+  await form.getByRole("button", { name: "Publish" }).click();
   await expect(page).toHaveURL(/\/community\/car\/talk\?post=/);
   const createdUrl = new URL(page.url());
   await page.goto(`${createdUrl.pathname}${createdUrl.search}&modal=edit`);
@@ -203,15 +230,77 @@ test("maps renders the full map and marker filter FAB without list mode", async 
   await expect(marker).toHaveCSS("clip-path", /polygon\(50% 100%/);
 });
 
-test("home categories lead to their nested talk pages", async ({ page }) => {
+test("map marker and filters survive browser Back", async ({ page }) => {
+  await page.route("**/api/explore?**", async (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: [
+          {
+            id: "marker-1",
+            kind: "meeting",
+            title: "Test meeting",
+            subtitle: "Bangkok",
+            latitude: 13.7563,
+            longitude: 100.5018,
+            startsAt: "2026-09-01T06:00:00.000Z",
+            endsAt: null,
+            author: {
+              id: "author-1",
+              username: "rider",
+              displayName: "Rider",
+            },
+            canEdit: false,
+          },
+        ],
+      }),
+    }),
+  );
+  await page.goto("/maps?layers=meeting%2Ctrip");
+  await page.getByRole("button", { name: "Filter markers" }).click();
+  await expect(page.getByRole("checkbox", { name: "Event" })).not.toBeChecked();
+  await page.getByRole("button", { name: "Test meeting" }).click();
+  await expect(page).toHaveURL(/marker=marker-1/);
   await page.goto("/");
-  for (const category of ["Cars", "Motorcycles", "Bicycles", "Groups"])
-    await expect(
-      page.getByRole("link", { name: category, exact: true }),
-    ).toBeVisible();
-  await page.getByRole("link", { name: "Motorcycles", exact: true }).click();
-  await expect(page.getByRole("link", { name: /^Talk/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /^Market/ })).toHaveCount(0);
+  await page.goBack();
+  await expect(page).toHaveURL(/layers=meeting%2Ctrip/);
+  await expect(
+    page.getByRole("dialog", { name: "Test meeting" }),
+  ).toBeVisible();
+});
+
+test("map marker failure offers retry without hiding the map", async ({
+  page,
+}) => {
+  await page.route("**/api/explore?**", (route) => route.abort());
+  await page.goto("/maps");
+  await expect(page.getByText("Markers could not load")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Retry markers" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Discover map" }),
+  ).toBeVisible();
+});
+
+test("home discovery cards lead to their intended destinations", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const features = page.locator('[data-ui="feature-selection"]');
+  await expect(
+    features.getByRole("link", { name: "Community" }),
+  ).toHaveAttribute("href", "/community/groups");
+  await expect(features.getByRole("link", { name: "Games" })).toHaveAttribute(
+    "href",
+    "/games",
+  );
+  await expect(
+    features.getByRole("link", { name: "Activities" }),
+  ).toHaveAttribute("href", "/maps");
+  await features.getByRole("link", { name: "Community" }).click();
+  await expect(page).toHaveURL(/\/community\/groups$/);
+  await expect(page.getByRole("heading", { name: "Groups" })).toBeFocused();
 });
 
 test("theme selection survives reload", async ({ page }) => {
@@ -268,9 +357,9 @@ test("removed product routes redirect home while unknown legacy routes return 40
 });
 
 test("has no horizontal overflow at target widths", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   for (const width of [360, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
-    await page.goto("/");
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth > innerWidth,
@@ -388,30 +477,38 @@ test("desktop marker detail uses a tall side panel without document growth", asy
   );
 });
 
-test("home keeps mobile choices compact, readable, and keyboard visible", async ({
+test("home keeps mobile story cards readable and keyboard visible", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
-  const intro = page.locator(".community-home-heading p");
-  const cars = page.getByRole("link", { name: "Cars", exact: true });
+  const intro = page.getByText(
+    "Meet people, play, and create new memories along the same road.",
+  );
+  const activities = page.getByRole("link", {
+    name: "Activities",
+    exact: true,
+  });
   expect(
     await intro.evaluate((element) =>
       Number.parseFloat(getComputedStyle(element).fontSize),
     ),
   ).toBeGreaterThanOrEqual(16);
   expect(
-    await cars.evaluate((element) => element.getBoundingClientRect().height),
-  ).toBeLessThanOrEqual(128);
+    await activities.evaluate(
+      (element) => element.getBoundingClientRect().height,
+    ),
+  ).toBeGreaterThanOrEqual(320);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    ),
+  ).toBe(false);
 
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await expect(cars).toBeFocused();
-  await expect(cars).toHaveCSS("outline-style", "solid");
+  await activities.focus();
+  await expect(activities).toBeFocused();
+  await expect(activities).toHaveCSS("outline-style", "solid");
 });
 
 test("reduced motion keeps marker selection instant and understandable", async ({
@@ -570,7 +667,7 @@ test("owner edit opens only the edit dialog with contained datetime controls", a
 test("Google Maps import updates the form and the rendered map location", async ({
   page,
 }) => {
-  await openActivityCreateForm(page);
+  const form = await openActivityCreateForm(page);
 
   const map = page.locator(".mini-map-preview");
   await page.getByRole("button", { name: "Import from Google Maps" }).click();
@@ -583,10 +680,10 @@ test("Google Maps import updates the form and the rendered map location", async 
     .fill("https://www.google.com/maps/search/?api=1&query=18.788343,98.9853");
   await importDialog.getByRole("button", { name: "Use this location" }).click();
 
-  await expect(page.locator('input[name="latitude"]')).toHaveValue("18.788343");
-  await expect(page.locator('input[name="longitude"]')).toHaveValue("98.9853");
-  await expect(page.getByLabel("Latitude")).toHaveValue("18.788343");
-  await expect(page.getByLabel("Longitude")).toHaveValue("98.9853");
+  await expect(form.locator('input[name="latitude"]')).toHaveValue("18.788343");
+  await expect(form.locator('input[name="longitude"]')).toHaveValue("98.9853");
+  await expect(form.getByLabel("Latitude")).toHaveValue("18.788343");
+  await expect(form.getByLabel("Longitude")).toHaveValue("98.9853");
   await expect(map).toHaveAttribute("data-camera-center", "98.9853,18.788343");
   await expect(
     map.getByRole("img", { name: "Selected location" }),
@@ -620,12 +717,12 @@ test("an invalid map URL leaves its import panel open with an error", async ({
 test("activity datetime fields stay within their grid at target viewport widths", async ({
   page,
 }) => {
-  await openActivityCreateForm(page);
+  const form = await openActivityCreateForm(page);
 
   for (const width of [360, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
     for (const name of ["startsAt", "endsAt"]) {
-      const input = page.locator(`input[name="${name}"]`);
+      const input = form.locator(`input[name="${name}"]`);
       expect(
         await input.evaluate((element) => {
           const shell = element.parentElement!;

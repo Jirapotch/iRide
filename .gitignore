@@ -16,6 +16,8 @@
 **/coverage/
 /test-results/
 /playwright-report/
+/.artifacts/navigation-ux/*.png
+/.artifacts/home-discovery/*.png
 
 # next.js
 **/.next/

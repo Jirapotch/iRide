@@ -74,6 +74,129 @@ test("search is a page and absent from header actions", async ({ page }) => {
   ).toHaveCount(0);
 });
 
+test("browser Back restores the search query", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Search" }).click();
+  const input = page.getByRole("textbox", { name: "Search" });
+  await input.fill("ride");
+  await expect(page).toHaveURL(/\/search\?q=ride$/);
+  await expect(input).toHaveValue("ride");
+  await page.getByRole("link", { name: "iRide home" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/search\?q=ride$/);
+  await expect(input).toHaveValue("ride");
+});
+
+test("failed search offers retry without clearing the query", async ({
+  page,
+}) => {
+  await page.route("**/api/v1/search?**", (route) => route.abort());
+  await page.goto("/search?q=ride");
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Search" })).toHaveValue(
+    "ride",
+  );
+});
+
+test("nested community routes expose responsive breadcrumbs", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/community/car/talk");
+  const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
+  await expect(breadcrumb.getByRole("link", { name: "Home" })).toBeVisible();
+  await expect(breadcrumb.getByRole("link", { name: "Cars" })).toBeVisible();
+  const homeCrumb = breadcrumb.getByRole("link", { name: "Home" });
+  await homeCrumb.focus();
+  await expect(homeCrumb).toBeFocused();
+  await expect(homeCrumb).toHaveCSS("outline-style", "solid");
+  await expect(breadcrumb.getByText("Talk", { exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(breadcrumb.locator(".breadcrumb-full")).toHaveCSS(
+    "position",
+    "absolute",
+  );
+  await expect(
+    breadcrumb.getByRole("link", { name: "Back to Cars" }),
+  ).toBeVisible();
+});
+
+test("a slow destination acknowledges one navigation", async ({ page }) => {
+  let release: (() => void) | undefined;
+  let requests = 0;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/games*", async (route) => {
+    if (route.request().headers().rsc === "1") {
+      requests += 1;
+      await held;
+    }
+    await route.continue();
+  });
+  await page.goto("/");
+  const games = page.getByRole("link", { name: "Games", exact: true });
+
+  try {
+    await games.click({ noWaitAfter: true });
+    await expect(games).toHaveAttribute("aria-busy", "true");
+    await expect(games.locator(".link-pending-indicator")).toHaveAttribute(
+      "data-pending",
+      "true",
+    );
+    await expect(games.locator(".link-pending-indicator")).toHaveAttribute(
+      "data-link-pending",
+      "true",
+    );
+    await page.waitForTimeout(2_700);
+    await expect(games).toHaveAttribute("aria-busy", "true");
+    const requestsBeforeRepeat = requests;
+    await games.dispatchEvent("click");
+    await page.waitForTimeout(100);
+    expect(requests).toBe(requestsBeforeRepeat);
+  } finally {
+    release?.();
+  }
+
+  await expect(page).toHaveURL(/\/games$/);
+});
+
+test("create renders its form before optional marker data", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:54321/test/delay", {
+    data: { path: "/rest/v1/events", milliseconds: 2_000 },
+  });
+  await page.goto("/login?next=%2Fcreate%3Ftype%3Dpost");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Create something new" }),
+  ).toBeVisible({ timeout: 1_500 });
+  await expect(
+    page.getByPlaceholder("Write a post and type @ to attach a marker"),
+  ).toBeVisible();
+});
+
+test("pathname navigation focuses the destination heading", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Games", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Traffic Endless Ride" }),
+  ).toBeFocused();
+  await page.getByRole("link", { name: "iRide home" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Every road has a story" }),
+  ).toBeFocused();
+});
+
 test("settings contains theme and language without account settings", async ({
   page,
 }) => {
@@ -86,16 +209,22 @@ test("settings contains theme and language without account settings", async ({
   await expect(drawer.getByText("Account settings")).toHaveCount(0);
 });
 
-test("active administrators can open the user management list", async ({ page }) => {
+test("active administrators can open the user management list", async ({
+  page,
+}) => {
   await page.goto("/login?next=%2F");
   await page.getByRole("button", { name: /Google/ }).click();
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("link", { name: "Manage users" }).click();
-  await expect(page.getByRole("heading", { name: "Manage users" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Manage users" }),
+  ).toBeVisible();
   await expect(page.getByRole("link", { name: /E2E Rider/ })).toBeVisible();
   await expect(page.getByText("oauth-user@iride.test")).toBeVisible();
 
-  await page.getByRole("textbox", { name: "Search users" }).fill("locked@iride.test");
+  await page
+    .getByRole("textbox", { name: "Search users" })
+    .fill("locked@iride.test");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page.getByRole("link", { name: /Locked Rider/ })).toBeVisible();
   await page.getByRole("link", { name: "Clear search" }).click();
@@ -103,11 +232,154 @@ test("active administrators can open the user management list", async ({ page })
   await expect(page.getByRole("link", { name: /E2E Rider/ })).toBeVisible();
 });
 
+test("admin controls render while the user list is delayed", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await expect(page.getByRole("link", { name: /E2E Rider/ })).toBeVisible();
+  await request.post("http://127.0.0.1:54321/test/delay", {
+    data: { path: "/auth/v1/admin/users", milliseconds: 4_000 },
+  });
+  await page.getByRole("textbox", { name: "Search users" }).fill("locked");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Manage users" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Search users" }),
+  ).toBeVisible();
+  await expect(page.locator('[data-ui="admin-list-skeleton"]')).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Primary navigation" }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: /Locked Rider/ })).toBeVisible();
+});
+
 test("administrators can unlock a locked user", async ({ page }) => {
   await page.goto("/login?next=%2Fsettings%2Fusers");
   await page.getByRole("button", { name: /Google/ }).click();
   await page.getByRole("link", { name: /Locked Rider/ }).click();
   await expect(page.getByText("user · locked", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Unlock", exact: true }).click();
+  const unlock = page.getByRole("button", { name: "Unlock", exact: true });
+  await unlock.dblclick({ noWaitAfter: true });
+  await expect(unlock).toBeDisabled();
+  await expect(unlock).toHaveAttribute("aria-busy", "true");
+  await expect(page.getByText("Unlocking…", { exact: true })).toBeVisible();
   await expect(page.getByText("user · active", { exact: true })).toBeVisible();
+});
+
+test("current main routes expose navigation UX contracts", async ({ page }) => {
+  for (const route of [
+    "/search",
+    "/maps",
+    "/notifications",
+    "/community/groups",
+  ]) {
+    await page.goto(route);
+    await expect(page.locator("h1[data-route-heading]")).toHaveCount(1);
+    const breadcrumbs = page.getByRole("navigation", { name: "Breadcrumb" });
+    await expect(breadcrumbs).toBeVisible();
+    await expect(breadcrumbs.locator('[aria-current="page"]')).toHaveCount(1);
+    await expect(
+      page.getByRole("navigation", { name: "Primary navigation" }),
+    ).toBeVisible();
+  }
+});
+
+test("a selected map record error keeps the map available", async ({
+  page,
+}) => {
+  await page.goto("/maps?marker=missing-marker&modal=edit");
+  await expect(page.locator(".map-canvas")).toBeVisible();
+  const error = page.getByRole("alert").filter({
+    hasText: "The selected place could not load",
+  });
+  await expect(error).toBeVisible();
+  await expect(error.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(
+    page.getByText("You do not have permission to edit this marker."),
+  ).toHaveCount(0);
+});
+
+test("admin detail returns to the exact filtered list", async ({ page }) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers%3Fq%3Dlocked%26page%3D1");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByRole("link", { name: /Locked Rider/ }).click();
+  await page.getByRole("button", { name: "Back to user list" }).click();
+  await expect(page).toHaveURL(/\/settings\/users\?q=locked/);
+  await expect(page.getByRole("textbox", { name: "Search users" })).toHaveValue(
+    "locked",
+  );
+});
+
+test("a directly opened admin detail uses its safe fallback", async ({
+  page,
+}) => {
+  const next = encodeURIComponent(
+    "/settings/users/22222222-2222-4222-8222-222222222222?from=/settings/users?q=locked",
+  );
+  await page.goto(`/login?next=${next}`);
+  await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByRole("button", { name: "Back to user list" }).click();
+  await expect(page).toHaveURL(/\/settings\/users\?q=locked$/);
+});
+
+test("admin detail does not reuse stale list history", async ({ page }) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers%3Fq%3Dlocked");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByRole("link", { name: /Locked Rider/ }).click();
+  await expect(
+    page.getByRole("button", { name: "Back to user list" }),
+  ).toBeVisible();
+  const detailUrl = page.url();
+  await page.getByRole("link", { name: "iRide home" }).click();
+  await page.goto(detailUrl);
+  await page.getByRole("button", { name: "Back to user list" }).click();
+  await expect(page).toHaveURL(/\/settings\/users\?q=locked$/);
+});
+
+test("browser Back restores the filtered list scroll position", async ({
+  page,
+}) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers%3Fq%3Drider");
+  await page.getByRole("button", { name: /Google/ }).click();
+  const detailLink = page
+    .getByRole("link", { name: /Rider/ })
+    .filter({ visible: true })
+    .first();
+  await page.addStyleTag({
+    content: "html, body { min-height: 2400px !important; }",
+  });
+  await detailLink.evaluate((element) => {
+    const spacer = document.createElement("div");
+    spacer.style.height = "1200px";
+    element.closest(".admin-user-table")?.before(spacer);
+    element.scrollIntoView({ block: "center" });
+  });
+  const before = await page.evaluate(() => window.scrollY);
+  expect(before).toBeGreaterThan(200);
+  await detailLink.click();
+  await page.getByRole("button", { name: "Back to user list" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate((target) => {
+        const maximum =
+          document.documentElement.scrollHeight - window.innerHeight;
+        return window.scrollY >= Math.min(target - 2, maximum - 2);
+      }, before),
+    )
+    .toBe(true);
+});
+
+test("a destination error keeps navigation available", async ({ page }) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers%2Fnot-a-user");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await expect(page).toHaveURL(/\/settings\/users\/not-a-user$/);
+  await expect(page.locator(".route-error")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Primary navigation" }),
+  ).toBeVisible();
 });

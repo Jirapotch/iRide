@@ -20,44 +20,33 @@ import type {
   VehicleKind,
 } from "@iride/types";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
-import { attachProfileMediaAction } from "../../media-actions";
-import { ProfileForm } from "../../profile/profile-form";
-import { editProfile } from "../../profile/actions";
+import { attachProfileMediaAction } from "../../../media-actions";
+import { ProfileForm } from "../../../profile/profile-form";
+import { editProfile } from "../../../profile/actions";
 import { mediaVariantUrl } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
-import { EditModal } from "../../(main)/_components/edit-modal";
-import { ActionSubmitButton } from "../../(main)/_components/action-submit-button";
-import {
-  removeVehicleAction,
-  saveVehicleAction,
-} from "../../(main)/create/actions";
+import { PendingLink } from "../../_components/pending-link";
+import { EditModal } from "../../_components/edit-modal";
+import { ActionSubmitButton } from "../../_components/action-submit-button";
+import { removeVehicleAction, saveVehicleAction } from "../../create/actions";
 import { MediaUploader } from "./media-uploader";
 
 interface Props {
-  readonly activities: readonly ExploreFeatureDto[];
-  readonly canManage: boolean;
   readonly initialTab?: string;
   readonly locale: Locale;
-  readonly modal?: string;
   readonly ownerProfile: OwnProfileDto | null;
   readonly profile: PublicProfileDto;
-  readonly selectedVehicleId?: string;
-  readonly vehicles: readonly VehicleDto[];
+  readonly tabContent: ReactNode;
 }
 export function UserProfileScreen({
-  activities,
-  canManage,
   initialTab,
   locale,
-  modal,
   ownerProfile,
   profile,
-  selectedVehicleId,
-  vehicles,
+  tabContent,
 }: Props) {
   const router = useRouter(),
     [editing, setEditing] = useState(false),
@@ -66,18 +55,6 @@ export function UserProfileScreen({
         ? initialTab
         : "overview",
     initials = profile.displayName.slice(0, 2).toUpperCase();
-  const selected = selectedVehicleId
-      ? (vehicles.find(
-          (item) => item.id === selectedVehicleId && item.canEdit,
-        ) ?? null)
-      : null,
-    showVehicleModal = Boolean(
-      (modal === "create-vehicle" && ownerProfile?.canWrite) ||
-      (modal === "edit" && selected && (ownerProfile?.canWrite || canManage)),
-    );
-  const vehicleEditDenied = Boolean(
-    modal === "edit" && selectedVehicleId && !selected,
-  );
   const text =
     locale === "th"
       ? {
@@ -121,7 +98,11 @@ export function UserProfileScreen({
             unoptimized
           />
         ) : (
-          <div aria-label="Profile cover placeholder" className="profile-cover-placeholder" role="img" />
+          <div
+            aria-label="Profile cover placeholder"
+            className="profile-cover-placeholder"
+            role="img"
+          />
         )}
         <div aria-hidden="true" />
       </div>
@@ -150,26 +131,28 @@ export function UserProfileScreen({
                 {text.cancel}
               </button>
             </div>
-            {ownerProfile.canWrite ? <div className="profile-media-editors">
-              <section>
-                <h2>{locale === "th" ? "รูปโปรไฟล์" : "Profile photo"}</h2>
-                <MediaUploader
-                  cropRatio={1}
-                  locale={locale}
-                  onReady={(id) => attach("avatar", id)}
-                  purpose="avatar"
-                />
-              </section>
-              <section>
-                <h2>{locale === "th" ? "ภาพ Cover" : "Cover image"}</h2>
-                <MediaUploader
-                  cropRatio={3}
-                  locale={locale}
-                  onReady={(id) => attach("cover", id)}
-                  purpose="cover"
-                />
-              </section>
-            </div> : null}
+            {ownerProfile.canWrite ? (
+              <div className="profile-media-editors">
+                <section>
+                  <h2>{locale === "th" ? "รูปโปรไฟล์" : "Profile photo"}</h2>
+                  <MediaUploader
+                    cropRatio={1}
+                    locale={locale}
+                    onReady={(id) => attach("avatar", id)}
+                    purpose="avatar"
+                  />
+                </section>
+                <section>
+                  <h2>{locale === "th" ? "ภาพ Cover" : "Cover image"}</h2>
+                  <MediaUploader
+                    cropRatio={3}
+                    locale={locale}
+                    onReady={(id) => attach("cover", id)}
+                    purpose="cover"
+                  />
+                </section>
+              </div>
+            ) : null}
             <ProfileForm
               action={editProfile}
               initialProfile={ownerProfile}
@@ -181,16 +164,15 @@ export function UserProfileScreen({
             <div className="profile-title-row">
               <div className="space-y-2">
                 <p className="premium-kicker">{text.profile}</p>
-                <h1>{profile.displayName}</h1>
+                <h1 data-route-heading tabIndex={-1}>
+                  {profile.displayName}
+                </h1>
                 <p className="font-mono text-sm text-muted-foreground">
                   @{profile.username}
                 </p>
               </div>
               {ownerProfile ? (
-                <Button
-                  onClick={() => setEditing(true)}
-                  type="primary"
-                >
+                <Button onClick={() => setEditing(true)} type="primary">
                   {text.edit}
                 </Button>
               ) : null}
@@ -211,13 +193,13 @@ export function UserProfileScreen({
               }
             >
               {(["overview", "garage", "activities"] as const).map((value) => (
-                <Link
+                <PendingLink
                   aria-current={tab === value ? "page" : undefined}
                   href={`/users/${profile.username}${value === "overview" ? "" : `?tab=${value}`}`}
                   key={value}
                 >
                   {text[value]}
-                </Link>
+                </PendingLink>
               ))}
             </nav>
             {tab === "overview" ? (
@@ -233,56 +215,21 @@ export function UserProfileScreen({
                 </article>
                 <article className="premium-card p-5">
                   <p className="premium-kicker">Garage</p>
-                  <strong>{vehicles.length} Vehicles</strong>
+                  <PendingLink href={`/users/${profile.username}?tab=garage`}>
+                    {locale === "th" ? "เปิด Garage" : "View garage"}
+                  </PendingLink>
                 </article>
               </section>
             ) : null}
-            {tab === "garage" ? (
-              <GaragePanel
-                locale={locale}
-                canCreate={ownerProfile?.canWrite ?? false}
-                username={profile.username}
-                vehicles={vehicles}
-              />
-            ) : null}
-            {tab === "activities" ? (
-              <ProfileActivities activities={activities} locale={locale} />
-            ) : null}
+            {tab !== "overview" ? tabContent : null}
           </>
         )}
-        {showVehicleModal ? (
-          <EditModal
-            closeUrl={`/users/${profile.username}?tab=garage${selected ? `&vehicle=${selected.id}` : ""}`}
-            title={
-              selected
-                ? locale === "th"
-                  ? "แก้ไข Vehicle"
-                  : "Edit vehicle"
-                : locale === "th"
-                  ? "เพิ่ม Vehicle"
-                  : "Add vehicle"
-            }
-          >
-            <VehicleForm
-              initial={selected}
-              locale={locale}
-              username={profile.username}
-            />
-          </EditModal>
-        ) : null}
-        {vehicleEditDenied ? (
-          <div className="permission-toast" role="alert">
-            {locale === "th"
-              ? "คุณไม่มีสิทธิ์แก้ไข Vehicle นี้"
-              : "You do not have permission to edit this vehicle."}
-          </div>
-        ) : null}
       </div>
     </article>
   );
 }
 
-function ProfileActivities({
+export function ProfileActivities({
   activities,
   locale,
 }: {
@@ -297,7 +244,9 @@ function ProfileActivities({
             ? "ยังไม่มีกิจกรรมที่เผยแพร่"
             : "No published activities yet"}
         </strong>
-        <Link href="/maps">{locale === "th" ? "เปิดแผนที่" : "Open map"}</Link>
+        <PendingLink href="/maps">
+          {locale === "th" ? "เปิดแผนที่" : "Open map"}
+        </PendingLink>
       </section>
     );
   return (
@@ -312,7 +261,7 @@ function ProfileActivities({
                 ? Path
                 : Camera;
         return (
-          <Link
+          <PendingLink
             className="premium-card profile-activity-card"
             href={`/maps?marker=${activity.id}`}
             key={`${activity.kind}:${activity.id}`}
@@ -334,24 +283,44 @@ function ProfileActivities({
                 }).format(new Date(activity.startsAt))}
               </time>
             </div>
-          </Link>
+          </PendingLink>
         );
       })}
     </section>
   );
 }
 
-function GaragePanel({
+export function GaragePanel({
   canCreate,
+  canManage,
   locale,
+  modal,
+  ownerProfile,
+  selectedVehicleId,
   username,
   vehicles,
 }: {
   readonly locale: Locale;
   readonly canCreate: boolean;
+  readonly canManage: boolean;
+  readonly modal: string | undefined;
+  readonly ownerProfile: OwnProfileDto | null;
+  readonly selectedVehicleId: string | undefined;
   readonly username: string;
   readonly vehicles: readonly VehicleDto[];
 }) {
+  const selected = selectedVehicleId
+      ? (vehicles.find(
+          (item) => item.id === selectedVehicleId && item.canEdit,
+        ) ?? null)
+      : null,
+    showVehicleModal = Boolean(
+      (modal === "create-vehicle" && ownerProfile?.canWrite) ||
+      (modal === "edit" && selected && (ownerProfile?.canWrite || canManage)),
+    ),
+    vehicleEditDenied = Boolean(
+      modal === "edit" && selectedVehicleId && !selected,
+    );
   return (
     <section>
       <div className="section-heading">
@@ -360,13 +329,13 @@ function GaragePanel({
           <h2>{locale === "th" ? "Vehicle" : "Vehicles"}</h2>
         </div>
         {canCreate ? (
-          <Link
+          <PendingLink
             className="primary-link-button"
             href={`/users/${username}?tab=garage&modal=create-vehicle`}
           >
             <Plus size={17} />
             {locale === "th" ? "เพิ่ม" : "Add"}
-          </Link>
+          </PendingLink>
         ) : null}
       </div>
       <div className="vehicle-grid">
@@ -395,12 +364,12 @@ function GaragePanel({
               </p>
               {vehicle.canEdit ? (
                 <div className="owner-actions">
-                  <Link
+                  <PendingLink
                     href={`/users/${username}?tab=garage&vehicle=${vehicle.id}&modal=edit`}
                   >
                     <NotePencil size={16} />
                     {locale === "th" ? "แก้ไข" : "Edit"}
-                  </Link>
+                  </PendingLink>
                   <form
                     action={removeVehicleAction}
                     onSubmit={(event) => {
@@ -416,10 +385,13 @@ function GaragePanel({
                   >
                     <input name="id" type="hidden" value={vehicle.id} />
                     <input name="username" type="hidden" value={username} />
-                    <button type="submit">
+                    <ActionSubmitButton
+                      className="owner-action-button"
+                      pendingLabel={locale === "th" ? "กำลังลบ…" : "Deleting…"}
+                    >
                       <Trash size={16} />
                       {locale === "th" ? "ลบ" : "Delete"}
-                    </button>
+                    </ActionSubmitButton>
                   </form>
                 </div>
               ) : null}
@@ -432,6 +404,29 @@ function GaragePanel({
           {locale === "th"
             ? "ยังไม่มี Vehicle ใน Garage"
             : "No vehicles in this garage"}
+        </div>
+      ) : null}
+      {showVehicleModal ? (
+        <EditModal
+          closeUrl={`/users/${username}?tab=garage${selected ? `&vehicle=${selected.id}` : ""}`}
+          title={
+            selected
+              ? locale === "th"
+                ? "แก้ไข Vehicle"
+                : "Edit vehicle"
+              : locale === "th"
+                ? "เพิ่ม Vehicle"
+                : "Add vehicle"
+          }
+        >
+          <VehicleForm initial={selected} locale={locale} username={username} />
+        </EditModal>
+      ) : null}
+      {vehicleEditDenied ? (
+        <div className="permission-toast" role="alert">
+          {locale === "th"
+            ? "คุณไม่มีสิทธิ์แก้ไข Vehicle นี้"
+            : "You do not have permission to edit this vehicle."}
         </div>
       ) : null}
     </section>

@@ -13,55 +13,39 @@ import type {
   ContentAuthorDto,
   PostDto,
 } from "@iride/types";
-import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
-import { communityTalkHref, type CommunityRoomId } from "@/lib/app-navigation-domain";
+import {
+  communityTalkHref,
+  type CommunityRoomId,
+} from "@/lib/app-navigation-domain";
 import { getComments } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
 import { commentAction } from "../community/actions";
 import { removeContent } from "../create/actions";
-import type { MarkerOption } from "./create-content-screen";
-import { EditModal } from "./edit-modal";
-
-const BackendForm = dynamic(() =>
-  import("./create-content-screen").then((module) => module.BackendForm),
-);
+import { ActionSubmitButton } from "./action-submit-button";
+import { PendingLink } from "./pending-link";
 interface Props {
   readonly authenticated: boolean;
   readonly canWrite: boolean;
-  readonly editId: string | undefined;
   readonly locale: Locale;
-  readonly markerOptions: readonly MarkerOption[];
   readonly posts: readonly PostDto[];
   readonly room: CommunityRoomId;
   readonly viewer: ContentAuthorDto | null;
   readonly category: CommunityCategory;
-  readonly heading: string;
 }
 export function CommunityScreen({
   authenticated,
   canWrite,
-  editId,
   locale,
-  markerOptions,
   posts,
   room,
   viewer,
   category,
-  heading,
 }: Props) {
   const talkHref = communityTalkHref(category);
-  const editPost = editId
-    ? (posts.find((item) => item.id === editId && item.canEdit) ?? null)
-    : null;
-  const editDenied = Boolean(editId && !editPost);
   return (
-    <div className="community-page">
-      <header className="community-heading">
-        <h1>{heading}</h1>
-      </header>
+    <>
       {room === "talk" || room === "groups" ? (
         <TalkRoom
           authenticated={authenticated}
@@ -73,27 +57,7 @@ export function CommunityScreen({
           viewer={viewer}
         />
       ) : null}
-      {editPost ? (
-        <EditModal
-          closeUrl={`${talkHref}?post=${editPost.id}`}
-          title={locale === "th" ? "แก้ไขโพสต์" : "Edit post"}
-        >
-          <BackendForm
-            initial={editPost}
-            locale={locale}
-            markerOptions={markerOptions}
-            type="post"
-          />
-        </EditModal>
-      ) : null}
-      {editDenied ? (
-        <div className="permission-toast" role="alert">
-          {locale === "th"
-            ? "คุณไม่มีสิทธิ์แก้ไขรายการนี้"
-            : "You do not have permission to edit this item."}
-        </div>
-      ) : null}
-    </div>
+    </>
   );
 }
 
@@ -117,11 +81,18 @@ function TalkRoom({
   return (
     <section className="community-feed">
       {canWrite ? (
-        <Link className="community-create-link" href={`/create?type=post&category=${category}`}>
+        <PendingLink
+          className="community-create-link"
+          href={`/create?type=post&category=${category}`}
+        >
           + {locale === "th" ? "เขียนโพสต์" : "Write a post"}
-        </Link>
+        </PendingLink>
       ) : authenticated ? (
-        <p className="access-wait-note">{locale === "th" ? "บัญชีนี้อ่านได้อย่างเดียว กรุณารอผู้ดูแลระบบปลดล็อก" : "This account is read-only until an administrator unlocks it."}</p>
+        <p className="access-wait-note">
+          {locale === "th"
+            ? "บัญชีนี้อ่านได้อย่างเดียว กรุณารอผู้ดูแลระบบปลดล็อก"
+            : "This account is read-only until an administrator unlocks it."}
+        </p>
       ) : null}
       {posts.length ? (
         posts.map((post) => (
@@ -131,9 +102,9 @@ function TalkRoom({
             key={post.id}
           >
             <header>
-              <Link href={`/users/${post.author.username}`}>
+              <PendingLink href={`/users/${post.author.username}`}>
                 {post.author.displayName}
-              </Link>
+              </PendingLink>
               <span>@{post.author.username}</span>
               {post.canEdit ? (
                 <OwnerActionMenu
@@ -142,7 +113,11 @@ function TalkRoom({
                   }
                   deleteAction={removeContent}
                   editHref={`${talkHref}?post=${post.id}&modal=edit`}
-                  hidden={{ domain: "posts", id: post.id, communityCategory: post.communityCategory }}
+                  hidden={{
+                    domain: "posts",
+                    id: post.id,
+                    communityCategory: post.communityCategory,
+                  }}
                   locale={locale}
                 />
               ) : null}
@@ -152,13 +127,13 @@ function TalkRoom({
               <div className="post-marker-tags">
                 {post.markerTags.map((tag) =>
                   tag.available ? (
-                    <Link
+                    <PendingLink
                       href={`/maps?marker=${tag.id}`}
                       key={`${tag.kind}:${tag.id}`}
                     >
                       <MapPin size={15} />
                       {tag.title}
-                    </Link>
+                    </PendingLink>
                   ) : (
                     <span aria-disabled="true" key={`${tag.kind}:${tag.id}`}>
                       <MapPin size={15} />
@@ -255,10 +230,14 @@ function OwnerActionMenu({
       </button>
       {open ? (
         <div className="owner-menu-popover" role="menu">
-          <Link href={editHref} onClick={() => setOpen(false)} role="menuitem">
+          <PendingLink
+            href={editHref}
+            onClick={() => setOpen(false)}
+            role="menuitem"
+          >
             <NotePencil size={16} />
             {locale === "th" ? "แก้ไข" : "Edit"}
-          </Link>
+          </PendingLink>
           <form
             action={deleteAction}
             onSubmit={(event) => {
@@ -268,10 +247,15 @@ function OwnerActionMenu({
             {Object.entries(hidden).map(([name, value]) => (
               <input key={name} name={name} type="hidden" value={value} />
             ))}
-            <button role="menuitem" type="submit">
+            <ActionSubmitButton
+              ariaLabel={locale === "th" ? "ลบ" : "Delete"}
+              className=""
+              pendingLabel={locale === "th" ? "กำลังลบ…" : "Deleting…"}
+              role="menuitem"
+            >
               <Trash size={16} />
               {locale === "th" ? "ลบ" : "Delete"}
-            </button>
+            </ActionSubmitButton>
           </form>
         </div>
       ) : null}
@@ -297,7 +281,13 @@ function CommentThread({
     [loading, setLoading] = useState(false),
     [error, setError] = useState<string | null>(null),
     [replyTo, setReplyTo] = useState<CommentDto | null>(null),
-    [editing, setEditing] = useState<string | null>(null);
+    [editing, setEditing] = useState<string | null>(null),
+    [submitting, setSubmitting] = useState(false),
+    [pendingMutations, setPendingMutations] = useState<ReadonlySet<string>>(
+      new Set(),
+    );
+  const submittingRef = useRef(false);
+  const pendingMutationRefs = useRef(new Set<string>());
   async function load() {
     setLoading(true);
     try {
@@ -320,10 +310,13 @@ function CommentThread({
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submittingRef.current) return;
     const form = event.currentTarget,
       data = new FormData(form),
       body = String(data.get("body") ?? "").trim();
     if (!body) return;
+    submittingRef.current = true;
+    setSubmitting(true);
     const tempId = `temp-${Date.now()}`;
     if (viewer)
       setItems((current) => [
@@ -349,15 +342,25 @@ function CommentThread({
     } catch {
       setItems((current) => current.filter((item) => item.id !== tempId));
       setError(locale === "th" ? "ส่งความคิดเห็นไม่สำเร็จ" : "Comment failed");
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   }
   async function mutate(data: FormData) {
+    const mutationKey = `${String(data.get("intent"))}:${String(data.get("id"))}`;
+    if (pendingMutationRefs.current.has(mutationKey)) return;
+    pendingMutationRefs.current.add(mutationKey);
+    setPendingMutations(new Set(pendingMutationRefs.current));
     try {
       await commentAction(data);
       setEditing(null);
       await load();
     } catch {
       setError(locale === "th" ? "บันทึกไม่สำเร็จ" : "Update failed");
+    } finally {
+      pendingMutationRefs.current.delete(mutationKey);
+      setPendingMutations(new Set(pendingMutationRefs.current));
     }
   }
   const roots = useMemo(() => items.filter((item) => !item.parentId), [items]);
@@ -390,6 +393,7 @@ function CommentThread({
               key={comment.id}
               locale={locale}
               mutate={mutate}
+              pendingMutations={pendingMutations}
               onEdit={setEditing}
               onReply={setReplyTo}
             />
@@ -416,18 +420,27 @@ function CommentThread({
                 }
                 required
               />
-              <button className="primary-action" type="submit">
-                {locale === "th" ? "ส่ง" : "Send"}
+              <button
+                aria-busy={submitting}
+                className="primary-action"
+                disabled={submitting}
+                type="submit"
+              >
+                {submitting
+                  ? locale === "th"
+                    ? "กำลังส่ง…"
+                    : "Sending…"
+                  : locale === "th"
+                    ? "ส่ง"
+                    : "Send"}
               </button>
             </form>
           ) : (
-            <Link
-              href={`/login?next=${encodeURIComponent(returnHref)}`}
-            >
+            <PendingLink href={`/login?next=${encodeURIComponent(returnHref)}`}>
               {locale === "th"
                 ? "เข้าสู่ระบบเพื่อแสดงความคิดเห็น"
                 : "Sign in to comment"}
-            </Link>
+            </PendingLink>
           )}
         </div>
       ) : null}
@@ -441,6 +454,7 @@ interface CommentItemProps {
   readonly items: readonly CommentDto[];
   readonly locale: Locale;
   readonly mutate: (data: FormData) => Promise<void>;
+  readonly pendingMutations: ReadonlySet<string>;
   readonly onEdit: (id: string | null) => void;
   readonly onReply: (item: CommentDto) => void;
 }
@@ -450,6 +464,7 @@ function CommentItem({
   items,
   locale,
   mutate,
+  pendingMutations,
   onEdit,
   onReply,
 }: CommentItemProps) {
@@ -461,6 +476,7 @@ function CommentItem({
         editing={editing}
         locale={locale}
         mutate={mutate}
+        pendingMutations={pendingMutations}
         onEdit={onEdit}
         onReply={onReply}
       />
@@ -471,6 +487,7 @@ function CommentItem({
             editing={editing}
             locale={locale}
             mutate={mutate}
+            pendingMutations={pendingMutations}
             onEdit={onEdit}
             onReply={onReply}
           />
@@ -484,6 +501,7 @@ function CommentBody({
   editing,
   locale,
   mutate,
+  pendingMutations,
   onEdit,
   onReply,
 }: {
@@ -491,9 +509,12 @@ function CommentBody({
   readonly editing: string | null;
   readonly locale: Locale;
   readonly mutate: (data: FormData) => Promise<void>;
+  readonly pendingMutations: ReadonlySet<string>;
   readonly onEdit: (id: string | null) => void;
   readonly onReply: (item: CommentDto) => void;
 }) {
+  const updating = pendingMutations.has(`update:${comment.id}`);
+  const deleting = pendingMutations.has(`delete:${comment.id}`);
   return (
     <div>
       <strong>@{comment.author.username}</strong>
@@ -508,8 +529,20 @@ function CommentBody({
             name="body"
             required
           />
-          <button type="submit">{locale === "th" ? "บันทึก" : "Save"}</button>
-          <button onClick={() => onEdit(null)} type="button">
+          <button aria-busy={updating} disabled={updating} type="submit">
+            {updating
+              ? locale === "th"
+                ? "กำลังบันทึก…"
+                : "Saving…"
+              : locale === "th"
+                ? "บันทึก"
+                : "Save"}
+          </button>
+          <button
+            disabled={updating}
+            onClick={() => onEdit(null)}
+            type="button"
+          >
             {locale === "th" ? "ยกเลิก" : "Cancel"}
           </button>
         </form>
@@ -535,8 +568,14 @@ function CommentBody({
               <form action={mutate}>
                 <input name="intent" type="hidden" value="delete" />
                 <input name="id" type="hidden" value={comment.id} />
-                <button type="submit">
-                  {locale === "th" ? "ลบ" : "Delete"}
+                <button aria-busy={deleting} disabled={deleting} type="submit">
+                  {deleting
+                    ? locale === "th"
+                      ? "กำลังลบ…"
+                      : "Deleting…"
+                    : locale === "th"
+                      ? "ลบ"
+                      : "Delete"}
                 </button>
               </form>
             </>

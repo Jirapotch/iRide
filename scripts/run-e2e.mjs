@@ -30,7 +30,8 @@ const e2eEnvironment = {
   NEXT_PUBLIC_APP_URL: webOrigin,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: MOCK_PUBLISHABLE_KEY,
   NEXT_PUBLIC_SUPABASE_URL: MOCK_SUPABASE_URL,
-  MIGRATION_DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+  MIGRATION_DATABASE_URL:
+    "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
   OPN_SECRET_KEY: "e2e-opn-secret",
   OPN_WEBHOOK_SECRET: "e2e-opn-webhook-secret",
   R2_ACCESS_KEY_ID: "e2e-r2-access-key",
@@ -86,6 +87,8 @@ async function runCommand(command, args, options = {}) {
 }
 
 async function run() {
+  const forwardedArgs = process.argv.slice(2);
+  if (forwardedArgs[0] === "--") forwardedArgs.shift();
   let authServer;
   let servers = [];
   try {
@@ -101,12 +104,12 @@ async function run() {
     const webServer = spawn(
       process.execPath,
       [
-          "node_modules/next/dist/bin/next",
-          "start",
-          "--hostname",
-          "0.0.0.0",
-          "--port",
-          String(webPort),
+        "node_modules/next/dist/bin/next",
+        "start",
+        "--hostname",
+        "0.0.0.0",
+        "--port",
+        String(webPort),
       ],
       {
         cwd: path.join(repositoryRoot, "apps", "web"),
@@ -128,7 +131,7 @@ async function run() {
 
     const playwright = spawn(
       process.execPath,
-      ["node_modules/@playwright/test/cli.js", "test"],
+      ["node_modules/@playwright/test/cli.js", "test", ...forwardedArgs],
       { cwd: repositoryRoot, env: e2eEnvironment, stdio: "inherit" },
     );
     const [exitCode] = await once(playwright, "exit");

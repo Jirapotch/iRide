@@ -2,18 +2,46 @@ import type { EventDto, ExploreFeatureDto } from "@iride/types";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getEvent } from "@/lib/content-api";
-import { redirect } from "next/navigation";
 import { getRequestLocale } from "@/lib/request-locale";
 import { ActivityHub } from "../_components/activity-hub";
+import { captureData } from "@/lib/data-result";
 
-export default async function MapsPage({ searchParams }: { readonly searchParams: Promise<{ marker?: string; modal?: string }> }) {
-  const [locale, params, session] = await Promise.all([getRequestLocale(), searchParams, getVerifiedWebSession().catch(() => null)]);
+export default async function MapsPage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<{ marker?: string; modal?: string }>;
+}) {
+  const [locale, params, session] = await Promise.all([
+    getRequestLocale(),
+    searchParams,
+    getVerifiedWebSession().catch(() => null),
+  ]);
   const accessToken = session?.accessToken;
-  const selectedContent = params.marker ? await getEvent(params.marker, accessToken).catch(() => null) : null;
-  if (params.marker && !selectedContent) redirect("/");
-  const initialFeature = selectedContent ? toExploreFeature(selectedContent) : null;
-  const initialEdit = params.modal === "edit" && selectedContent?.canEdit ? selectedContent : null;
-  return <ActivityHub editDenied={params.modal === "edit" && Boolean(params.marker) && !initialEdit} initialEdit={initialEdit} initialFeature={initialFeature} locale={locale} />;
+  const selectedResult = params.marker
+    ? await captureData(() => getEvent(params.marker as string, accessToken))
+    : null;
+  const selectedContent =
+    selectedResult?.status === "success" ? selectedResult.data : null;
+  const initialFeature = selectedContent
+    ? toExploreFeature(selectedContent)
+    : null;
+  const initialEdit =
+    params.modal === "edit" && selectedContent?.canEdit
+      ? selectedContent
+      : null;
+  return (
+    <ActivityHub
+      editDenied={
+        params.modal === "edit" &&
+        selectedResult?.status === "success" &&
+        !initialEdit
+      }
+      initialEdit={initialEdit}
+      initialFeature={initialFeature}
+      locale={locale}
+      selectedFeatureUnavailable={selectedResult?.status === "error"}
+    />
+  );
 }
 
 function toExploreFeature(content: EventDto): ExploreFeatureDto {
