@@ -22,10 +22,13 @@ describe("Natural Mist map palette", () => {
       ground: "#F6F3E8",
       block: "#D9DFC7",
       block2: "#E7E1D3",
-      road: "#FBFAF5",
-      edge: "#C8D1C3",
+      road: "#D5D8D2",
+      edge: "#BEC4BC",
+      outline: "#C8D1C3",
+      boundary: "#C8D1C3",
       water: "#BCD7D0",
       label: "#4B5D51",
+      labelHalo: "#FBFAF5",
       veil: "rgb(79 111 82 / .08)",
       rasterSaturation: -0.55,
       rasterContrast: -0.08,
@@ -44,16 +47,102 @@ describe("classifyMapLayer", () => {
     [{ id: "park-landcover", type: "fill" }, "block"],
     [{ id: "building-3d", type: "fill-extrusion" }, "block2"],
     [{ id: "dense-urban-area", type: "fill" }, "block2"],
-    [{ id: "road_primary", type: "line" }, "road"],
+    [{ id: "road_motorway", type: "line" }, "road"],
+    [{ id: "road_trunk_primary", type: "line" }, "road"],
+    [{ id: "road_secondary_tertiary", type: "line" }, "road"],
+    [{ id: "highway-primary", type: "line" }, "road"],
+    [
+      {
+        id: "transport",
+        type: "line",
+        "source-layer": "transportation",
+        filter: ["==", ["get", "class"], "primary"],
+      },
+      "road",
+    ],
     [{ id: "road-casing", type: "line" }, "edge"],
-    [{ id: "admin-boundary", type: "line" }, "edge"],
-    [{ id: "transit-support", type: "line" }, "edge"],
+    [{ id: "road_motorway_casing", type: "line" }, "edge"],
+    [{ id: "tunnel_trunk_primary_casing", type: "line" }, "edge"],
+    [{ id: "bridge_secondary_tertiary_casing", type: "line" }, "edge"],
+    [{ id: "road-border", type: "line" }, "edge"],
+    [{ id: "admin-boundary", type: "line" }, "boundary"],
+    [{ id: "country-border", type: "line" }, "boundary"],
+    [{ id: "railway_transit", type: "line" }, null],
+    [{ id: "transit-support", type: "line" }, null],
+    [{ id: "aeroway_runway", type: "line" }, null],
+    [{ id: "ferry", type: "line" }, null],
+    [
+      {
+        id: "transportation",
+        type: "line",
+        "source-layer": "transportation",
+        filter: ["==", ["get", "class"], "rail"],
+      },
+      null,
+    ],
+    [
+      {
+        id: "transportation",
+        type: "line",
+        "source-layer": "transportation",
+        filter: [
+          "all",
+          ["!in", "class", "rail", "transit", "ferry"],
+          ["in", "class", "motorway", "trunk", "primary"],
+        ],
+      },
+      "road",
+    ],
     [{ id: "poi-label", type: "symbol" }, "poi"],
     [{ id: "place-label", type: "symbol" }, "label"],
     [{ id: "osm", type: "raster" }, "raster"],
     [{ id: "weather", type: "heatmap" }, null],
   ] as const)("classifies %s as %s", (layer, expected) => {
     expect(classifyMapLayer(layer)).toBe(expected);
+  });
+
+  it.each([
+    "motorway",
+    "trunk",
+    "primary",
+    "secondary",
+    "tertiary",
+    "minor",
+    "service",
+    "residential",
+    "unclassified",
+    "raceway",
+    "busway",
+    "bus_guideway",
+    "track",
+    "path",
+    "pedestrian",
+  ])("recognizes the %s transportation class as a road", (roadClass) => {
+    expect(
+      classifyMapLayer({
+        id: "transportation",
+        type: "line",
+        "source-layer": "transportation",
+        filter: ["==", ["get", "class"], roadClass],
+      }),
+    ).toBe("road");
+  });
+
+  it("reads positively matched road classes without treating the fallback as a class", () => {
+    expect(
+      classifyMapLayer({
+        id: "transportation",
+        type: "line",
+        "source-layer": "transportation",
+        filter: [
+          "match",
+          ["get", "class"],
+          ["motorway", "trunk", "primary"],
+          true,
+          false,
+        ],
+      }),
+    ).toBe("road");
   });
 });
 
@@ -66,9 +155,13 @@ describe("applyMapPalette", () => {
           { id: "background", type: "background" },
           { id: "park", type: "fill" },
           { id: "building", type: "fill-extrusion" },
+          { id: "building-fill", type: "fill" },
           { id: "water", type: "fill" },
-          { id: "road_primary", type: "line" },
-          { id: "road-casing", type: "line" },
+          { id: "road_motorway", type: "line" },
+          { id: "road_trunk_primary", type: "line" },
+          { id: "road_secondary_tertiary", type: "line" },
+          { id: "road_motorway_casing", type: "line" },
+          { id: "admin-boundary", type: "line" },
           { id: "place-label", type: "symbol" },
           { id: "poi-label", type: "symbol" },
           { id: "osm", type: "raster" },
@@ -83,14 +176,36 @@ describe("applyMapPalette", () => {
 
     expect(calls).toContainEqual(["background", "background-color", "#F6F3E8"]);
     expect(calls).toContainEqual(["park", "fill-color", "#D9DFC7"]);
+    expect(calls).toContainEqual(["park", "fill-outline-color", "#C8D1C3"]);
     expect(calls).toContainEqual([
       "building",
       "fill-extrusion-color",
       "#E7E1D3",
     ]);
+    expect(calls).toContainEqual([
+      "building-fill",
+      "fill-outline-color",
+      "#C8D1C3",
+    ]);
     expect(calls).toContainEqual(["water", "fill-color", "#BCD7D0"]);
-    expect(calls).toContainEqual(["road_primary", "line-color", "#FBFAF5"]);
-    expect(calls).toContainEqual(["road-casing", "line-color", "#C8D1C3"]);
+    expect(calls).toContainEqual(["water", "fill-outline-color", "#C8D1C3"]);
+    expect(calls).toContainEqual(["road_motorway", "line-color", "#D5D8D2"]);
+    expect(calls).toContainEqual([
+      "road_trunk_primary",
+      "line-color",
+      "#D5D8D2",
+    ]);
+    expect(calls).toContainEqual([
+      "road_secondary_tertiary",
+      "line-color",
+      "#D5D8D2",
+    ]);
+    expect(calls).toContainEqual([
+      "road_motorway_casing",
+      "line-color",
+      "#BEC4BC",
+    ]);
+    expect(calls).toContainEqual(["admin-boundary", "line-color", "#C8D1C3"]);
     expect(calls).toContainEqual(["place-label", "text-color", "#4B5D51"]);
     expect(calls).toContainEqual(["place-label", "text-halo-color", "#FBFAF5"]);
     expect(calls).toContainEqual(["place-label", "text-halo-width", 1.1]);
