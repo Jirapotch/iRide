@@ -201,6 +201,29 @@ test("administrators can unlock a locked user", async ({ page }) => {
   await expect(page.getByText("user · active", { exact: true })).toBeVisible();
 });
 
+test("admin detail returns to the exact filtered list", async ({ page }) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers%3Fq%3Dlocked%26page%3D1");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByRole("link", { name: /Locked Rider/ }).click();
+  await page.getByRole("button", { name: "Back to user list" }).click();
+  await expect(page).toHaveURL(/\/settings\/users\?q=locked/);
+  await expect(page.getByRole("textbox", { name: "Search users" })).toHaveValue(
+    "locked",
+  );
+});
+
+test("a directly opened admin detail uses its safe fallback", async ({
+  page,
+}) => {
+  const next = encodeURIComponent(
+    "/settings/users/22222222-2222-4222-8222-222222222222?from=/settings/users?q=locked",
+  );
+  await page.goto(`/login?next=${next}`);
+  await page.getByRole("button", { name: /Google/ }).click();
+  await page.getByRole("button", { name: "Back to user list" }).click();
+  await expect(page).toHaveURL(/\/settings\/users\?q=locked$/);
+});
+
 test("a destination error keeps navigation available", async ({ page }) => {
   await page.goto("/login?next=%2Fsettings%2Fusers%2Fnot-a-user");
   await page.getByRole("button", { name: /Google/ }).click();

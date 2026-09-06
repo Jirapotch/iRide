@@ -1,16 +1,15 @@
 const MAX_REDIRECT_LENGTH = 2_048;
 const DEFAULT_AUTH_PATH = "/";
 
-export function safeNextPath(
-  value: string | null | undefined,
-): string {
+export function safeNextPath(value: string | null | undefined): string {
   return safeLocalPath(value, DEFAULT_AUTH_PATH);
 }
 
 export function safeReturnPath(
   value: string | null | undefined,
+  fallback = "/",
 ): string {
-  return safeLocalPath(value, "/");
+  return safeLocalPath(value, fallback);
 }
 
 function safeLocalPath(

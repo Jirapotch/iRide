@@ -4,13 +4,16 @@ import { Table, Tag, type TableColumnsType } from "antd";
 import Link from "next/link";
 
 import type { AdminUserDto } from "@/lib/admin-users-api";
+import { adminUserDetailHref } from "@/lib/app-navigation-domain";
 import type { Locale } from "@/lib/locale";
 
 export function AdminUserDirectory({
   locale,
+  returnHref,
   users,
 }: {
   readonly locale: Locale;
+  readonly returnHref: string;
   readonly users: readonly AdminUserDto[];
 }) {
   const columns: TableColumnsType<AdminUserDto> = [
@@ -18,9 +21,29 @@ export function AdminUserDirectory({
       title: locale === "th" ? "ผู้ใช้" : "User",
       key: "user",
       render: (_, user) => (
-        <Link href={`/settings/users/${user.id}`}>
-          <strong>{user.displayName ?? (locale === "th" ? "ยังไม่มีชื่อ" : "No name")}</strong>
-          <small className="admin-table-secondary">@{user.username ?? "-"}</small>
+        <Link
+          href={adminUserDetailHref(user.id, returnHref)}
+          onClick={(event) => {
+            if (
+              event.button === 0 &&
+              !event.altKey &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.shiftKey
+            ) {
+              window.sessionStorage.setItem(
+                "iride:admin-users-origin",
+                returnHref,
+              );
+            }
+          }}
+        >
+          <strong>
+            {user.displayName ?? (locale === "th" ? "ยังไม่มีชื่อ" : "No name")}
+          </strong>
+          <small className="admin-table-secondary">
+            @{user.username ?? "-"}
+          </small>
         </Link>
       ),
     },
@@ -43,7 +66,15 @@ export function AdminUserDirectory({
       key: "status",
       width: 130,
       render: (value: string) => (
-        <Tag color={value === "active" ? "success" : value === "locked" ? "warning" : "error"}>
+        <Tag
+          color={
+            value === "active"
+              ? "success"
+              : value === "locked"
+                ? "warning"
+                : "error"
+          }
+        >
           {value}
         </Tag>
       ),
@@ -52,7 +83,12 @@ export function AdminUserDirectory({
 
   return (
     <div className="admin-user-table">
-      <Table columns={columns} dataSource={[...users]} pagination={false} rowKey="id" />
+      <Table
+        columns={columns}
+        dataSource={[...users]}
+        pagination={false}
+        rowKey="id"
+      />
     </div>
   );
 }
