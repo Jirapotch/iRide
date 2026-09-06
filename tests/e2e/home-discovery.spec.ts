@@ -46,6 +46,36 @@ test.beforeEach(async ({ context, page }) => {
             createdAt: "2026-09-04T00:00:00.000Z",
             updatedAt: "2026-09-04T00:00:00.000Z",
           },
+          {
+            id: "post-3",
+            body: "City ride after work.",
+            communityCategory: "bicycle",
+            author: {
+              id: "author-3",
+              username: "cyclist",
+              displayName: "Cyclist",
+            },
+            canEdit: false,
+            commentCount: 2,
+            markerTags: [],
+            createdAt: "2026-09-03T00:00:00.000Z",
+            updatedAt: "2026-09-03T00:00:00.000Z",
+          },
+          {
+            id: "post-4",
+            body: "Weekend meetup planning from the real groups feed.",
+            communityCategory: "groups",
+            author: {
+              id: "author-4",
+              username: "organizer",
+              displayName: "Organizer",
+            },
+            canEdit: false,
+            commentCount: 5,
+            markerTags: [],
+            createdAt: "2026-09-06T00:00:00.000Z",
+            updatedAt: "2026-09-06T00:00:00.000Z",
+          },
         ],
       }),
     }),
@@ -102,9 +132,19 @@ test("home presents three living feature destinations and opens games showcase",
     page.getByRole("heading", { name: "Every road has a story" }),
   ).toBeVisible();
   const featureGrid = page.locator('[data-ui="feature-selection"]');
-  for (const label of ["Community", "Games", "Activities"]) {
-    await expect(featureGrid.getByRole("link", { name: label })).toBeVisible();
+  for (const [label, href] of [
+    ["Community", "/community/groups"],
+    ["Games", "/games"],
+    ["Activities", "/maps"],
+  ]) {
+    await expect(
+      featureGrid.getByRole("link", { name: label }),
+    ).toHaveAttribute("href", href);
   }
+  await expect(
+    featureGrid.getByText("Weekend meetup planning from the real groups feed."),
+  ).toBeVisible();
+  await expect(featureGrid.getByText("Bangkok to Khao Yai")).toBeVisible();
 
   await featureGrid.getByRole("link", { name: "Community" }).hover();
   await expect(featureGrid).toHaveAttribute("data-active", "community");
@@ -116,6 +156,58 @@ test("home presents three living feature destinations and opens games showcase",
   ).toBeFocused();
   await expect(page.getByText("Preview", { exact: true })).toBeVisible();
   await expect(page.getByText(/high score/i)).toHaveCount(0);
+});
+
+test("community vehicle cards use real posts and expose destination buttons", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const categories = page.locator('[data-ui="community-categories"]');
+  await expect(
+    categories.getByText("A quiet coffee road for Sunday morning."),
+  ).toBeVisible();
+  await expect(
+    categories.getByText("Who is joining the sunrise ride this weekend?"),
+  ).toBeVisible();
+  await expect(categories.getByText("City ride after work.")).toBeVisible();
+  await expect(page.getByText("Demo content", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Weekend Roads", { exact: true })).toHaveCount(0);
+
+  for (const [name, href] of [
+    ["View Cars community", "/community/car/talk"],
+    ["View Motorcycles community", "/community/motorcycle/talk"],
+    ["View Bicycles community", "/community/bicycle/talk"],
+  ]) {
+    await expect(categories.getByRole("link", { name })).toHaveAttribute(
+      "href",
+      href,
+    );
+  }
+});
+
+test("games stays a static preview without API requests or browser history", async ({
+  page,
+}) => {
+  const gamesRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/bff/games"))
+      gamesRequests.push(request.url());
+  });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.removeItem("iride.home.recent.v1"));
+
+  await page.getByRole("link", { name: "Games", exact: true }).click();
+
+  await expect(page).toHaveURL(/\/games$/);
+  expect(gamesRequests).toEqual([]);
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(localStorage.getItem("iride.home.recent.v1") ?? "[]").some(
+        (item: { kind?: string }) => item.kind === "games",
+      ),
+    ),
+  ).toBe(false);
 });
 
 test("mobile home uses story cards without pointer-only behavior or overflow", async ({
@@ -145,25 +237,30 @@ test("home sections fail independently", async ({ page }) => {
   await expect(
     page.getByText("Community stories could not load"),
   ).toBeVisible();
-  await expect(page.getByText("Bangkok to Khao Yai")).toBeVisible();
+  await expect(
+    page
+      .locator('[aria-labelledby="activities-title"]')
+      .getByRole("heading", { name: "Bangkok to Khao Yai" }),
+  ).toBeVisible();
 });
 
 test("trending filter changes stories without reloading the URL", async ({
   page,
 }) => {
   await page.goto("/");
+  const trending = page.locator('[aria-labelledby="trending-title"]');
   await expect(
-    page.getByText("Who is joining the sunrise ride this weekend?"),
+    trending.getByText("Who is joining the sunrise ride this weekend?"),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Cars", exact: true }).click();
 
   await expect(page).toHaveURL(/\/$/);
   await expect(
-    page.getByText("A quiet coffee road for Sunday morning."),
+    trending.getByText("A quiet coffee road for Sunday morning."),
   ).toBeVisible();
   await expect(
-    page.getByText("Who is joining the sunrise ride this weekend?"),
+    trending.getByText("Who is joining the sunrise ride this weekend?"),
   ).toHaveCount(0);
 });
 

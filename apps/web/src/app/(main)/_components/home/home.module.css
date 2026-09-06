@@ -268,33 +268,6 @@
   transition: transform 80ms linear;
 }
 
-.avatarStack {
-  display: flex;
-}
-
-.avatarStack span {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  margin-right: -8px;
-  border: 3px solid var(--surface);
-  border-radius: 50%;
-  background: var(--matcha-deep);
-  color: white;
-  font-size: 0.63rem;
-  font-weight: 900;
-}
-
-.avatarStack span:nth-child(2) {
-  background: #c78c66;
-}
-
-.avatarStack span:nth-child(3) {
-  background: #567fa0;
-}
-
-.conversationBubble,
 .gameVisual,
 .activityVisual {
   display: flex;
@@ -308,13 +281,6 @@
   font-weight: 750;
 }
 
-.communityKinds {
-  display: flex;
-  gap: 0.4rem;
-  margin-top: 0.75rem;
-  color: var(--primary);
-}
-
 .gameVisual,
 .activityVisual {
   color: inherit;
@@ -322,17 +288,20 @@
   backdrop-filter: blur(12px);
 }
 
-.gameVisual span,
-.activityVisual span:not(.routeDot) {
+.gameVisual > span,
+.activityVisual > span:not(.routeDot) {
   display: grid;
   flex: 1;
+  gap: 0.2rem;
 }
 
 .gameVisual small,
-.activityVisual small {
+.activityVisual small,
+.featureSnapshot small {
   opacity: 0.55;
   font-size: 0.55rem;
   letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .activityVisual {
@@ -345,6 +314,38 @@
   border-radius: 50%;
   background: var(--primary);
   box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.featureSnapshot {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
+
+.featureSnapshot > strong {
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.featureSnapshot > span,
+.activityVisual > span > span {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: color-mix(in srgb, currentcolor 65%, transparent);
+  font-size: 0.63rem;
+}
+
+.featureDataState {
+  display: block;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 750;
 }
 
 .featureAction {
@@ -660,8 +661,7 @@
   padding: 4rem var(--home-gutter);
 }
 
-.previewBadge,
-.demoBadge {
+.previewBadge {
   display: inline-flex;
   align-items: center;
   min-height: 28px;
@@ -700,12 +700,6 @@
   margin-top: 1.5rem;
 }
 
-.demoBadge {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
-  color: var(--primary);
-}
-
 .groupRail {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -718,22 +712,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 0 1.1rem 1.1rem;
+  padding: 1.25rem;
   border: 1px solid var(--border);
   border-radius: 1.25rem;
   background: var(--surface);
-}
-
-.groupCover {
-  position: relative;
-  height: 150px;
-  margin-inline: -1.1rem;
-  overflow: hidden;
-  background: var(--muted);
-}
-
-.groupCover img {
-  object-fit: cover;
 }
 
 .groupIcon {
@@ -741,8 +723,7 @@
   height: 46px;
   display: grid;
   place-items: center;
-  margin-top: -23px;
-  border: 4px solid var(--surface);
+  border: 0;
   border-radius: 50%;
   background: var(--primary);
   color: var(--primary-foreground);
@@ -764,14 +745,14 @@
 }
 
 .groupCard p {
-  min-height: 3.1rem;
+  min-height: 3.3rem;
   margin: 0.45rem 0 1rem;
   color: var(--muted-foreground);
   font-size: 0.74rem;
   line-height: 1.5;
 }
 
-.groupCard button {
+.groupCard > a {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -785,15 +766,29 @@
   font-weight: 900;
 }
 
-.groupCard button[aria-pressed="true"] {
+.groupCard > a:hover,
+.groupCard > a:focus-visible {
   background: var(--primary);
   color: var(--primary-foreground);
 }
 
-.demoNote {
-  margin: 0.8rem 0 0;
+.groupMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
   color: var(--muted-foreground);
   font-size: 0.66rem;
+}
+
+.groupMeta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.groupEmpty {
+  font-style: italic;
 }
 
 .exploreCta {

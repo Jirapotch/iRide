@@ -5,7 +5,6 @@ import {
   Bicycle,
   Car,
   ChatCircle,
-  Check,
   Compass,
   MapPin,
   Motorcycle,
@@ -21,12 +20,12 @@ import {
   parseRecentJourneys,
   readHomeStorage,
   recordRecentJourney,
+  selectLatestCommunityPosts,
   selectUpcomingEvents,
   writeHomeStorage,
-  type DemoGroup,
-  type HomeFeatureKind,
   type HomeLoadState,
   type RecentJourneyItem,
+  type RecentJourneyKind,
   type TrendingFilter,
 } from "@/lib/home-domain";
 import type { Locale } from "@/lib/locale";
@@ -37,7 +36,6 @@ import { HomeMiniMap } from "./home-mini-map";
 import styles from "./home.module.css";
 
 const RECENT_KEY = "iride.home.recent.v1";
-const GROUPS_KEY = "iride.home.demo-groups.v1";
 
 const copy = {
   th: {
@@ -70,12 +68,11 @@ const copy = {
     gameBody:
       "ถนนไม่มีที่สิ้นสุด จังหวะที่ต้องตัดสินใจ และการเดินทางครั้งใหม่ที่กำลังมา",
     gameAction: "ดูเกมส์",
-    groupsKicker: "GROUPS",
-    groupsTitle: "เจอคนที่ชอบเหมือนกัน",
-    demo: "ข้อมูลตัวอย่าง",
-    join: "เข้าร่วม",
-    joined: "เข้าร่วมแล้ว",
-    groupsNote: "สถานะนี้เก็บเฉพาะในเบราว์เซอร์ ยังไม่เชื่อมต่อระบบสมาชิก",
+    groupsKicker: "COMMUNITY",
+    groupsTitle: "เลือกชุมชนตามประเภทรถ",
+    groupsError: "ไม่สามารถโหลดโพสต์ของแต่ละชุมชนได้",
+    groupsEmpty: "ยังไม่มีโพสต์ในชุมชนนี้",
+    viewCommunity: "ดูชุมชน",
     exploreTitle: "เรื่องราวต่อไป เริ่มจากการออกไปค้นหา",
     exploreBody: "ดูผู้คน สถานที่ และกิจกรรมที่กำลังเกิดขึ้นรอบตัวคุณ",
     exploreAction: "เปิดแผนที่",
@@ -111,13 +108,11 @@ const copy = {
     gameBody:
       "An endless road, quick decisions, and a new kind of journey coming soon.",
     gameAction: "View games",
-    groupsKicker: "GROUPS",
-    groupsTitle: "Find people who move like you",
-    demo: "Demo content",
-    join: "Join",
-    joined: "Joined",
-    groupsNote:
-      "This state stays in your browser and is not connected to membership yet.",
+    groupsKicker: "COMMUNITY",
+    groupsTitle: "Explore by vehicle",
+    groupsError: "Vehicle community posts could not load",
+    groupsEmpty: "There are no posts in this community yet.",
+    viewCommunity: "View community",
     exploreTitle: "Your next story starts by looking around",
     exploreBody:
       "Discover the people, places, and activities happening around you.",
@@ -127,58 +122,23 @@ const copy = {
   },
 } as const;
 
-const demoGroups: readonly DemoGroup[] = [
-  {
-    id: "weekend-roads",
-    name: "Weekend Roads",
-    category: "car",
-    description: {
-      th: "เส้นทางยามเช้า จุดแวะกาแฟ และการขับรถแบบไม่เร่งรีบ",
-      en: "Morning routes, coffee stops, and unhurried drives.",
-    },
-    imageSrc: "/home/hero-journey.png",
-  },
-  {
-    id: "two-wheel-stories",
-    name: "Two Wheel Stories",
-    category: "motorcycle",
-    description: {
-      th: "บันทึกการเดินทางและผู้คนที่พบระหว่างจุดหมาย",
-      en: "Touring notes and the people met between destinations.",
-    },
-    imageSrc: "/home/game-road.png",
-  },
-  {
-    id: "city-pedals",
-    name: "City Pedals",
-    category: "bicycle",
-    description: {
-      th: "ถนนเงียบ ๆ จังหวะร่วมกัน และการปั่นรอบเมือง",
-      en: "Quiet streets, shared pace, and rides around the city.",
-    },
-    imageSrc: "/home/hero-journey.png",
-  },
-];
-
 const filterOrder = ["all", "car", "motorcycle", "bicycle"] as const;
 
-interface BrowserHomeState {
-  readonly recent: RecentJourneyItem[];
-  readonly joinedGroups: Set<string>;
-}
+const communityDestinations = [
+  { kind: "car", href: "/community/car/talk", icon: Car },
+  {
+    kind: "motorcycle",
+    href: "/community/motorcycle/talk",
+    icon: Motorcycle,
+  },
+  { kind: "bicycle", href: "/community/bicycle/talk", icon: Bicycle },
+] as const;
 
-type BrowserHomeAction =
-  | { readonly type: "hydrate"; readonly state: BrowserHomeState }
-  | { readonly type: "recent"; readonly items: RecentJourneyItem[] }
-  | { readonly type: "joined"; readonly items: Set<string> };
-
-function browserHomeReducer(
-  state: BrowserHomeState,
-  action: BrowserHomeAction,
-): BrowserHomeState {
-  if (action.type === "hydrate") return action.state;
-  if (action.type === "recent") return { ...state, recent: action.items };
-  return { ...state, joinedGroups: action.items };
+function recentJourneyReducer(
+  _state: RecentJourneyItem[],
+  items: RecentJourneyItem[],
+): RecentJourneyItem[] {
+  return items;
 }
 
 export function HomeDiscovery({ locale }: { readonly locale: Locale }) {
@@ -192,26 +152,17 @@ export function HomeDiscovery({ locale }: { readonly locale: Locale }) {
   const [profile, setProfile] = useState<HomeLoadState<OwnProfileDto | null>>({
     status: "loading",
   });
-  const [{ recent, joinedGroups }, dispatchBrowserState] = useReducer(
-    browserHomeReducer,
-    { recent: [], joinedGroups: new Set<string>() },
-  );
+  const [recent, setRecent] = useReducer(recentJourneyReducer, []);
   const [filter, setFilter] = useState<TrendingFilter>("all");
   const [postsReload, setPostsReload] = useState(0);
   const [eventsReload, setEventsReload] = useState(0);
 
   useEffect(() => {
-    dispatchBrowserState({
-      type: "hydrate",
-      state: {
-        recent: parseRecentJourneys(
-          readHomeStorage(() => window.localStorage, RECENT_KEY),
-        ),
-        joinedGroups: readJoinedGroups(
-          readHomeStorage(() => window.localStorage, GROUPS_KEY),
-        ),
-      },
-    });
+    setRecent(
+      parseRecentJourneys(
+        readHomeStorage(() => window.localStorage, RECENT_KEY),
+      ),
+    );
   }, []);
 
   useEffect(() => {
@@ -254,30 +205,18 @@ export function HomeDiscovery({ locale }: { readonly locale: Locale }) {
     };
   }, []);
 
-  function remember(kind: HomeFeatureKind, href: string) {
+  function remember(kind: RecentJourneyKind, href: string) {
     const next = recordRecentJourney(recent, {
       kind,
       href,
       visitedAt: new Date().toISOString(),
     });
-    dispatchBrowserState({ type: "recent", items: next });
+    setRecent(next);
     writeHomeStorage(
       () => window.localStorage,
       RECENT_KEY,
       JSON.stringify(next),
     );
-  }
-
-  function toggleGroup(id: string) {
-    const next = new Set(joinedGroups);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    writeHomeStorage(
-      () => window.localStorage,
-      GROUPS_KEY,
-      JSON.stringify([...next]),
-    );
-    dispatchBrowserState({ type: "joined", items: next });
   }
 
   function retryPosts() {
@@ -293,7 +232,12 @@ export function HomeDiscovery({ locale }: { readonly locale: Locale }) {
   return (
     <main className={styles.home}>
       <Hero locale={locale} profile={profile} />
-      <FeatureSelection locale={locale} onNavigate={remember} />
+      <FeatureSelection
+        events={events}
+        locale={locale}
+        onNavigate={remember}
+        posts={posts}
+      />
       {recent.length ? (
         <ContinueJourney locale={locale} recent={recent} />
       ) : null}
@@ -309,12 +253,8 @@ export function HomeDiscovery({ locale }: { readonly locale: Locale }) {
         locale={locale}
         onRetry={retryEvents}
       />
-      <GameSpotlight locale={locale} onNavigate={remember} />
-      <GroupDiscovery
-        joined={joinedGroups}
-        locale={locale}
-        onToggle={toggleGroup}
-      />
+      <GameSpotlight locale={locale} />
+      <CommunityCategories locale={locale} onRetry={retryPosts} posts={posts} />
       <section className={styles.exploreCta}>
         <Compass aria-hidden size={36} weight="duotone" />
         <div>
@@ -387,16 +327,14 @@ function ContinueJourney({
   const itemLabels = {
     th: {
       community: ["ชุมชน", "กลับไปดูบทสนทนา"],
-      games: ["เกมส์", "กลับไปดูตัวอย่างเกมส์"],
       activities: ["กิจกรรม", "กลับไปสำรวจแผนที่"],
     },
     en: {
       community: ["Community", "Return to the conversation"],
-      games: ["Games", "Return to the game preview"],
       activities: ["Activities", "Return to the map"],
     },
   } as const;
-  const icons = { community: UsersThree, games: Play, activities: MapPin };
+  const icons = { community: UsersThree, activities: MapPin };
   return (
     <section
       className={styles.continueSection}
@@ -606,13 +544,7 @@ function UpcomingActivities({
   );
 }
 
-function GameSpotlight({
-  locale,
-  onNavigate,
-}: {
-  readonly locale: Locale;
-  readonly onNavigate: (kind: HomeFeatureKind, href: string) => void;
-}) {
+function GameSpotlight({ locale }: { readonly locale: Locale }) {
   const text = copy[locale];
   return (
     <section className={styles.gameSpotlight} aria-labelledby="game-title">
@@ -638,10 +570,7 @@ function GameSpotlight({
         </h2>
         <strong>{text.gameTitle}</strong>
         <span>{text.gameBody}</span>
-        <PendingLink
-          href="/games"
-          onClick={() => onNavigate("games", "/games")}
-        >
+        <PendingLink href="/games">
           <Play aria-hidden size={18} weight="fill" /> {text.gameAction}
         </PendingLink>
       </div>
@@ -649,72 +578,76 @@ function GameSpotlight({
   );
 }
 
-function GroupDiscovery({
-  joined,
+function CommunityCategories({
   locale,
-  onToggle,
+  onRetry,
+  posts,
 }: {
-  readonly joined: ReadonlySet<string>;
   readonly locale: Locale;
-  readonly onToggle: (id: string) => void;
+  readonly onRetry: () => void;
+  readonly posts: HomeLoadState<PostDto[]>;
 }) {
   const text = copy[locale];
-  const icons = {
-    car: Car,
-    motorcycle: Motorcycle,
-    bicycle: Bicycle,
-    groups: UsersThree,
-  };
+  const latestPosts =
+    posts.status === "ready" ? selectLatestCommunityPosts(posts.data) : {};
   return (
-    <section className={styles.groupsSection} aria-labelledby="groups-title">
-      <div className={styles.sectionTopline}>
-        <SectionHeading
-          kicker={text.groupsKicker}
-          title={text.groupsTitle}
-          id="groups-title"
+    <section
+      className={styles.groupsSection}
+      aria-labelledby="groups-title"
+      data-ui="community-categories"
+    >
+      <SectionHeading
+        kicker={text.groupsKicker}
+        title={text.groupsTitle}
+        id="groups-title"
+      />
+      {posts.status === "loading" ? (
+        <SectionSkeleton locale={locale} variant="posts" />
+      ) : null}
+      {posts.status === "error" ? (
+        <InlineError
+          message={text.groupsError}
+          onRetry={onRetry}
+          retry={text.retry}
         />
-        <span className={styles.demoBadge}>{text.demo}</span>
-      </div>
-      <div className={styles.groupRail}>
-        {demoGroups.map((group, index) => {
-          const Icon = icons[group.category];
-          const selected = joined.has(group.id);
-          return (
-            <article className={styles.groupCard} key={group.id}>
-              <div className={styles.groupCover}>
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  fill
-                  loading="lazy"
-                  sizes="(max-width: 759px) 78vw, 30vw"
-                  src={group.imageSrc}
-                  style={{
-                    objectPosition: index === 2 ? "25% center" : "center",
-                  }}
-                />
-              </div>
-              <span className={styles.groupIcon}>
-                <Icon aria-hidden size={22} />
-              </span>
-              <small>{group.category}</small>
-              <h3>{group.name}</h3>
-              <p>{group.description[locale]}</p>
-              <button
-                aria-pressed={selected}
-                onClick={() => onToggle(group.id)}
-                type="button"
-              >
-                {selected ? (
-                  <Check aria-hidden size={17} weight="bold" />
-                ) : null}
-                {selected ? text.joined : text.join}
-              </button>
-            </article>
-          );
-        })}
-      </div>
-      <p className={styles.demoNote}>{text.groupsNote}</p>
+      ) : null}
+      {posts.status === "ready" ? (
+        <div className={styles.groupRail} aria-live="polite">
+          {communityDestinations.map(({ kind, href, icon: Icon }) => {
+            const post = latestPosts[kind];
+            const label = text[kind];
+            const linkLabel =
+              locale === "th"
+                ? `${text.viewCommunity} ${label}`
+                : `View ${label} community`;
+            return (
+              <article className={styles.groupCard} key={kind}>
+                <span className={styles.groupIcon}>
+                  <Icon aria-hidden size={24} weight="duotone" />
+                </span>
+                <small>{kind}</small>
+                <h3>{label}</h3>
+                {post ? (
+                  <>
+                    <p>{post.body}</p>
+                    <span className={styles.groupMeta}>
+                      <span>@{post.author.username}</span>
+                      <span>
+                        <ChatCircle aria-hidden size={15} /> {post.commentCount}
+                      </span>
+                    </span>
+                  </>
+                ) : (
+                  <p className={styles.groupEmpty}>{text.groupsEmpty}</p>
+                )}
+                <PendingLink aria-label={linkLabel} href={href}>
+                  {linkLabel} <ArrowRight aria-hidden size={17} />
+                </PendingLink>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -782,20 +715,4 @@ function postHref(post: PostDto): string {
       ? "/community/groups"
       : `/community/${post.communityCategory}/talk`;
   return `${path}?post=${encodeURIComponent(post.id)}`;
-}
-
-function readJoinedGroups(value: string | null): Set<string> {
-  if (!value) return new Set();
-  try {
-    const candidate: unknown = JSON.parse(value);
-    if (!Array.isArray(candidate)) return new Set();
-    const allowed = new Set(demoGroups.map((group) => group.id));
-    return new Set(
-      candidate.filter(
-        (item): item is string => typeof item === "string" && allowed.has(item),
-      ),
-    );
-  } catch {
-    return new Set();
-  }
 }

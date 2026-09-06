@@ -6,8 +6,10 @@ import {
   parseRecentJourneys,
   readHomeStorage,
   recordRecentJourney,
+  selectLatestCommunityPosts,
   selectUpcomingEvents,
   writeHomeStorage,
+  type RecentJourneyItem,
 } from "./home-domain";
 
 const author = {
@@ -90,6 +92,21 @@ describe("home discovery domain", () => {
     ]);
   });
 
+  it("selects the newest real post for every community destination", () => {
+    const items = [
+      post("car-old", "car", 4, "2026-09-01T00:00:00.000Z"),
+      post("groups-new", "groups", 1, "2026-09-05T00:00:00.000Z"),
+      post("car-new", "car", 0, "2026-09-06T00:00:00.000Z"),
+      post("motorcycle", "motorcycle", 3, "2026-09-03T00:00:00.000Z"),
+    ];
+
+    expect(selectLatestCommunityPosts(items)).toEqual({
+      car: items[2],
+      motorcycle: items[3],
+      groups: items[1],
+    });
+  });
+
   it("rejects malformed recent history instead of leaking invalid links", () => {
     expect(parseRecentJourneys("not json")).toEqual([]);
     expect(
@@ -103,7 +120,7 @@ describe("home discovery domain", () => {
           {
             kind: "games",
             href: "/games",
-            visitedAt: "not-a-date",
+            visitedAt: "2026-09-06T01:00:00.000Z",
           },
           {
             kind: "activities",
@@ -121,7 +138,7 @@ describe("home discovery domain", () => {
     ]);
   });
 
-  it("records the newest visit once and caps history at three items", () => {
+  it("never retains Games in browser journey history", () => {
     const existing = [
       {
         kind: "community" as const,
@@ -138,7 +155,7 @@ describe("home discovery domain", () => {
         href: "/maps",
         visitedAt: "2026-09-05T00:00:00.000Z",
       },
-    ];
+    ] as unknown as RecentJourneyItem[];
 
     expect(
       recordRecentJourney(existing, {
@@ -156,11 +173,6 @@ describe("home discovery domain", () => {
         kind: "activities",
         href: "/maps",
         visitedAt: "2026-09-05T00:00:00.000Z",
-      },
-      {
-        kind: "games",
-        href: "/games",
-        visitedAt: "2026-09-04T00:00:00.000Z",
       },
     ]);
   });

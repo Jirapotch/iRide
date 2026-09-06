@@ -6,28 +6,20 @@ export type HomeLoadState<T> =
   | { readonly status: "error" };
 
 export type HomeFeatureKind = "community" | "games" | "activities";
+export type RecentJourneyKind = Exclude<HomeFeatureKind, "games">;
 
 export interface RecentJourneyItem {
-  readonly kind: HomeFeatureKind;
+  readonly kind: RecentJourneyKind;
   readonly href: string;
   readonly visitedAt: string;
-}
-
-export interface DemoGroup {
-  readonly id: string;
-  readonly name: string;
-  readonly category: CommunityCategory;
-  readonly description: { readonly th: string; readonly en: string };
-  readonly imageSrc: string;
 }
 
 export type TrendingFilter = "all" | Exclude<CommunityCategory, "groups">;
 
 const featureHrefs = {
   community: "/community/groups",
-  games: "/games",
   activities: "/maps",
-} as const satisfies Record<HomeFeatureKind, string>;
+} as const satisfies Record<RecentJourneyKind, string>;
 
 export function filterTrendingPosts(
   posts: readonly PostDto[],
@@ -54,6 +46,18 @@ export function selectUpcomingEvents(
     );
 }
 
+export function selectLatestCommunityPosts(
+  posts: readonly PostDto[],
+): Partial<Record<CommunityCategory, PostDto>> {
+  const latest: Partial<Record<CommunityCategory, PostDto>> = {};
+  for (const post of [...posts].sort(
+    (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
+  )) {
+    latest[post.communityCategory] ??= post;
+  }
+  return latest;
+}
+
 export function parseRecentJourneys(value: string | null): RecentJourneyItem[] {
   if (!value) return [];
   try {
@@ -70,7 +74,12 @@ export function recordRecentJourney(
   visit: RecentJourneyItem,
 ): RecentJourneyItem[] {
   if (!isRecentJourney(visit)) return [...current];
-  return [visit, ...current.filter((item) => item.kind !== visit.kind)]
+  return [
+    visit,
+    ...current.filter(
+      (item) => isRecentJourney(item) && item.kind !== visit.kind,
+    ),
+  ]
     .sort((left, right) => compareVisitedAt(right.visitedAt, left.visitedAt))
     .slice(0, 3);
 }
@@ -103,15 +112,15 @@ function isRecentJourney(value: unknown): value is RecentJourneyItem {
   if (!value || typeof value !== "object") return false;
   const item = value as Record<string, unknown>;
   return (
-    isHomeFeatureKind(item.kind) &&
+    isRecentJourneyKind(item.kind) &&
     item.href === featureHrefs[item.kind] &&
     typeof item.visitedAt === "string" &&
     Number.isFinite(Date.parse(item.visitedAt))
   );
 }
 
-function isHomeFeatureKind(value: unknown): value is HomeFeatureKind {
-  return value === "community" || value === "games" || value === "activities";
+function isRecentJourneyKind(value: unknown): value is RecentJourneyKind {
+  return value === "community" || value === "activities";
 }
 
 function compareVisitedAt(left: string, right: string): number {
