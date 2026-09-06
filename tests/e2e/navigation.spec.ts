@@ -74,6 +74,31 @@ test("search is a page and absent from header actions", async ({ page }) => {
   ).toHaveCount(0);
 });
 
+test("browser Back restores the search query", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Search" }).click();
+  const input = page.getByRole("textbox", { name: "Search" });
+  await input.fill("ride");
+  await expect(page).toHaveURL(/\/search\?q=ride$/);
+  await expect(input).toHaveValue("ride");
+  await page.getByRole("link", { name: "iRide home" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/search\?q=ride$/);
+  await expect(input).toHaveValue("ride");
+});
+
+test("failed search offers retry without clearing the query", async ({
+  page,
+}) => {
+  await page.route("**/api/v1/search?**", (route) => route.abort());
+  await page.goto("/search?q=ride");
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Search" })).toHaveValue(
+    "ride",
+  );
+});
+
 test("nested community routes expose responsive breadcrumbs", async ({
   page,
 }) => {

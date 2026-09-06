@@ -1753,6 +1753,36 @@ a {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.search-result-skeleton {
+  min-height: 68px;
+  border-color: transparent;
+  background: linear-gradient(
+    100deg,
+    var(--muted) 30%,
+    color-mix(in srgb, var(--muted) 55%, var(--surface)) 50%,
+    var(--muted) 70%
+  );
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.25s ease-in-out infinite;
+}
+.search-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--border));
+  border-radius: 0.9rem;
+}
+.search-error button {
+  min-height: 40px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: var(--foreground);
+  font-weight: 800;
+}
 .create-type-tabs {
   margin-bottom: 0.75rem;
 }
