@@ -25,7 +25,3 @@ export async function startApiServer(): Promise<void> {
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port, "0.0.0.0");
 }
-
-if (require.main === module) {
-  void startApiServer();
-}

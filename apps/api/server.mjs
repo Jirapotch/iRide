@@ -1,4 +1,4 @@
 import "@nestjs/core";
-import apiBundle from "./dist/main.js";
+import { startApiServer } from "./dist/main.mjs";
 
-export default apiBundle.startApiServer();
+export default startApiServer();

@@ -1,14 +1,15 @@
+import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 const fixtures: string[] = [];
+const execFileAsync = promisify(execFile);
 
 afterEach(async () => {
-  globalThis.__IRIDE_START_API_SERVER__ = undefined;
   await Promise.all(
     fixtures
       .splice(0)
@@ -32,26 +33,25 @@ describe("Vercel bundle entrypoint", () => {
     await writeFile(path.join(fixture, "server.mjs"), entrypoint);
     await writeFile(
       path.join(fixture, "node_modules/@nestjs/core/index.js"),
-      "module.exports = {};",
+      "export {};",
     );
     await writeFile(
-      path.join(fixture, "dist/main.js"),
-      `module.exports = {
-        startApiServer: async () => {
-          globalThis.__IRIDE_START_API_SERVER__ = true;
-        }
-      };`,
+      path.join(fixture, "node_modules/@nestjs/core/package.json"),
+      JSON.stringify({ type: "module", exports: "./index.js" }),
+    );
+    await writeFile(
+      path.join(fixture, "dist/main.mjs"),
+      `import { writeFile } from "node:fs/promises";
+       export async function startApiServer() {
+         await writeFile(process.env.IRIDE_TEST_SIGNAL, "started");
+       }`,
     );
 
-    const loaded = await import(
-      `${pathToFileURL(path.join(fixture, "server.mjs")).href}?test=${Date.now()}`
-    );
-    await loaded.default;
+    const signalPath = path.join(fixture, "started.txt");
+    await execFileAsync(process.execPath, [path.join(fixture, "server.mjs")], {
+      env: { ...process.env, IRIDE_TEST_SIGNAL: signalPath },
+    });
 
-    expect(globalThis.__IRIDE_START_API_SERVER__).toBe(true);
+    await expect(readFile(signalPath, "utf8")).resolves.toBe("started");
   });
 });
-
-declare global {
-  var __IRIDE_START_API_SERVER__: boolean | undefined;
-}
