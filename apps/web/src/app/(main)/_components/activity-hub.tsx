@@ -31,7 +31,11 @@ import {
 } from "react";
 
 import { useTheme } from "@/app/_components/theme-provider";
-import { mapStyle } from "@/lib/app-navigation-domain";
+import {
+  mapStateHref,
+  mapStyle,
+  parseMapKinds,
+} from "@/lib/app-navigation-domain";
 import { getExploreContent } from "@/lib/content-api";
 import { googleMapsSearchUrl } from "@/lib/google-maps-domain";
 import type { Locale } from "@/lib/locale";
@@ -62,7 +66,9 @@ export function ActivityHub({
   const [features, setFeatures] = useState<ExploreFeatureDto[]>(
     initialFeature ? [initialFeature] : [],
   );
-  const [enabled, setEnabled] = useState<ExploreFeatureKind[]>(kinds);
+  const [enabled, setEnabled] = useState<ExploreFeatureKind[]>(() =>
+    parseMapKinds(params.get("layers")),
+  );
   const [selectedId, setSelectedId] = useState<string | null>(
     params.get("marker"),
   );
@@ -81,10 +87,28 @@ export function ActivityHub({
   const enabledRef = useRef(enabled);
   const themeRef = useRef(theme);
   const markerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const selectedIdRef = useRef(selectedId);
+  const pushedMarkerRef = useRef(false);
 
   useEffect(() => {
     enabledRef.current = enabled;
   }, [enabled]);
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+  useEffect(() => {
+    const restore = () => {
+      const query = new URL(window.location.href).searchParams;
+      const restoredKinds = parseMapKinds(query.get("layers"));
+      enabledRef.current = restoredKinds;
+      selectedIdRef.current = query.get("marker");
+      pushedMarkerRef.current = false;
+      setEnabled(restoredKinds);
+      setSelectedId(selectedIdRef.current);
+    };
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, []);
   useEffect(() => {
     themeRef.current = theme;
     const map = mapRef.current;
@@ -212,6 +236,15 @@ export function ActivityHub({
         button.dataset.featureId = feature.id;
         button.addEventListener("click", () => {
           markerTriggerRef.current = button;
+          window.history.pushState(
+            null,
+            "",
+            mapStateHref({
+              kinds: enabledRef.current,
+              marker: feature.id,
+            }),
+          );
+          pushedMarkerRef.current = true;
           setSelectedId(feature.id);
         });
         anchor.append(button);
@@ -337,6 +370,17 @@ export function ActivityHub({
   const closeFeatureSheet = useCallback(() => {
     const markerId = selectedId;
     setSelectedId(null);
+    selectedIdRef.current = null;
+    if (pushedMarkerRef.current) {
+      pushedMarkerRef.current = false;
+      window.history.back();
+    } else {
+      window.history.replaceState(
+        null,
+        "",
+        mapStateHref({ kinds: enabledRef.current }),
+      );
+    }
     window.requestAnimationFrame(() => {
       const marker = Array.from(
         document.querySelectorAll<HTMLButtonElement>(".activity-marker"),
@@ -345,11 +389,18 @@ export function ActivityHub({
     });
   }, [selectedId]);
   function toggle(kind: ExploreFeatureKind) {
-    setEnabled((current) =>
-      current.includes(kind)
+    setEnabled((current) => {
+      const next = current.includes(kind)
         ? current.filter((value) => value !== kind)
-        : [...current, kind],
-    );
+        : [...current, kind];
+      enabledRef.current = next;
+      window.history.replaceState(
+        null,
+        "",
+        mapStateHref({ kinds: next, marker: selectedIdRef.current }),
+      );
+      return next;
+    });
   }
   function locate() {
     const map = mapRef.current;
@@ -416,9 +467,21 @@ export function ActivityHub({
       {error ? (
         <div className="map-error-banner" role="alert">
           <WarningCircle size={18} />
-          {locale === "th"
-            ? "โหลดข้อมูล marker ไม่สำเร็จ แผนที่ยังใช้งานได้"
-            : "Markers could not load. The map is still available."}
+          <span>
+            {locale === "th"
+              ? "โหลดข้อมูล marker ไม่สำเร็จ แผนที่ยังใช้งานได้"
+              : "Markers could not load. The map is still available."}
+          </span>
+          <button
+            disabled={loading}
+            onClick={() => {
+              const map = mapRef.current;
+              if (map) void loadViewport(map);
+            }}
+            type="button"
+          >
+            {locale === "th" ? "ลองโหลด marker อีกครั้ง" : "Retry markers"}
+          </button>
         </div>
       ) : null}
       <div className="map-actions-stack">
@@ -483,7 +546,7 @@ export function ActivityHub({
       ) : null}
       {initialEdit ? (
         <EditModal
-          closeUrl={`/maps?marker=${initialEdit.id}`}
+          closeUrl={mapStateHref({ kinds: enabled, marker: initialEdit.id })}
           title={locale === "th" ? "แก้ไขข้อมูล" : "Edit details"}
         >
           <BackendForm

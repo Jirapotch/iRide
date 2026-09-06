@@ -1927,6 +1927,16 @@ body:has(.discover-map) {
   top: 3.4rem;
   background: var(--map-danger-container);
   color: var(--map-danger);
+  white-space: normal;
+}
+.map-error-banner button {
+  min-height: 36px;
+  padding: 0 0.7rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: inherit;
+  font-weight: 850;
+  white-space: nowrap;
 }
 .map-filter-fab,
 .map-locate-fab {

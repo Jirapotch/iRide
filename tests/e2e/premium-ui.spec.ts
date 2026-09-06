@@ -205,6 +205,59 @@ test("maps renders the full map and marker filter FAB without list mode", async 
   await expect(marker).toHaveCSS("clip-path", /polygon\(50% 100%/);
 });
 
+test("map marker and filters survive browser Back", async ({ page }) => {
+  await page.route("**/api/explore?**", async (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: [
+          {
+            id: "marker-1",
+            kind: "meeting",
+            title: "Test meeting",
+            subtitle: "Bangkok",
+            latitude: 13.7563,
+            longitude: 100.5018,
+            startsAt: "2026-09-01T06:00:00.000Z",
+            endsAt: null,
+            author: {
+              id: "author-1",
+              username: "rider",
+              displayName: "Rider",
+            },
+            canEdit: false,
+          },
+        ],
+      }),
+    }),
+  );
+  await page.goto("/maps?layers=meeting%2Ctrip");
+  await page.getByRole("button", { name: "Filter markers" }).click();
+  await expect(page.getByRole("checkbox", { name: "Event" })).not.toBeChecked();
+  await page.getByRole("button", { name: "Test meeting" }).click();
+  await expect(page).toHaveURL(/marker=marker-1/);
+  await page.goto("/");
+  await page.goBack();
+  await expect(page).toHaveURL(/layers=meeting%2Ctrip/);
+  await expect(
+    page.getByRole("dialog", { name: "Test meeting" }),
+  ).toBeVisible();
+});
+
+test("map marker failure offers retry without hiding the map", async ({
+  page,
+}) => {
+  await page.route("**/api/explore?**", (route) => route.abort());
+  await page.goto("/maps");
+  await expect(page.getByText("Markers could not load")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Retry markers" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Discover map" }),
+  ).toBeVisible();
+});
+
 test("home categories lead to their nested talk pages", async ({ page }) => {
   await page.goto("/");
   for (const category of ["Cars", "Motorcycles", "Bicycles", "Groups"])
@@ -585,12 +638,8 @@ test("Google Maps import updates the form and the rendered map location", async 
     .fill("https://www.google.com/maps/search/?api=1&query=18.788343,98.9853");
   await importDialog.getByRole("button", { name: "Use this location" }).click();
 
-  await expect(form.locator('input[name="latitude"]')).toHaveValue(
-    "18.788343",
-  );
-  await expect(form.locator('input[name="longitude"]')).toHaveValue(
-    "98.9853",
-  );
+  await expect(form.locator('input[name="latitude"]')).toHaveValue("18.788343");
+  await expect(form.locator('input[name="longitude"]')).toHaveValue("98.9853");
   await expect(form.getByLabel("Latitude")).toHaveValue("18.788343");
   await expect(form.getByLabel("Longitude")).toHaveValue("98.9853");
   await expect(map).toHaveAttribute("data-camera-center", "98.9853,18.788343");
