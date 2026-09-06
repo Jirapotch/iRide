@@ -8,6 +8,7 @@ import {
   mapStyle,
   primaryNavigation,
   publicSearchResults,
+  resolveBreadcrumbs,
   resolveTheme,
   searchResultHref,
 } from "./app-navigation-domain";
@@ -117,5 +118,47 @@ describe("application navigation domain", () => {
       sources: { osm: { type: "raster" } },
       layers: [{ id: "osm", type: "raster", source: "osm" }],
     });
+  });
+
+  it("resolves a localized nested community hierarchy", () => {
+    expect(
+      resolveBreadcrumbs("/community/car/talk", { locale: "en" }),
+    ).toEqual([
+      { key: "home", label: "Home", href: "/" },
+      { key: "community-car", label: "Cars", href: "/community/car" },
+      { key: "community-talk", label: "Talk" },
+    ]);
+  });
+
+  it("keeps a context-preserving admin parent href", () => {
+    expect(
+      resolveBreadcrumbs("/settings/users/user-1", {
+        locale: "th",
+        entityLabel: "สมชาย",
+        parentHref: "/settings/users?q=som&page=2",
+      }),
+    ).toEqual([
+      { key: "home", label: "หน้าหลัก", href: "/" },
+      {
+        key: "admin-users",
+        label: "จัดการผู้ใช้",
+        href: "/settings/users?q=som&page=2",
+      },
+      { key: "admin-user", label: "สมชาย" },
+    ]);
+  });
+
+  it("uses the active profile tab as the final item", () => {
+    expect(
+      resolveBreadcrumbs("/users/maya", {
+        locale: "en",
+        entityLabel: "Maya",
+        tab: "garage",
+      }),
+    ).toEqual([
+      { key: "home", label: "Home", href: "/" },
+      { key: "profile", label: "Maya", href: "/users/maya" },
+      { key: "profile-garage", label: "Garage" },
+    ]);
   });
 });
