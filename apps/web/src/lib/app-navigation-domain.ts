@@ -4,6 +4,8 @@ import type { Locale } from "./locale";
 
 export type AppTheme = "light" | "dark";
 export type CommunityRoomId = "talk" | "groups";
+const mapKindOrder = ["meeting", "event", "trip"] as const;
+export type MapKind = (typeof mapKindOrder)[number];
 
 export interface BreadcrumbItem {
   readonly key: string;
@@ -189,6 +191,54 @@ export function publicSearchResults(
   results: readonly SearchResultDto[],
 ): SearchResultDto[] {
   return [...results];
+}
+
+export function searchHref(query: string): string {
+  const value = query.trim();
+  return value ? `/search?${new URLSearchParams({ q: value })}` : "/search";
+}
+
+export function adminUsersHref({
+  q,
+  page,
+}: {
+  readonly q: string;
+  readonly page: number;
+}): string {
+  const query = new URLSearchParams();
+  if (q.trim()) query.set("q", q.trim());
+  if (page > 1) query.set("page", String(page));
+  return query.size ? `/settings/users?${query}` : "/settings/users";
+}
+
+export function adminUserDetailHref(id: string, from: string): string {
+  return `/settings/users/${encodeURIComponent(id)}?${new URLSearchParams({ from })}`;
+}
+
+export function parseMapKinds(value: string | null | undefined): MapKind[] {
+  if (value == null) return [...mapKindOrder];
+  if (value === "") return [];
+  const selected = new Set(value.split(","));
+  const parsed = mapKindOrder.filter((kind) => selected.has(kind));
+  return parsed.length ? parsed : [...mapKindOrder];
+}
+
+export function mapStateHref({
+  kinds,
+  marker,
+  modal,
+}: {
+  readonly kinds: readonly MapKind[];
+  readonly marker?: string | null;
+  readonly modal?: string | null;
+}): string {
+  const query = new URLSearchParams();
+  const ordered = mapKindOrder.filter((kind) => kinds.includes(kind));
+  if (ordered.length !== mapKindOrder.length)
+    query.set("layers", ordered.join(","));
+  if (marker) query.set("marker", marker);
+  if (modal) query.set("modal", modal);
+  return query.size ? `/maps?${query}` : "/maps";
 }
 
 export const communityRooms = [

@@ -2,14 +2,19 @@ import type { SearchResultDto } from "@iride/types";
 import { describe, expect, it } from "vitest";
 
 import {
+  adminUserDetailHref,
+  adminUsersHref,
   communityCategoryHref,
   communityTalkHref,
   legacyCommunityHref,
+  mapStateHref,
   mapStyle,
+  parseMapKinds,
   primaryNavigation,
   publicSearchResults,
   resolveBreadcrumbs,
   resolveTheme,
+  searchHref,
   searchResultHref,
 } from "./app-navigation-domain";
 
@@ -25,9 +30,18 @@ describe("application navigation domain", () => {
   });
 
   it("keeps remaining public search results", () => {
-    expect(publicSearchResults([
-      { id: "p", kind: "post", title: "Post", subtitle: "Maya", username: "maya", communityCategory: "groups" },
-    ]).map((item) => item.id)).toEqual(["p"]);
+    expect(
+      publicSearchResults([
+        {
+          id: "p",
+          kind: "post",
+          title: "Post",
+          subtitle: "Maya",
+          username: "maya",
+          communityCategory: "groups",
+        },
+      ]).map((item) => item.id),
+    ).toEqual(["p"]);
   });
 
   it.each([
@@ -121,13 +135,13 @@ describe("application navigation domain", () => {
   });
 
   it("resolves a localized nested community hierarchy", () => {
-    expect(
-      resolveBreadcrumbs("/community/car/talk", { locale: "en" }),
-    ).toEqual([
-      { key: "home", label: "Home", href: "/" },
-      { key: "community-car", label: "Cars", href: "/community/car" },
-      { key: "community-talk", label: "Talk" },
-    ]);
+    expect(resolveBreadcrumbs("/community/car/talk", { locale: "en" })).toEqual(
+      [
+        { key: "home", label: "Home", href: "/" },
+        { key: "community-car", label: "Cars", href: "/community/car" },
+        { key: "community-talk", label: "Talk" },
+      ],
+    );
   });
 
   it("keeps a context-preserving admin parent href", () => {
@@ -160,5 +174,26 @@ describe("application navigation domain", () => {
       { key: "profile", label: "Maya", href: "/users/maya" },
       { key: "profile-garage", label: "Garage" },
     ]);
+  });
+
+  it("serializes restorable search and admin state", () => {
+    expect(searchHref("  maya  ")).toBe("/search?q=maya");
+    expect(searchHref(" ")).toBe("/search");
+    expect(adminUsersHref({ q: "locked rider", page: 2 })).toBe(
+      "/settings/users?q=locked+rider&page=2",
+    );
+    expect(adminUserDetailHref("u/1", "/settings/users?q=locked&page=2")).toBe(
+      "/settings/users/u%2F1?from=%2Fsettings%2Fusers%3Fq%3Dlocked%26page%3D2",
+    );
+  });
+
+  it("round-trips canonical map filters and selection", () => {
+    expect(parseMapKinds("trip,meeting,unknown")).toEqual(["meeting", "trip"]);
+    expect(parseMapKinds(null)).toEqual(["meeting", "event", "trip"]);
+    expect(parseMapKinds("")).toEqual([]);
+    expect(mapStateHref({ kinds: [] })).toBe("/maps?layers=");
+    expect(
+      mapStateHref({ kinds: ["trip", "meeting"], marker: "event-1" }),
+    ).toBe("/maps?layers=meeting%2Ctrip&marker=event-1");
   });
 });
