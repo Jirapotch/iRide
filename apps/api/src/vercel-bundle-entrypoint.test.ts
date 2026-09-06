@@ -30,6 +30,7 @@ describe("Vercel bundle entrypoint", () => {
       path.resolve(import.meta.dirname, "../server.mjs"),
       "utf8",
     );
+    expect(entrypoint).not.toContain("export default");
     await writeFile(path.join(fixture, "server.mjs"), entrypoint);
     await writeFile(
       path.join(fixture, "node_modules/@nestjs/core/index.js"),
