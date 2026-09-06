@@ -13,7 +13,6 @@ import type {
   ContentAuthorDto,
   PostDto,
 } from "@iride/types";
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import {
@@ -24,6 +23,8 @@ import { getComments } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
 import { commentAction } from "../community/actions";
 import { removeContent } from "../create/actions";
+import { ActionSubmitButton } from "./action-submit-button";
+import { PendingLink } from "./pending-link";
 interface Props {
   readonly authenticated: boolean;
   readonly canWrite: boolean;
@@ -80,12 +81,12 @@ function TalkRoom({
   return (
     <section className="community-feed">
       {canWrite ? (
-        <Link
+        <PendingLink
           className="community-create-link"
           href={`/create?type=post&category=${category}`}
         >
           + {locale === "th" ? "เขียนโพสต์" : "Write a post"}
-        </Link>
+        </PendingLink>
       ) : authenticated ? (
         <p className="access-wait-note">
           {locale === "th"
@@ -101,9 +102,9 @@ function TalkRoom({
             key={post.id}
           >
             <header>
-              <Link href={`/users/${post.author.username}`}>
+              <PendingLink href={`/users/${post.author.username}`}>
                 {post.author.displayName}
-              </Link>
+              </PendingLink>
               <span>@{post.author.username}</span>
               {post.canEdit ? (
                 <OwnerActionMenu
@@ -126,13 +127,13 @@ function TalkRoom({
               <div className="post-marker-tags">
                 {post.markerTags.map((tag) =>
                   tag.available ? (
-                    <Link
+                    <PendingLink
                       href={`/maps?marker=${tag.id}`}
                       key={`${tag.kind}:${tag.id}`}
                     >
                       <MapPin size={15} />
                       {tag.title}
-                    </Link>
+                    </PendingLink>
                   ) : (
                     <span aria-disabled="true" key={`${tag.kind}:${tag.id}`}>
                       <MapPin size={15} />
@@ -229,10 +230,14 @@ function OwnerActionMenu({
       </button>
       {open ? (
         <div className="owner-menu-popover" role="menu">
-          <Link href={editHref} onClick={() => setOpen(false)} role="menuitem">
+          <PendingLink
+            href={editHref}
+            onClick={() => setOpen(false)}
+            role="menuitem"
+          >
             <NotePencil size={16} />
             {locale === "th" ? "แก้ไข" : "Edit"}
-          </Link>
+          </PendingLink>
           <form
             action={deleteAction}
             onSubmit={(event) => {
@@ -242,10 +247,15 @@ function OwnerActionMenu({
             {Object.entries(hidden).map(([name, value]) => (
               <input key={name} name={name} type="hidden" value={value} />
             ))}
-            <button role="menuitem" type="submit">
+            <ActionSubmitButton
+              ariaLabel={locale === "th" ? "ลบ" : "Delete"}
+              className=""
+              pendingLabel={locale === "th" ? "กำลังลบ…" : "Deleting…"}
+              role="menuitem"
+            >
               <Trash size={16} />
               {locale === "th" ? "ลบ" : "Delete"}
-            </button>
+            </ActionSubmitButton>
           </form>
         </div>
       ) : null}
@@ -395,11 +405,11 @@ function CommentThread({
               </button>
             </form>
           ) : (
-            <Link href={`/login?next=${encodeURIComponent(returnHref)}`}>
+            <PendingLink href={`/login?next=${encodeURIComponent(returnHref)}`}>
               {locale === "th"
                 ? "เข้าสู่ระบบเพื่อแสดงความคิดเห็น"
                 : "Sign in to comment"}
-            </Link>
+            </PendingLink>
           )}
         </div>
       ) : null}

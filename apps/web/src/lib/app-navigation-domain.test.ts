@@ -176,6 +176,16 @@ describe("application navigation domain", () => {
     ]);
   });
 
+  it("keeps malformed profile path segments safe", () => {
+    expect(
+      resolveBreadcrumbs("/users/%", {
+        locale: "en",
+        entityLabel: "Profile",
+        tab: "garage",
+      }),
+    ).toContainEqual({ key: "profile", label: "Profile", href: "/users/%25" });
+  });
+
   it("serializes restorable search and admin state", () => {
     expect(searchHref("  maya  ")).toBe("/search?q=maya");
     expect(searchHref(" ")).toBe("/search");

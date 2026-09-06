@@ -20,7 +20,6 @@ import type {
   VehicleKind,
 } from "@iride/types";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
@@ -29,6 +28,7 @@ import { ProfileForm } from "../../../profile/profile-form";
 import { editProfile } from "../../../profile/actions";
 import { mediaVariantUrl } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
+import { PendingLink } from "../../_components/pending-link";
 import { EditModal } from "../../_components/edit-modal";
 import { ActionSubmitButton } from "../../_components/action-submit-button";
 import { removeVehicleAction, saveVehicleAction } from "../../create/actions";
@@ -193,13 +193,13 @@ export function UserProfileScreen({
               }
             >
               {(["overview", "garage", "activities"] as const).map((value) => (
-                <Link
+                <PendingLink
                   aria-current={tab === value ? "page" : undefined}
                   href={`/users/${profile.username}${value === "overview" ? "" : `?tab=${value}`}`}
                   key={value}
                 >
                   {text[value]}
-                </Link>
+                </PendingLink>
               ))}
             </nav>
             {tab === "overview" ? (
@@ -215,9 +215,9 @@ export function UserProfileScreen({
                 </article>
                 <article className="premium-card p-5">
                   <p className="premium-kicker">Garage</p>
-                  <Link href={`/users/${profile.username}?tab=garage`}>
+                  <PendingLink href={`/users/${profile.username}?tab=garage`}>
                     {locale === "th" ? "เปิด Garage" : "View garage"}
-                  </Link>
+                  </PendingLink>
                 </article>
               </section>
             ) : null}
@@ -244,7 +244,9 @@ export function ProfileActivities({
             ? "ยังไม่มีกิจกรรมที่เผยแพร่"
             : "No published activities yet"}
         </strong>
-        <Link href="/maps">{locale === "th" ? "เปิดแผนที่" : "Open map"}</Link>
+        <PendingLink href="/maps">
+          {locale === "th" ? "เปิดแผนที่" : "Open map"}
+        </PendingLink>
       </section>
     );
   return (
@@ -259,7 +261,7 @@ export function ProfileActivities({
                 ? Path
                 : Camera;
         return (
-          <Link
+          <PendingLink
             className="premium-card profile-activity-card"
             href={`/maps?marker=${activity.id}`}
             key={`${activity.kind}:${activity.id}`}
@@ -281,7 +283,7 @@ export function ProfileActivities({
                 }).format(new Date(activity.startsAt))}
               </time>
             </div>
-          </Link>
+          </PendingLink>
         );
       })}
     </section>
@@ -327,13 +329,13 @@ export function GaragePanel({
           <h2>{locale === "th" ? "Vehicle" : "Vehicles"}</h2>
         </div>
         {canCreate ? (
-          <Link
+          <PendingLink
             className="primary-link-button"
             href={`/users/${username}?tab=garage&modal=create-vehicle`}
           >
             <Plus size={17} />
             {locale === "th" ? "เพิ่ม" : "Add"}
-          </Link>
+          </PendingLink>
         ) : null}
       </div>
       <div className="vehicle-grid">
@@ -362,12 +364,12 @@ export function GaragePanel({
               </p>
               {vehicle.canEdit ? (
                 <div className="owner-actions">
-                  <Link
+                  <PendingLink
                     href={`/users/${username}?tab=garage&vehicle=${vehicle.id}&modal=edit`}
                   >
                     <NotePencil size={16} />
                     {locale === "th" ? "แก้ไข" : "Edit"}
-                  </Link>
+                  </PendingLink>
                   <form
                     action={removeVehicleAction}
                     onSubmit={(event) => {

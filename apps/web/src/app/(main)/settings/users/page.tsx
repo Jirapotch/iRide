@@ -1,11 +1,15 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import { listAdminUsers } from "@/lib/admin-users-api";
 import { getOwnProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 import { AdminUserDirectory } from "@/features/admin/admin-user-directory";
-import { adminUsersHref } from "@/lib/app-navigation-domain";
+import {
+  adminUsersHref,
+  resolveBreadcrumbs,
+} from "@/lib/app-navigation-domain";
+import { Breadcrumbs } from "../../_components/breadcrumbs";
+import { PendingLink } from "../../_components/pending-link";
 
 export default async function AdminUsersPage({
   searchParams,
@@ -30,6 +34,7 @@ export default async function AdminUsersPage({
   const returnHref = adminUsersHref({ q, page });
   return (
     <main className="admin-users-page">
+      <Breadcrumbs items={resolveBreadcrumbs("/settings/users", { locale })} />
       <header>
         <h1 data-route-heading tabIndex={-1}>
           {locale === "th" ? "จัดการผู้ใช้" : "Manage users"}
@@ -53,9 +58,9 @@ export default async function AdminUsersPage({
         />
         <button type="submit">{locale === "th" ? "ค้นหา" : "Search"}</button>
         {q ? (
-          <Link className="admin-search-clear" href="/settings/users">
+          <PendingLink className="admin-search-clear" href="/settings/users">
             {locale === "th" ? "ล้างการค้นหา" : "Clear search"}
-          </Link>
+          </PendingLink>
         ) : null}
       </form>
       <AdminUserDirectory
@@ -65,16 +70,16 @@ export default async function AdminUsersPage({
       />
       <nav className="admin-pagination" aria-label="Pagination">
         {page > 1 ? (
-          <Link href={adminUsersHref({ q, page: page - 1 })}>
+          <PendingLink href={adminUsersHref({ q, page: page - 1 })}>
             ← {locale === "th" ? "ก่อนหน้า" : "Previous"}
-          </Link>
+          </PendingLink>
         ) : (
           <span />
         )}
         {hasNext ? (
-          <Link href={adminUsersHref({ q, page: page + 1 })}>
+          <PendingLink href={adminUsersHref({ q, page: page + 1 })}>
             {locale === "th" ? "ถัดไป" : "Next"} →
-          </Link>
+          </PendingLink>
         ) : null}
       </nav>
     </main>

@@ -1,12 +1,12 @@
 "use client";
 
 import { Table, Tag, type TableColumnsType } from "antd";
-import Link from "next/link";
 import { useEffect } from "react";
 
 import type { AdminUserDto } from "@/lib/admin-users-api";
 import { adminUserDetailHref } from "@/lib/app-navigation-domain";
 import type { Locale } from "@/lib/locale";
+import { PendingLink } from "@/app/(main)/_components/pending-link";
 
 export function AdminUserDirectory({
   locale,
@@ -33,7 +33,7 @@ export function AdminUserDirectory({
       title: locale === "th" ? "ผู้ใช้" : "User",
       key: "user",
       render: (_, user) => (
-        <Link
+        <PendingLink
           href={adminUserDetailHref(user.id, returnHref)}
           onClick={(event) => {
             if (
@@ -60,7 +60,7 @@ export function AdminUserDirectory({
           <small className="admin-table-secondary">
             @{user.username ?? "-"}
           </small>
-        </Link>
+        </PendingLink>
       ),
     },
     {

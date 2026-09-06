@@ -20,9 +20,13 @@ for (const locale of ["th", "en"] as const) {
 
     await page.getByRole("button", { name: /Google/ }).click();
     await expect(page).toHaveURL(/\/users\/e2e_rider$/);
-    await expect(page.getByText("@e2e_rider")).toBeVisible();
+    await expect(
+      page.getByText("@e2e_rider").filter({ visible: true }),
+    ).toBeVisible();
     await expect(page.locator('[data-ui="app-shell"]')).toBeVisible();
-    await expect(page.getByRole("heading", { name: "E2E Rider" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "E2E Rider" }),
+    ).toBeVisible();
 
     const authCookies = (await context.cookies()).filter((cookie) =>
       cookie.name.startsWith("iride-auth"),
@@ -77,7 +81,5 @@ test("returns to the protected profile after sign-in", async ({ page }) => {
 
   await page.getByRole("button", { name: /Google/ }).click();
   await expect(page).toHaveURL(/\/users\/e2e_rider$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "E2E Rider",
-  );
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("E2E Rider");
 });

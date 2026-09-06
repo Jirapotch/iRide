@@ -1,11 +1,12 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { Locale } from "@/lib/locale";
 import { BrandMark } from "../../_components/brand-mark";
 import { BottomNavigation, HeaderActions } from "./app-navigation";
 import { MockAppProvider } from "./mock-app-provider";
+import { PendingLink } from "./pending-link";
 import { RouteFocusManager } from "./route-focus-manager";
+import { RouteTransition } from "./route-transition";
 
 export function AppShell({
   authenticated,
@@ -28,9 +29,13 @@ export function AppShell({
         </a>
         <header className="app-header">
           <div className="header-inner">
-            <Link className="brand-link" href="/" aria-label="iRide home">
+            <PendingLink
+              className="brand-link"
+              href="/"
+              aria-label="iRide home"
+            >
               <BrandMark />
-            </Link>
+            </PendingLink>
             <HeaderActions
               authenticated={authenticated}
               canManage={canManage}
@@ -41,7 +46,7 @@ export function AppShell({
         </header>
         <RouteFocusManager />
         <main className="app-main" id="main-content">
-          {children}
+          <RouteTransition>{children}</RouteTransition>
         </main>
         <div className="mobile-nav-shell">
           <BottomNavigation locale={locale} username={username} />

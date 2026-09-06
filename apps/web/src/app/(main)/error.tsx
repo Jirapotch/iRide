@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useSyncExternalStore } from "react";
+import { PendingLink } from "./_components/pending-link";
 
 const subscribeToLocale = () => () => undefined;
 const readClientLocale = () => document.documentElement.lang === "th";
@@ -38,7 +38,9 @@ export default function MainError({
         <button className="primary-action" onClick={reset} type="button">
           {thai ? "ลองอีกครั้ง" : "Retry"}
         </button>
-        <Link href="/">{thai ? "กลับหน้าหลัก" : "Back home"}</Link>
+        <PendingLink href="/">
+          {thai ? "กลับหน้าหลัก" : "Back home"}
+        </PendingLink>
       </div>
     </section>
   );

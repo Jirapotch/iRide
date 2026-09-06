@@ -14,7 +14,6 @@ import {
   UsersThree,
 } from "@phosphor-icons/react";
 import { Button, Drawer } from "antd";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -146,7 +145,7 @@ export function HeaderActions({
           {canManage ? (
             <section>
               <p className="drawer-label">Admin</p>
-              <Link
+              <PendingLink
                 className="drawer-row"
                 href="/settings/users"
                 onClick={() => setDrawerOpen(false)}
@@ -155,7 +154,7 @@ export function HeaderActions({
                   <UsersThree size={20} />
                   {text.manageUsers}
                 </span>
-              </Link>
+              </PendingLink>
             </section>
           ) : null}
           <section>
@@ -179,7 +178,7 @@ export function HeaderActions({
             <p className="drawer-label">{text.profile}</p>
             {authenticated ? (
               <>
-                <Link
+                <PendingLink
                   className="drawer-row"
                   href={username ? `/users/${username}` : "/onboarding"}
                 >
@@ -187,16 +186,16 @@ export function HeaderActions({
                     <UserCircle size={20} />
                     {text.profile}
                   </span>
-                </Link>
+                </PendingLink>
                 <SignOutButton label={text.logout} />
               </>
             ) : (
-              <Link className="drawer-row" href="/login?intent=profile">
+              <PendingLink className="drawer-row" href="/login?intent=profile">
                 <span>
                   <SignIn size={20} />
                   {text.login}
                 </span>
-              </Link>
+              </PendingLink>
             )}
           </section>
         </div>
@@ -305,9 +304,9 @@ function NotificationPopover({ locale }: { readonly locale: Locale }) {
               );
             })}
           </div>
-          <Link href="/notifications" onClick={() => setOpen(false)}>
+          <PendingLink href="/notifications" onClick={() => setOpen(false)}>
             {locale === "th" ? "ดูหน้าแจ้งเตือน" : "Open notifications page"}
-          </Link>
+          </PendingLink>
         </section>
       ) : null}
     </div>

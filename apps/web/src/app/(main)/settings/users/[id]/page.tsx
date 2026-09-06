@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 import { safeReturnPath } from "@/lib/auth-redirect";
@@ -9,6 +8,8 @@ import { getRequestLocale } from "@/lib/request-locale";
 import { changeUserAccess, removeAdminContent } from "../actions";
 import { Breadcrumbs } from "../../../_components/breadcrumbs";
 import { HistoryBackButton } from "../../../_components/history-back-button";
+import { ActionSubmitButton } from "../../../_components/action-submit-button";
+import { PendingLink } from "../../../_components/pending-link";
 
 export default async function AdminUserPage({
   params,
@@ -91,14 +92,14 @@ export default async function AdminUserPage({
           </div>
         </dl>
         {user.status !== "suspended" && user.username ? (
-          <Link
+          <PendingLink
             className="drawer-row"
             href={`/users/${encodeURIComponent(user.username)}`}
           >
             {locale === "th"
               ? "ดูโปรไฟล์และจัดการเนื้อหา"
               : "Open profile and manage content"}
-          </Link>
+          </PendingLink>
         ) : null}
         <div className="admin-user-actions">
           {actions.map((action) => (
@@ -106,14 +107,15 @@ export default async function AdminUserPage({
               <input name="id" type="hidden" value={user.id} />
               <input name="from" type="hidden" value={returnHref} />
               <input name="accessAction" type="hidden" value={action} />
-              <button
+              <ActionSubmitButton
+                ariaLabel={actionLabel(action, locale)}
                 className={
                   action === "suspend" ? "danger-action" : "primary-action"
                 }
-                type="submit"
+                pendingLabel={actionPendingLabel(action, locale)}
               >
                 {actionLabel(action, locale)}
-              </button>
+              </ActionSubmitButton>
             </form>
           ))}
         </div>
@@ -131,9 +133,13 @@ export default async function AdminUserPage({
                   <input name="from" type="hidden" value={returnHref} />
                   <input name="id" type="hidden" value={item.id} />
                   <input name="kind" type="hidden" value={item.kind} />
-                  <button className="danger-action" type="submit">
+                  <ActionSubmitButton
+                    ariaLabel={locale === "th" ? "ลบ" : "Delete"}
+                    className="danger-action"
+                    pendingLabel={locale === "th" ? "กำลังลบ…" : "Deleting…"}
+                  >
                     {locale === "th" ? "ลบ" : "Delete"}
-                  </button>
+                  </ActionSubmitButton>
                 </form>
               </article>
             ))
@@ -144,6 +150,27 @@ export default async function AdminUserPage({
       </section>
     </main>
   );
+}
+
+function actionPendingLabel(
+  action: "lock" | "unlock" | "suspend" | "restore",
+  locale: "th" | "en",
+) {
+  const labels = {
+    th: {
+      lock: "กำลังล็อก…",
+      unlock: "กำลังปลดล็อก…",
+      suspend: "กำลังระงับ…",
+      restore: "กำลังกู้คืน…",
+    },
+    en: {
+      lock: "Locking…",
+      unlock: "Unlocking…",
+      suspend: "Suspending…",
+      restore: "Restoring…",
+    },
+  } as const;
+  return labels[locale][action];
 }
 
 function actionLabel(

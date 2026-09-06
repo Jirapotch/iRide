@@ -107,6 +107,10 @@ test("nested community routes expose responsive breadcrumbs", async ({
   const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
   await expect(breadcrumb.getByRole("link", { name: "Home" })).toBeVisible();
   await expect(breadcrumb.getByRole("link", { name: "Cars" })).toBeVisible();
+  const homeCrumb = breadcrumb.getByRole("link", { name: "Home" });
+  await homeCrumb.focus();
+  await expect(homeCrumb).toBeFocused();
+  await expect(homeCrumb).toHaveCSS("outline-style", "solid");
   await expect(breadcrumb.getByText("Talk", { exact: true })).toHaveAttribute(
     "aria-current",
     "page",
@@ -197,8 +201,30 @@ test("administrators can unlock a locked user", async ({ page }) => {
   await page.getByRole("button", { name: /Google/ }).click();
   await page.getByRole("link", { name: /Locked Rider/ }).click();
   await expect(page.getByText("user · locked", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Unlock", exact: true }).click();
+  const unlock = page.getByRole("button", { name: "Unlock", exact: true });
+  await unlock.dblclick({ noWaitAfter: true });
+  await expect(unlock).toBeDisabled();
+  await expect(unlock).toHaveAttribute("aria-busy", "true");
+  await expect(page.getByText("Unlocking…", { exact: true })).toBeVisible();
   await expect(page.getByText("user · active", { exact: true })).toBeVisible();
+});
+
+test("current main routes expose navigation UX contracts", async ({ page }) => {
+  for (const route of [
+    "/search",
+    "/maps",
+    "/notifications",
+    "/community/groups",
+  ]) {
+    await page.goto(route);
+    await expect(page.locator("h1[data-route-heading]")).toHaveCount(1);
+    const breadcrumbs = page.getByRole("navigation", { name: "Breadcrumb" });
+    await expect(breadcrumbs).toBeVisible();
+    await expect(breadcrumbs.locator('[aria-current="page"]')).toHaveCount(1);
+    await expect(
+      page.getByRole("navigation", { name: "Primary navigation" }),
+    ).toBeVisible();
+  }
 });
 
 test("admin detail returns to the exact filtered list", async ({ page }) => {
@@ -248,14 +274,11 @@ test("browser Back restores the filtered list scroll position", async ({
   await page.getByRole("button", { name: "Back to user list" }).click();
   await expect
     .poll(() =>
-      page.evaluate(
-        (target) => {
-          const maximum =
-            document.documentElement.scrollHeight - window.innerHeight;
-          return window.scrollY >= Math.min(target - 2, maximum - 2);
-        },
-        before,
-      ),
+      page.evaluate((target) => {
+        const maximum =
+          document.documentElement.scrollHeight - window.innerHeight;
+        return window.scrollY >= Math.min(target - 2, maximum - 2);
+      }, before),
     )
     .toBe(true);
 });

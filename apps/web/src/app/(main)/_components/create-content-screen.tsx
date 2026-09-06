@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useTheme } from "@/app/_components/theme-provider";
-import { mapStyle } from "@/lib/app-navigation-domain";
+import { mapStyle, resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 import type { Locale } from "@/lib/locale";
 import { applyMapPalette } from "@/lib/map-palette";
 import { parseGoogleMapsCoordinates } from "@/lib/google-maps-domain";
@@ -34,6 +34,8 @@ import {
 } from "@/lib/marker-mention-domain";
 import { resolveGoogleMapsLocation, saveContent } from "../create/actions";
 import { ActionSubmitButton } from "./action-submit-button";
+import { Breadcrumbs } from "./breadcrumbs";
+import { PendingLink } from "./pending-link";
 import { SectionError } from "./section-error";
 
 type CreateType = "post" | "activity" | "trip";
@@ -67,6 +69,7 @@ export function CreateContentScreen({
   ];
   return (
     <main className="create-page">
+      <Breadcrumbs items={resolveBreadcrumbs("/create", { locale })} />
       <header className="create-intro">
         <p className="premium-kicker">iRide Create</p>
         <h1 data-route-heading tabIndex={-1}>
@@ -75,13 +78,13 @@ export function CreateContentScreen({
       </header>
       <nav className="create-type-tabs">
         {options.map((option) => (
-          <a
+          <PendingLink
             aria-current={option.type === type ? "page" : undefined}
             href={`/create?type=${option.type}`}
             key={option.type}
           >
             {option.label}
-          </a>
+          </PendingLink>
         ))}
       </nav>
       <section className="create-card premium-card">

@@ -74,6 +74,30 @@ test.beforeEach(async ({ context, page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
 });
 
+test("route content uses a short entrance without delaying navigation", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Search", exact: true }).click();
+  const content = page.locator('[data-ui="route-content"]');
+  await expect(page).toHaveURL(/\/search$/);
+  await expect(content).toHaveCSS("animation-name", "route-content-enter");
+  await expect(content).toHaveCSS("animation-duration", "0.2s");
+});
+
+test("reduced motion collapses the route animation duration", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/search");
+  const durationSeconds = await page
+    .locator('[data-ui="route-content"]')
+    .evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).animationDuration),
+    );
+  expect(durationSeconds).toBeLessThanOrEqual(0.00001);
+});
+
 test("locked accounts see a read-only create state", async ({
   page,
   request,
@@ -99,12 +123,13 @@ test("post category is required and changing it on edit redirects to the new fee
 }) => {
   await page.goto("/login?next=%2Fcreate%3Ftype%3Dpost%26category%3Dcar");
   await page.getByRole("button", { name: /Google/ }).click();
-  const category = page.getByLabel("Community category");
+  const form = page.locator("form.form-stack:visible");
+  const category = form.getByLabel("Community category");
   await expect(category).toHaveAttribute("required", "");
   await expect(category.locator("option")).toHaveCount(4);
-  await page.getByLabel("Post text").fill("Category route test");
+  await form.getByLabel("Post text").fill("Category route test");
   await category.selectOption("car");
-  await page.getByRole("button", { name: "Publish" }).click();
+  await form.getByRole("button", { name: "Publish" }).click();
   await expect(page).toHaveURL(/\/community\/car\/talk\?post=/);
   const createdUrl = new URL(page.url());
   await page.goto(`${createdUrl.pathname}${createdUrl.search}&modal=edit`);

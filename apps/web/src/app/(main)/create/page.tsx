@@ -10,7 +10,9 @@ import {
   type CreateContentType,
 } from "@/lib/create-content-domain";
 import { legacyEditRedirect } from "@/lib/edit-modal-domain";
+import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 import { CreateContentScreen } from "../_components/create-content-screen";
+import { Breadcrumbs } from "../_components/breadcrumbs";
 
 export default async function CreatePage({
   searchParams,
@@ -40,8 +42,9 @@ export default async function CreatePage({
   if (!profile?.canWrite) {
     return (
       <main className="create-page">
+        <Breadcrumbs items={resolveBreadcrumbs("/create", { locale })} />
         <section className="create-card premium-card access-wait-state">
-          <h1>
+          <h1 data-route-heading tabIndex={-1}>
             {locale === "th"
               ? "บัญชียังไม่พร้อมสร้างเนื้อหา"
               : "Your account is read-only"}

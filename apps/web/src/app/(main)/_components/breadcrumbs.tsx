@@ -1,6 +1,5 @@
-import Link from "next/link";
-
 import type { BreadcrumbItem } from "@/lib/app-navigation-domain";
+import { PendingLink } from "./pending-link";
 
 export function Breadcrumbs({
   items,
@@ -17,7 +16,7 @@ export function Breadcrumbs({
         {items.map((item) => (
           <li key={item.key}>
             {item.href ? (
-              <Link href={item.href}>{item.label}</Link>
+              <PendingLink href={item.href}>{item.label}</PendingLink>
             ) : (
               <span aria-current="page">{item.label}</span>
             )}
@@ -25,13 +24,13 @@ export function Breadcrumbs({
         ))}
       </ol>
       {parent?.href ? (
-        <Link
+        <PendingLink
           aria-label={`Back to ${parent.label}`}
           className="breadcrumb-compact"
           href={parent.href}
         >
           ← {parent.label}
-        </Link>
+        </PendingLink>
       ) : null}
     </nav>
   );

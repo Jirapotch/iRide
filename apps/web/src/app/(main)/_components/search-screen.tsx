@@ -2,17 +2,19 @@
 
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import type { SearchResultDto } from "@iride/types";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import {
   publicSearchResults,
+  resolveBreadcrumbs,
   searchHref,
   searchResultHref,
 } from "@/lib/app-navigation-domain";
 import { searchContent } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
+import { Breadcrumbs } from "./breadcrumbs";
+import { PendingLink } from "./pending-link";
 
 export function SearchScreen({
   initialQuery,
@@ -83,6 +85,7 @@ export function SearchScreen({
 
   return (
     <main className="search-page">
+      <Breadcrumbs items={resolveBreadcrumbs("/search", { locale })} />
       <header>
         <p className="premium-kicker">iRide Search</p>
         <h1 data-route-heading tabIndex={-1}>
@@ -137,7 +140,7 @@ export function SearchScreen({
         ) : null}
         {!loading
           ? visibleResults.map((result) => (
-              <Link
+              <PendingLink
                 className="search-result-row"
                 href={searchResultHref(result)}
                 key={`${result.kind}-${result.id}`}
@@ -145,7 +148,7 @@ export function SearchScreen({
                 <span>{labelFor(result.kind, locale)}</span>
                 <strong>{result.title}</strong>
                 <small>{result.subtitle}</small>
-              </Link>
+              </PendingLink>
             ))
           : null}
         {query.trim() && !loading && !failed && !visibleResults.length ? (

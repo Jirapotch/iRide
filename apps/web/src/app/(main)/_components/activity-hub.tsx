@@ -18,7 +18,6 @@ import type {
 } from "@iride/types";
 import { gsap } from "gsap";
 import * as maplibregl from "maplibre-gl";
-import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import {
@@ -35,6 +34,7 @@ import {
   mapStateHref,
   mapStyle,
   parseMapKinds,
+  resolveBreadcrumbs,
 } from "@/lib/app-navigation-domain";
 import { getExploreContent } from "@/lib/content-api";
 import { googleMapsSearchUrl } from "@/lib/google-maps-domain";
@@ -43,12 +43,37 @@ import { applyMapPalette, contentKindColors } from "@/lib/map-palette";
 import { mapSelectionCamera } from "@/lib/map-motion";
 import { motionTokens } from "@/shared/theme/tokens";
 import { removeContent } from "../create/actions";
+import { ActionSubmitButton } from "./action-submit-button";
+import { Breadcrumbs } from "./breadcrumbs";
 import { BackendForm } from "./create-content-screen";
 import { EditModal } from "./edit-modal";
+import { PendingLink } from "./pending-link";
 
 const center: [number, number] = [100.5018, 13.7563];
 const kinds: ExploreFeatureKind[] = ["meeting", "event", "trip"];
 const markerColors = contentKindColors;
+
+function focusMarkerWhenSheetCloses(
+  markerId: string,
+  fallback: HTMLButtonElement | null,
+) {
+  const focus = () => {
+    if (document.querySelector("[data-feature-sheet]")) return false;
+    const marker = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(".activity-marker"),
+    ).find((button) => button.dataset.featureId === markerId);
+    (marker ?? fallback)?.focus();
+    return document.activeElement === (marker ?? fallback);
+  };
+
+  window.setTimeout(() => {
+    if (focus()) return;
+    const observer = new MutationObserver(() => {
+      if (focus()) observer.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }, 0);
+}
 
 export function ActivityHub({
   locale,
@@ -87,6 +112,7 @@ export function ActivityHub({
   const enabledRef = useRef(enabled);
   const themeRef = useRef(theme);
   const markerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const returnFocusMarkerIdRef = useRef<string | null>(null);
   const selectedIdRef = useRef(selectedId);
   const pushedMarkerRef = useRef(false);
 
@@ -105,6 +131,11 @@ export function ActivityHub({
       pushedMarkerRef.current = false;
       setEnabled(restoredKinds);
       setSelectedId(selectedIdRef.current);
+      const markerId = returnFocusMarkerIdRef.current;
+      if (markerId) {
+        returnFocusMarkerIdRef.current = null;
+        focusMarkerWhenSheetCloses(markerId, markerTriggerRef.current);
+      }
     };
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
@@ -214,6 +245,11 @@ export function ActivityHub({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    const focusedMarkerId =
+      document.activeElement instanceof HTMLButtonElement &&
+      document.activeElement.matches(".activity-marker")
+        ? document.activeElement.dataset.featureId
+        : null;
     markerRefs.current.forEach((marker) => marker.remove());
     markerRefs.current = features
       .filter((feature) => enabled.includes(feature.kind))
@@ -222,7 +258,7 @@ export function ActivityHub({
         anchor.className = "activity-marker-anchor";
         const button = document.createElement("button");
         button.type = "button";
-        button.className = `activity-marker marker-${feature.kind} ${feature.id === selectedId ? "is-selected" : ""}`;
+        button.className = `activity-marker marker-${feature.kind} ${feature.id === selectedIdRef.current ? "is-selected" : ""}`;
         button.style.setProperty("--marker-color", markerColors[feature.kind]);
         button.setAttribute("aria-label", feature.title);
         button.textContent =
@@ -252,7 +288,25 @@ export function ActivityHub({
           .setLngLat([feature.longitude, feature.latitude])
           .addTo(map);
       });
-  }, [enabled, features, selectedId]);
+    if (focusedMarkerId) {
+      rootRef.current
+        ?.querySelector<HTMLButtonElement>(
+          `.activity-marker[data-feature-id="${CSS.escape(focusedMarkerId)}"]`,
+        )
+        ?.focus();
+    }
+  }, [enabled, features]);
+
+  useEffect(() => {
+    rootRef.current
+      ?.querySelectorAll<HTMLButtonElement>(".activity-marker")
+      .forEach((button) => {
+        button.classList.toggle(
+          "is-selected",
+          button.dataset.featureId === selectedId,
+        );
+      });
+  }, [selectedId]);
 
   const selected = useMemo(
     () => features.find((feature) => feature.id === selectedId) ?? null,
@@ -369,24 +423,23 @@ export function ActivityHub({
   }, [selected]);
   const closeFeatureSheet = useCallback(() => {
     const markerId = selectedId;
-    setSelectedId(null);
-    selectedIdRef.current = null;
+    returnFocusMarkerIdRef.current = markerId;
     if (pushedMarkerRef.current) {
       pushedMarkerRef.current = false;
       window.history.back();
     } else {
+      setSelectedId(null);
+      selectedIdRef.current = null;
       window.history.replaceState(
         null,
         "",
         mapStateHref({ kinds: enabledRef.current }),
       );
+      if (markerId) {
+        returnFocusMarkerIdRef.current = null;
+        focusMarkerWhenSheetCloses(markerId, markerTriggerRef.current);
+      }
     }
-    window.requestAnimationFrame(() => {
-      const marker = Array.from(
-        document.querySelectorAll<HTMLButtonElement>(".activity-marker"),
-      ).find((button) => button.dataset.featureId === markerId);
-      (marker ?? markerTriggerRef.current)?.focus();
-    });
   }, [selectedId]);
   function toggle(kind: ExploreFeatureKind) {
     setEnabled((current) => {
@@ -450,6 +503,12 @@ export function ActivityHub({
       data-camera-duration={cameraDuration ?? undefined}
       ref={rootRef}
     >
+      <h1 className="sr-only" data-route-heading tabIndex={-1}>
+        {locale === "th" ? "แผนที่" : "Maps"}
+      </h1>
+      <div className="map-breadcrumbs">
+        <Breadcrumbs items={resolveBreadcrumbs("/maps", { locale })} />
+      </div>
       <div className="map-canvas" ref={containerRef} />
       <div
         aria-label={locale === "th" ? "ผลลัพธ์บนแผนที่" : "Map results"}
@@ -635,7 +694,7 @@ function FeatureSheet({
   return createPortal(
     <div
       className="activity-sheet-backdrop on-map"
-      onMouseDown={(event) => {
+      onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
@@ -670,9 +729,9 @@ function FeatureSheet({
           <h2>{feature.title}</h2>
           <p>{feature.subtitle}</p>
           <p>
-            <Link href={`/users/${feature.author.username}`}>
+            <PendingLink href={`/users/${feature.author.username}`}>
               {feature.author.displayName}
-            </Link>{" "}
+            </PendingLink>{" "}
             ·{" "}
             <time dateTime={feature.startsAt}>
               {new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en", {
@@ -695,16 +754,20 @@ function FeatureSheet({
           </a>
           {feature.canEdit ? (
             <div className="owner-actions">
-              <Link href={`/maps?marker=${feature.id}&modal=edit`}>
+              <PendingLink href={`/maps?marker=${feature.id}&modal=edit`}>
                 {locale === "th" ? "แก้ไข" : "Edit"}
-              </Link>
+              </PendingLink>
               <form action={removeContent}>
                 <input name="domain" type="hidden" value={domain} />
                 <input name="id" type="hidden" value={feature.id} />
-                <button type="submit">
+                <ActionSubmitButton
+                  ariaLabel={locale === "th" ? "ลบ" : "Delete"}
+                  className=""
+                  pendingLabel={locale === "th" ? "กำลังลบ…" : "Deleting…"}
+                >
                   <Trash size={16} />
                   {locale === "th" ? "ลบ" : "Delete"}
-                </button>
+                </ActionSubmitButton>
               </form>
             </div>
           ) : null}

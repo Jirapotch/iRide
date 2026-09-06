@@ -105,7 +105,7 @@ export function resolveBreadcrumbs(
       label: profileLabel,
       ...(context.tab === "garage" || context.tab === "activities"
         ? {
-            href: `/users/${encodeURIComponent(decodeURIComponent(profile[1] ?? ""))}`,
+            href: `/users/${canonicalPathSegment(profile[1] ?? "")}`,
           }
         : {}),
     };
@@ -146,6 +146,14 @@ export function resolveBreadcrumbs(
   }
 
   return [home];
+}
+
+function canonicalPathSegment(value: string): string {
+  try {
+    return encodeURIComponent(decodeURIComponent(value));
+  } catch {
+    return encodeURIComponent(value);
+  }
 }
 
 export function primaryNavigation(username: string | null) {
