@@ -128,11 +128,15 @@ test("nested community routes expose responsive breadcrumbs", async ({
 
 test("a slow destination acknowledges one navigation", async ({ page }) => {
   let release: (() => void) | undefined;
+  let requests = 0;
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
   await page.route("**/community/car*", async (route) => {
-    if (route.request().headers().rsc === "1") await held;
+    if (route.request().headers().rsc === "1") {
+      requests += 1;
+      await held;
+    }
     await route.continue();
   });
   await page.goto("/");
@@ -145,12 +149,38 @@ test("a slow destination acknowledges one navigation", async ({ page }) => {
       "data-pending",
       "true",
     );
+    await expect(cars.locator(".link-pending-indicator")).toHaveAttribute(
+      "data-link-pending",
+      "true",
+    );
+    await page.waitForTimeout(2_700);
+    await expect(cars).toHaveAttribute("aria-busy", "true");
+    const requestsBeforeRepeat = requests;
     await cars.dispatchEvent("click");
+    await page.waitForTimeout(100);
+    expect(requests).toBe(requestsBeforeRepeat);
   } finally {
     release?.();
   }
 
   await expect(page).toHaveURL(/\/community\/car$/);
+});
+
+test("create renders its form before optional marker data", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:54321/test/delay", {
+    data: { path: "/rest/v1/events", milliseconds: 2_000 },
+  });
+  await page.goto("/login?next=%2Fcreate%3Ftype%3Dpost");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Create something new" }),
+  ).toBeVisible({ timeout: 1_500 });
+  await expect(
+    page.getByPlaceholder("Write a post and type @ to attach a marker"),
+  ).toBeVisible();
 });
 
 test("pathname navigation focuses the destination heading", async ({
@@ -200,6 +230,31 @@ test("active administrators can open the user management list", async ({
   await expect(page.getByRole("link", { name: /E2E Rider/ })).toBeVisible();
 });
 
+test("admin controls render while the user list is delayed", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await expect(page.getByRole("link", { name: /E2E Rider/ })).toBeVisible();
+  await request.post("http://127.0.0.1:54321/test/delay", {
+    data: { path: "/auth/v1/admin/users", milliseconds: 4_000 },
+  });
+  await page.getByRole("textbox", { name: "Search users" }).fill("locked");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Manage users" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Search users" }),
+  ).toBeVisible();
+  await expect(page.locator('[data-ui="admin-list-skeleton"]')).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Primary navigation" }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: /Locked Rider/ })).toBeVisible();
+});
+
 test("administrators can unlock a locked user", async ({ page }) => {
   await page.goto("/login?next=%2Fsettings%2Fusers");
   await page.getByRole("button", { name: /Google/ }).click();
@@ -234,13 +289,16 @@ test("current main routes expose navigation UX contracts", async ({ page }) => {
 test("a selected map record error keeps the map available", async ({
   page,
 }) => {
-  await page.goto("/maps?marker=missing-marker");
+  await page.goto("/maps?marker=missing-marker&modal=edit");
   await expect(page.locator(".map-canvas")).toBeVisible();
   const error = page.getByRole("alert").filter({
     hasText: "The selected place could not load",
   });
   await expect(error).toBeVisible();
   await expect(error.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(
+    page.getByText("You do not have permission to edit this marker."),
+  ).toHaveCount(0);
 });
 
 test("admin detail returns to the exact filtered list", async ({ page }) => {

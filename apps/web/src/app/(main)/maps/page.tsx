@@ -32,7 +32,9 @@ export default async function MapsPage({
   return (
     <ActivityHub
       editDenied={
-        params.modal === "edit" && Boolean(params.marker) && !initialEdit
+        params.modal === "edit" &&
+        selectedResult?.status === "success" &&
+        !initialEdit
       }
       initialEdit={initialEdit}
       initialFeature={initialFeature}

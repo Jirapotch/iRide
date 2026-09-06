@@ -20,14 +20,41 @@ let accountAccess = completeAccountAccess();
 let targetAccess = targetAccountAccess();
 let posts = new Map();
 let events = new Map();
+let responseDelays = new Map();
 
 export function startMockSupabaseAuth() {
   events = new Map();
   accountAccess = completeAccountAccess();
   targetAccess = targetAccountAccess();
   posts = new Map();
+  responseDelays = new Map();
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", MOCK_SUPABASE_URL);
+
+    if (request.method === "POST" && url.pathname === "/test/delay") {
+      const body = await readJsonBody(request);
+      if (
+        typeof body?.path !== "string" ||
+        !body.path.startsWith("/") ||
+        !Number.isFinite(body?.milliseconds)
+      ) {
+        return json(response, 400, { error: "invalid_delay" });
+      }
+      responseDelays.set(body.path, {
+        milliseconds: Math.max(0, Math.min(5_000, body.milliseconds)),
+        remaining: Math.max(1, Math.min(10, body.uses ?? 1)),
+      });
+      return json(response, 200, { data: "delay_configured" });
+    }
+
+    const configuredDelay = responseDelays.get(url.pathname);
+    if (configuredDelay?.remaining > 0) {
+      configuredDelay.remaining -= 1;
+      if (configuredDelay.remaining === 0) responseDelays.delete(url.pathname);
+      await new Promise((resolve) =>
+        globalThis.setTimeout(resolve, configuredDelay.milliseconds),
+      );
+    }
 
     if (
       request.method === "GET" &&
@@ -82,65 +109,154 @@ export function startMockSupabaseAuth() {
 
     if (request.method === "POST" && url.pathname === "/test/account-access") {
       const body = await readJsonBody(request);
-      accountAccess = { ...accountAccess, status: body?.status === "locked" ? "locked" : "active", role: body?.role === "user" ? "user" : "admin", updated_at: new Date().toISOString() };
+      accountAccess = {
+        ...accountAccess,
+        status: body?.status === "locked" ? "locked" : "active",
+        role: body?.role === "user" ? "user" : "admin",
+        updated_at: new Date().toISOString(),
+      };
       return json(response, 200, { data: accountAccess });
     }
 
-    if (request.method === "GET" && url.pathname === "/rest/v1/account_access") {
+    if (
+      request.method === "GET" &&
+      url.pathname === "/rest/v1/account_access"
+    ) {
       const ids = filterValues(url.searchParams.get("user_id"));
-      const rows = [accountAccess, targetAccess].filter((item) => !ids || ids.includes(item.user_id));
-      return postgrestJson(response, postgrestBody(request, rows, rows[0] ?? null));
+      const rows = [accountAccess, targetAccess].filter(
+        (item) => !ids || ids.includes(item.user_id),
+      );
+      return postgrestJson(
+        response,
+        postgrestBody(request, rows, rows[0] ?? null),
+      );
     }
 
     if (request.method === "GET" && url.pathname === "/rest/v1/profiles") {
       const ids = filterValues(url.searchParams.get("id"));
       const username = filterValue(url.searchParams.get("username"));
-      const rows = [profile, targetProfile()].filter((item) => (!ids || ids.includes(item.id)) && (!username || username === item.username));
-      return postgrestJson(response, postgrestBody(request, rows, rows[0] ?? null));
+      const rows = [profile, targetProfile()].filter(
+        (item) =>
+          (!ids || ids.includes(item.id)) &&
+          (!username || username === item.username),
+      );
+      return postgrestJson(
+        response,
+        postgrestBody(request, rows, rows[0] ?? null),
+      );
     }
 
     if (request.method === "GET" && url.pathname === "/auth/v1/admin/users") {
       const users = [mockAuthUser(), mockTargetAuthUser()];
       const page = Math.max(1, Number(url.searchParams.get("page") ?? "1"));
-      const perPage = Math.max(1, Number(url.searchParams.get("per_page") ?? "50"));
+      const perPage = Math.max(
+        1,
+        Number(url.searchParams.get("per_page") ?? "50"),
+      );
       const from = (page - 1) * perPage;
-      return json(response, 200, { users: users.slice(from, from + perPage), aud: "authenticated" }, {
-        Link: `<${MOCK_SUPABASE_URL}/auth/v1/admin/users?page=${String(Math.max(1, Math.ceil(users.length / perPage)))}>; rel="last"`,
-        "x-total-count": String(users.length),
+      return json(
+        response,
+        200,
+        { users: users.slice(from, from + perPage), aud: "authenticated" },
+        {
+          Link: `<${MOCK_SUPABASE_URL}/auth/v1/admin/users?page=${String(Math.max(1, Math.ceil(users.length / perPage)))}>; rel="last"`,
+          "x-total-count": String(users.length),
+        },
+      );
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname.startsWith("/auth/v1/admin/users/")
+    ) {
+      const id = url.pathname.split("/").at(-1);
+      const user = [mockAuthUser(), mockTargetAuthUser()].find(
+        (item) => item.id === id,
+      );
+      return user
+        ? json(response, 200, { user })
+        : json(response, 404, { message: "User not found" });
+    }
+
+    if (
+      request.method === "PUT" &&
+      url.pathname.startsWith("/auth/v1/admin/users/")
+    ) {
+      await readJsonBody(request);
+      return json(response, 200, {
+        user: { id: url.pathname.split("/").at(-1) },
       });
     }
 
-    if (request.method === "GET" && url.pathname.startsWith("/auth/v1/admin/users/")) {
-      const id = url.pathname.split("/").at(-1);
-      const user = [mockAuthUser(), mockTargetAuthUser()].find((item) => item.id === id);
-      return user ? json(response, 200, { user }) : json(response, 404, { message: "User not found" });
-    }
-
-    if (request.method === "PUT" && url.pathname.startsWith("/auth/v1/admin/users/")) {
-      await readJsonBody(request);
-      return json(response, 200, { user: { id: url.pathname.split("/").at(-1) } });
-    }
-
-    if (request.method === "POST" && url.pathname === "/rest/v1/rpc/begin_account_access_transition") {
+    if (
+      request.method === "POST" &&
+      url.pathname === "/rest/v1/rpc/begin_account_access_transition"
+    ) {
       const body = await readJsonBody(request);
       const previous = targetAccess.status;
-      const next = body?.requested_action === "unlock" || body?.requested_action === "restore" ? "active" : body?.requested_action === "suspend" ? "suspended" : "locked";
-      targetAccess = { ...targetAccess, status: next, transition_id: "33333333-3333-4333-8333-333333333333", transition_action: body?.requested_action, transition_previous_status: previous, transition_actor_id: body?.actor_id, updated_at: new Date().toISOString() };
-      return postgrestJson(response, postgrestBody(request, [transitionRow(targetAccess, previous)], transitionRow(targetAccess, previous)));
+      const next =
+        body?.requested_action === "unlock" ||
+        body?.requested_action === "restore"
+          ? "active"
+          : body?.requested_action === "suspend"
+            ? "suspended"
+            : "locked";
+      targetAccess = {
+        ...targetAccess,
+        status: next,
+        transition_id: "33333333-3333-4333-8333-333333333333",
+        transition_action: body?.requested_action,
+        transition_previous_status: previous,
+        transition_actor_id: body?.actor_id,
+        updated_at: new Date().toISOString(),
+      };
+      return postgrestJson(
+        response,
+        postgrestBody(
+          request,
+          [transitionRow(targetAccess, previous)],
+          transitionRow(targetAccess, previous),
+        ),
+      );
     }
 
-    if (request.method === "POST" && url.pathname === "/rest/v1/rpc/finalize_account_access_transition") {
+    if (
+      request.method === "POST" &&
+      url.pathname === "/rest/v1/rpc/finalize_account_access_transition"
+    ) {
       await readJsonBody(request);
-      targetAccess = { ...targetAccess, transition_id: null, transition_action: null, transition_previous_status: null, transition_actor_id: null, updated_at: new Date().toISOString() };
-      const row = { role: targetAccess.role, status: targetAccess.status, updated_at: targetAccess.updated_at };
+      targetAccess = {
+        ...targetAccess,
+        transition_id: null,
+        transition_action: null,
+        transition_previous_status: null,
+        transition_actor_id: null,
+        updated_at: new Date().toISOString(),
+      };
+      const row = {
+        role: targetAccess.role,
+        status: targetAccess.status,
+        updated_at: targetAccess.updated_at,
+      };
       return postgrestJson(response, postgrestBody(request, [row], row));
     }
 
-    if (request.method === "POST" && url.pathname === "/rest/v1/rpc/save_post_with_markers") {
+    if (
+      request.method === "POST" &&
+      url.pathname === "/rest/v1/rpc/save_post_with_markers"
+    ) {
       const body = await readJsonBody(request);
       const id = body?.target_post_id || randomUUID();
       const timestamp = new Date().toISOString();
-      posts.set(id, { id, author_id: MOCK_USER_ID, body: body?.post_body ?? "", community_category: body?.post_community_category ?? "groups", deleted_at: null, created_at: posts.get(id)?.created_at ?? timestamp, updated_at: timestamp });
+      posts.set(id, {
+        id,
+        author_id: MOCK_USER_ID,
+        body: body?.post_body ?? "",
+        community_category: body?.post_community_category ?? "groups",
+        deleted_at: null,
+        created_at: posts.get(id)?.created_at ?? timestamp,
+        updated_at: timestamp,
+      });
       return postgrestJson(response, id);
     }
 
@@ -148,11 +264,28 @@ export function startMockSupabaseAuth() {
       const ids = filterValues(url.searchParams.get("id"));
       const authorId = filterValue(url.searchParams.get("author_id"));
       const category = filterValue(url.searchParams.get("community_category"));
-      const rows = Array.from(posts.values()).filter((item) => (!ids || ids.includes(item.id)) && (!authorId || item.author_id === authorId) && (!category || item.community_category === category) && !item.deleted_at);
-      return postgrestJson(response, postgrestBody(request, rows, rows[0] ?? null));
+      const rows = Array.from(posts.values()).filter(
+        (item) =>
+          (!ids || ids.includes(item.id)) &&
+          (!authorId || item.author_id === authorId) &&
+          (!category || item.community_category === category) &&
+          !item.deleted_at,
+      );
+      return postgrestJson(
+        response,
+        postgrestBody(request, rows, rows[0] ?? null),
+      );
     }
 
-    if (request.method === "GET" && ["/rest/v1/comments", "/rest/v1/post_marker_tags", "/rest/v1/photographer_spots", "/rest/v1/vehicles"].includes(url.pathname)) {
+    if (
+      request.method === "GET" &&
+      [
+        "/rest/v1/comments",
+        "/rest/v1/post_marker_tags",
+        "/rest/v1/photographer_spots",
+        "/rest/v1/vehicles",
+      ].includes(url.pathname)
+    ) {
       return postgrestJson(response, postgrestBody(request, [], null));
     }
 
@@ -376,11 +509,21 @@ function completeAccountAccess() {
 }
 
 function targetAccountAccess() {
-  return { ...completeAccountAccess(), user_id: MOCK_TARGET_USER_ID, role: "user", status: "locked" };
+  return {
+    ...completeAccountAccess(),
+    user_id: MOCK_TARGET_USER_ID,
+    role: "user",
+    status: "locked",
+  };
 }
 
 function targetProfile() {
-  return { ...completeProfile(), id: MOCK_TARGET_USER_ID, username: "locked_rider", display_name: "Locked Rider" };
+  return {
+    ...completeProfile(),
+    id: MOCK_TARGET_USER_ID,
+    username: "locked_rider",
+    display_name: "Locked Rider",
+  };
 }
 
 function mockAuthUser() {
@@ -392,7 +535,13 @@ function mockTargetAuthUser() {
 }
 
 function transitionRow(access, previousStatus) {
-  return { role: access.role, status: access.status, updated_at: access.updated_at, transition_token: access.transition_id, previous_status: previousStatus };
+  return {
+    role: access.role,
+    status: access.status,
+    updated_at: access.updated_at,
+    transition_token: access.transition_id,
+    previous_status: previousStatus,
+  };
 }
 
 function incompleteProfile() {

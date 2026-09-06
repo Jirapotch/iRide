@@ -1,9 +1,13 @@
 "use client";
 
 import Link, { useLinkStatus, type LinkProps } from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   useCallback,
+  useEffect,
+  useLayoutEffect,
   useRef,
+  useState,
   type AnchorHTMLAttributes,
   type MouseEvent,
   type ReactNode,
@@ -14,14 +18,30 @@ type PendingLinkProps = LinkProps &
     readonly children: ReactNode;
   };
 
-function PendingIndicator() {
+interface PendingNavigation {
+  observed: boolean;
+  timer: number | null;
+}
+
+const pendingNavigations = new Map<string, PendingNavigation>();
+let committedLocation: string | null = null;
+
+function PendingIndicator({
+  acknowledged,
+  onPendingChange,
+}: {
+  readonly acknowledged: boolean;
+  readonly onPendingChange: (pending: boolean) => void;
+}) {
   const { pending } = useLinkStatus();
+  useLayoutEffect(() => onPendingChange(pending), [onPendingChange, pending]);
 
   return (
     <span
       aria-hidden="true"
       className="link-pending-indicator"
-      data-pending={pending ? "true" : "false"}
+      data-link-pending={pending ? "true" : "false"}
+      data-pending={pending || acknowledged ? "true" : "false"}
     />
   );
 }
@@ -32,29 +52,46 @@ export function PendingLink({
   target,
   ...props
 }: PendingLinkProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const locationKey = `${pathname}?${searchParams.toString()}`;
   const anchorRef = useRef<HTMLAnchorElement>(null);
-  const acknowledgedRef = useRef(false);
-  const acknowledgedAtRef = useRef(0);
-  const pendingHrefRef = useRef<string | null>(null);
-  const recoveryTimerRef = useRef<number | null>(null);
-  const clearAcknowledgement = useCallback(() => {
-    if (recoveryTimerRef.current !== null) {
-      window.clearTimeout(recoveryTimerRef.current);
-      recoveryTimerRef.current = null;
-    }
-    acknowledgedRef.current = false;
-    for (const anchor of document.querySelectorAll<HTMLAnchorElement>(
-      'a[aria-busy="true"]',
-    )) {
-      if (anchor.href !== pendingHrefRef.current) continue;
-      anchor.removeAttribute("aria-busy");
-      const indicator = anchor.querySelector<HTMLElement>(
-        ".link-pending-indicator",
-      );
-      if (indicator) indicator.dataset.pending = "false";
-    }
-    pendingHrefRef.current = null;
+  const [acknowledgedLocation, setAcknowledgedLocation] = useState<
+    string | null
+  >(null);
+  const acknowledged = acknowledgedLocation === locationKey;
+  const clearAcknowledgement = useCallback((href: string) => {
+    const navigation = pendingNavigations.get(href);
+    if (navigation?.timer != null) window.clearTimeout(navigation.timer);
+    pendingNavigations.delete(href);
+    setAcknowledgedLocation(null);
   }, []);
+  const handlePendingChange = useCallback(
+    (pending: boolean) => {
+      const href = anchorRef.current?.href;
+      if (!href) return;
+      const navigation = pendingNavigations.get(href);
+      if (!navigation) return;
+      if (pending) {
+        navigation.observed = true;
+        if (navigation.timer !== null) {
+          window.clearTimeout(navigation.timer);
+          navigation.timer = null;
+        }
+        return;
+      }
+      if (navigation.observed) clearAcknowledgement(href);
+    },
+    [clearAcknowledgement],
+  );
+  useEffect(() => {
+    if (committedLocation === locationKey) return;
+    committedLocation = locationKey;
+    for (const navigation of pendingNavigations.values()) {
+      if (navigation.timer !== null) window.clearTimeout(navigation.timer);
+    }
+    pendingNavigations.clear();
+  }, [locationKey]);
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
     onClick?.(event);
@@ -69,30 +106,34 @@ export function PendingLink({
       target !== "_blank" &&
       !event.currentTarget.hasAttribute("download");
     if (!plainSameTabClick) return;
-    if (acknowledgedRef.current) {
-      if (Date.now() - acknowledgedAtRef.current < 2_500) {
-        event.preventDefault();
-        return;
-      }
-      clearAcknowledgement();
+    const href = event.currentTarget.href;
+    if (pendingNavigations.has(href)) {
+      event.preventDefault();
+      return;
     }
-    if (event.currentTarget.href === window.location.href) return;
+    if (href === window.location.href) return;
 
-    acknowledgedRef.current = true;
-    acknowledgedAtRef.current = Date.now();
-    pendingHrefRef.current = event.currentTarget.href;
-    event.currentTarget.setAttribute("aria-busy", "true");
-    const indicator = event.currentTarget.querySelector<HTMLElement>(
-      ".link-pending-indicator",
-    );
-    if (indicator) indicator.dataset.pending = "true";
-    recoveryTimerRef.current = window.setTimeout(clearAcknowledgement, 2_500);
+    setAcknowledgedLocation(locationKey);
+    const navigation: PendingNavigation = { observed: false, timer: null };
+    navigation.timer = window.setTimeout(() => {
+      if (!navigation.observed) clearAcknowledgement(href);
+    }, 2_500);
+    pendingNavigations.set(href, navigation);
   }
 
   return (
-    <Link {...props} onClick={handleClick} ref={anchorRef} target={target}>
+    <Link
+      {...props}
+      aria-busy={acknowledged || undefined}
+      onClick={handleClick}
+      ref={anchorRef}
+      target={target}
+    >
       {children}
-      <PendingIndicator />
+      <PendingIndicator
+        acknowledged={acknowledged}
+        onPendingChange={handlePendingChange}
+      />
     </Link>
   );
 }
