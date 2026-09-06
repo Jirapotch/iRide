@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/api-application.ts",
     "dev:worker": "tsx watch src/worker.ts",
-    "build": "tsc --noEmit && tsup",
+    "build": "tsc --noEmit && tsup && node scripts/verify-vercel-bundle.mjs",
     "start": "node server.mjs",
     "start:worker": "node dist/worker.mjs",
     "db:migrate:show": "tsx scripts/typeorm-migrations.ts show",
