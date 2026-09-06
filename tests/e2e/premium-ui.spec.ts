@@ -4,16 +4,18 @@ async function openActivityCreateForm(page: Page) {
   await page.goto("/login?next=%2Fcreate%3Ftype%3Dactivity");
   await page.getByRole("button", { name: /Google/ }).click();
   await expect(page).toHaveURL(/\/create\?type=activity$/);
-  await expect(page.locator("form.form-stack")).toBeVisible();
+  const form = page.locator("form.form-stack:visible");
+  await expect(form).toBeVisible();
+  return form;
 }
 
 async function createOwnerActivity(page: Page) {
-  await openActivityCreateForm(page);
-  await page.getByLabel("Title").fill("Owner meeting");
-  await page.getByLabel("Location name").fill("Bangkok");
-  await page.getByLabel("Starts").fill("2026-09-01T06:00");
-  await page.getByLabel("Ends").fill("2026-09-01T08:00");
-  await page.getByRole("button", { name: "Publish" }).click();
+  const form = await openActivityCreateForm(page);
+  await form.getByLabel("Title").fill("Owner meeting");
+  await form.getByLabel("Location name").fill("Bangkok");
+  await form.getByLabel("Starts").fill("2026-09-01T06:00");
+  await form.getByLabel("Ends").fill("2026-09-01T08:00");
+  await form.getByRole("button", { name: "Publish" }).click();
   await expect(page).toHaveURL(/\/maps\?marker=/);
 }
 
@@ -570,7 +572,7 @@ test("owner edit opens only the edit dialog with contained datetime controls", a
 test("Google Maps import updates the form and the rendered map location", async ({
   page,
 }) => {
-  await openActivityCreateForm(page);
+  const form = await openActivityCreateForm(page);
 
   const map = page.locator(".mini-map-preview");
   await page.getByRole("button", { name: "Import from Google Maps" }).click();
@@ -583,10 +585,14 @@ test("Google Maps import updates the form and the rendered map location", async 
     .fill("https://www.google.com/maps/search/?api=1&query=18.788343,98.9853");
   await importDialog.getByRole("button", { name: "Use this location" }).click();
 
-  await expect(page.locator('input[name="latitude"]')).toHaveValue("18.788343");
-  await expect(page.locator('input[name="longitude"]')).toHaveValue("98.9853");
-  await expect(page.getByLabel("Latitude")).toHaveValue("18.788343");
-  await expect(page.getByLabel("Longitude")).toHaveValue("98.9853");
+  await expect(form.locator('input[name="latitude"]')).toHaveValue(
+    "18.788343",
+  );
+  await expect(form.locator('input[name="longitude"]')).toHaveValue(
+    "98.9853",
+  );
+  await expect(form.getByLabel("Latitude")).toHaveValue("18.788343");
+  await expect(form.getByLabel("Longitude")).toHaveValue("98.9853");
   await expect(map).toHaveAttribute("data-camera-center", "98.9853,18.788343");
   await expect(
     map.getByRole("img", { name: "Selected location" }),
@@ -620,12 +626,12 @@ test("an invalid map URL leaves its import panel open with an error", async ({
 test("activity datetime fields stay within their grid at target viewport widths", async ({
   page,
 }) => {
-  await openActivityCreateForm(page);
+  const form = await openActivityCreateForm(page);
 
   for (const width of [360, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
     for (const name of ["startsAt", "endsAt"]) {
-      const input = page.locator(`input[name="${name}"]`);
+      const input = form.locator(`input[name="${name}"]`);
       expect(
         await input.evaluate((element) => {
           const shell = element.parentElement!;

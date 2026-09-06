@@ -67,3 +67,17 @@ export function AdminDetailSkeleton() {
     </section>
   );
 }
+
+export function CreateFormSkeleton() {
+  return (
+    <main
+      aria-busy="true"
+      aria-label="Loading create form"
+      className="create-page skeleton-stack"
+      data-ui="create-form-skeleton"
+    >
+      <div aria-hidden="true" className="skeleton-heading" />
+      <SkeletonCard lines={5} />
+    </main>
+  );
+}

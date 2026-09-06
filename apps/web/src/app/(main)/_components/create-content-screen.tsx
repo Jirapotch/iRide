@@ -34,6 +34,7 @@ import {
 } from "@/lib/marker-mention-domain";
 import { resolveGoogleMapsLocation, saveContent } from "../create/actions";
 import { ActionSubmitButton } from "./action-submit-button";
+import { SectionError } from "./section-error";
 
 type CreateType = "post" | "activity" | "trip";
 export type InitialContent = PostDto | EventDto | null;
@@ -49,12 +50,14 @@ export function CreateContentScreen({
   type,
   initial,
   markerOptions = [],
+  markerOptionsUnavailable = false,
   defaultCommunityCategory = "groups",
 }: {
   readonly locale: Locale;
   readonly type: CreateType;
   readonly initial: InitialContent;
   readonly markerOptions?: readonly MarkerOption[];
+  readonly markerOptionsUnavailable?: boolean;
   readonly defaultCommunityCategory?: CommunityCategory;
 }) {
   const options: { type: CreateType; label: string }[] = [
@@ -66,7 +69,9 @@ export function CreateContentScreen({
     <main className="create-page">
       <header className="create-intro">
         <p className="premium-kicker">iRide Create</p>
-        <h1>{locale === "th" ? "สร้างสิ่งใหม่" : "Create something new"}</h1>
+        <h1 data-route-heading tabIndex={-1}>
+          {locale === "th" ? "สร้างสิ่งใหม่" : "Create something new"}
+        </h1>
       </header>
       <nav className="create-type-tabs">
         {options.map((option) => (
@@ -80,7 +85,26 @@ export function CreateContentScreen({
         ))}
       </nav>
       <section className="create-card premium-card">
-        <BackendForm defaultCommunityCategory={defaultCommunityCategory} initial={initial} locale={locale} markerOptions={markerOptions} type={type} />
+        {markerOptionsUnavailable ? (
+          <SectionError
+            message={
+              locale === "th"
+                ? "ยังค้นหา marker ของกิจกรรมไม่ได้ แต่คุณยังกรอกแบบฟอร์มต่อได้"
+                : "Activity markers are unavailable, but you can keep filling out the form."
+            }
+            retryLabel={locale === "th" ? "ลองอีกครั้ง" : "Retry"}
+            title={
+              locale === "th" ? "โหลด marker ไม่ได้" : "Markers unavailable"
+            }
+          />
+        ) : null}
+        <BackendForm
+          defaultCommunityCategory={defaultCommunityCategory}
+          initial={initial}
+          locale={locale}
+          markerOptions={markerOptions}
+          type={type}
+        />
       </section>
     </main>
   );
@@ -136,11 +160,7 @@ export function BackendForm({
       {hasLocation ? (
         <>
           <Field label={locale === "th" ? "ชื่อ" : "Title"}>
-            <input
-              defaultValue={event?.title ?? ""}
-              name="title"
-              required
-            />
+            <input defaultValue={event?.title ?? ""} name="title" required />
           </Field>
           <Field label={locale === "th" ? "รายละเอียด" : "Description"}>
             <textarea
@@ -323,10 +343,18 @@ function PostFields({
   return (
     <>
       <Field label={locale === "th" ? "เลือกชุมชน" : "Community category"}>
-        <select defaultValue={initial?.communityCategory ?? defaultCommunityCategory} name="communityCategory" required>
+        <select
+          defaultValue={initial?.communityCategory ?? defaultCommunityCategory}
+          name="communityCategory"
+          required
+        >
           <option value="car">{locale === "th" ? "รถยนต์" : "Cars"}</option>
-          <option value="motorcycle">{locale === "th" ? "มอเตอร์ไซค์" : "Motorcycles"}</option>
-          <option value="bicycle">{locale === "th" ? "จักรยาน" : "Bicycles"}</option>
+          <option value="motorcycle">
+            {locale === "th" ? "มอเตอร์ไซค์" : "Motorcycles"}
+          </option>
+          <option value="bicycle">
+            {locale === "th" ? "จักรยาน" : "Bicycles"}
+          </option>
           <option value="groups">{locale === "th" ? "กลุ่ม" : "Groups"}</option>
         </select>
       </Field>

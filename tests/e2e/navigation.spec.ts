@@ -175,3 +175,14 @@ test("administrators can unlock a locked user", async ({ page }) => {
   await page.getByRole("button", { name: "Unlock", exact: true }).click();
   await expect(page.getByText("user · active", { exact: true })).toBeVisible();
 });
+
+test("a destination error keeps navigation available", async ({ page }) => {
+  await page.goto("/login?next=%2Fsettings%2Fusers%2Fnot-a-user");
+  await page.getByRole("button", { name: /Google/ }).click();
+  await expect(page).toHaveURL(/\/settings\/users\/not-a-user$/);
+  await expect(page.locator(".route-error")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Primary navigation" }),
+  ).toBeVisible();
+});
