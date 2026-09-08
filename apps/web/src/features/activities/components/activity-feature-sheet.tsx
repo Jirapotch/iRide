@@ -1,9 +1,15 @@
 "use client";
 
 import { ArrowSquareOut, Trash, X } from "@phosphor-icons/react";
-import type { ExploreFeatureDto } from "@iride/types";
+import type { EventDto, ExploreFeatureDto } from "@iride/types";
 import { createPortal } from "react-dom";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { removeContent } from "@/app/(main)/create/actions";
 import { ActionSubmitButton } from "@/features/content/components/action-submit-button";
@@ -14,15 +20,28 @@ import { contentKindColors } from "@/lib/map-palette";
 
 import { getActivityKindLabel } from "../activity-kind-label";
 
+const subscribeToHydration = () => () => {};
+
 export function ActivityFeatureSheet({
   feature,
   locale,
   onClose,
+  trip = null,
+  tripFailed = false,
+  onRetryTrip,
 }: {
+  readonly trip?: EventDto | null;
+  readonly tripFailed?: boolean;
+  readonly onRetryTrip?: () => void;
   readonly feature: ExploreFeatureDto;
   readonly locale: Locale;
   readonly onClose: () => void;
 }) {
+  const mounted = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
   const domain = "events";
   const sheetRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -81,6 +100,7 @@ export function ActivityFeatureSheet({
     };
   }, [desktop, onClose]);
 
+  if (!mounted) return null;
   return createPortal(
     <div
       className="activity-sheet-backdrop on-map"
@@ -123,13 +143,52 @@ export function ActivityFeatureSheet({
               {feature.author.displayName}
             </PendingLink>{" "}
             ·{" "}
-            <time dateTime={feature.startsAt}>
-              {new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en", {
-                dateStyle: "medium",
-                timeStyle: "short",
-              }).format(new Date(feature.startsAt))}
-            </time>
+            {feature.startsAt ? (
+              <time dateTime={feature.startsAt}>
+                {new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(new Date(feature.startsAt))}
+              </time>
+            ) : (
+              <span>
+                {locale === "th" ? "ยังไม่กำหนดวันเวลา" : "Date not set"}
+              </span>
+            )}
           </p>
+          {feature.kind === "trip" ? (
+            <div className="trip-sheet-itinerary">
+              <h3>
+                {locale === "th" ? "จุดหมายและที่แวะ" : "Destination and stops"}
+              </h3>
+              {trip ? (
+                <ol>
+                  {trip.locationLabel ? (
+                    <li>
+                      {locale === "th" ? "เริ่ม: " : "Start: "}
+                      {trip.locationLabel}
+                    </li>
+                  ) : null}
+                  {(trip.stops ?? []).map((point, index) => (
+                    <li key={index}>{point.name}</li>
+                  ))}
+                  <li className="trip-destination">
+                    ⚑ {trip.destinationLabel}
+                  </li>
+                </ol>
+              ) : tripFailed ? (
+                <button type="button" onClick={onRetryTrip}>
+                  {locale === "th"
+                    ? "โหลดจุดแวะไม่ได้ · ลองอีกครั้ง"
+                    : "Stops unavailable · Retry"}
+                </button>
+              ) : (
+                <p role="status">
+                  {locale === "th" ? "กำลังโหลดจุดแวะ…" : "Loading stops…"}
+                </p>
+              )}
+            </div>
+          ) : null}
           <a
             className="google-maps-action"
             href={googleMapsSearchUrl({

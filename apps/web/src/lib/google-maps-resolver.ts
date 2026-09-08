@@ -1,5 +1,6 @@
 import {
   parseGoogleMapsCoordinates,
+  isGoogleMapsDirections,
   type Coordinates,
 } from "./google-maps-domain";
 
@@ -16,6 +17,7 @@ export async function resolveGoogleMapsCoordinates(
   input: string,
   fetcher: Fetcher = fetch,
 ): Promise<Coordinates | null> {
+  if (isGoogleMapsDirections(input)) return null;
   const direct = parseGoogleMapsCoordinates(input);
   if (direct) return direct;
   let current: URL;
@@ -48,6 +50,12 @@ export async function resolveGoogleMapsCoordinates(
       } catch {
         return null;
       }
+      if (
+        current.protocol !== "https:" ||
+        !ALLOWED_HOSTS.has(current.hostname.toLowerCase()) ||
+        isGoogleMapsDirections(current.toString())
+      )
+        return null;
       const parsed = parseGoogleMapsCoordinates(current.toString());
       if (parsed) return parsed;
       continue;

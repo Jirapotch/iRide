@@ -20,7 +20,7 @@ const featureHrefs = {
   community: "/community",
   activities: "/maps",
   games: "/games",
-} as const
+} as const;
 
 export function filterTrendingPosts(
   posts: readonly PostDto[],
@@ -41,9 +41,14 @@ export function selectUpcomingEvents(
 ): EventDto[] {
   const threshold = now.getTime();
   return events
-    .filter((event) => Date.parse(event.startsAt) >= threshold)
+    .filter(
+      (event) =>
+        (event.startsAt ? Date.parse(event.startsAt) : Infinity) >= threshold,
+    )
     .sort(
-      (left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt),
+      (left, right) =>
+        (left.startsAt ? Date.parse(left.startsAt) : Infinity) -
+        (right.startsAt ? Date.parse(right.startsAt) : Infinity),
     );
 }
 

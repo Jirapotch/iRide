@@ -157,6 +157,7 @@ export type Database = {
       };
       events: {
         Row: {
+          stops: Json;
           created_at: string;
           deleted_at: string | null;
           description: string | null;
@@ -167,18 +168,19 @@ export type Database = {
           ends_at: string | null;
           id: string;
           kind: Database["public"]["Enums"]["event_kind"];
-          latitude: number;
+          latitude: number | null;
           location: unknown;
-          location_label: string;
-          longitude: number;
+          location_label: string | null;
+          longitude: number | null;
           organizer_id: string;
-          starts_at: string;
+          starts_at: string | null;
           timezone: string;
           title: string;
           updated_at: string;
           vehicle_kinds: Database["public"]["Enums"]["vehicle_kind"][];
         };
         Insert: {
+          stops?: Json;
           created_at?: string;
           deleted_at?: string | null;
           description?: string | null;
@@ -189,18 +191,19 @@ export type Database = {
           ends_at?: string | null;
           id?: string;
           kind: Database["public"]["Enums"]["event_kind"];
-          latitude: number;
+          latitude?: number | null;
           location?: unknown;
-          location_label: string;
-          longitude: number;
+          location_label?: string | null;
+          longitude?: number | null;
           organizer_id: string;
-          starts_at: string;
+          starts_at?: string | null;
           timezone: string;
           title: string;
           updated_at?: string;
           vehicle_kinds: Database["public"]["Enums"]["vehicle_kind"][];
         };
         Update: {
+          stops?: Json;
           created_at?: string;
           deleted_at?: string | null;
           description?: string | null;
@@ -211,12 +214,12 @@ export type Database = {
           ends_at?: string | null;
           id?: string;
           kind?: Database["public"]["Enums"]["event_kind"];
-          latitude?: number;
+          latitude?: number | null;
           location?: unknown;
-          location_label?: string;
-          longitude?: number;
+          location_label?: string | null;
+          longitude?: number | null;
           organizer_id?: string;
-          starts_at?: string;
+          starts_at?: string | null;
           timezone?: string;
           title?: string;
           updated_at?: string;
@@ -859,12 +862,7 @@ export const Constants = {
     Enums: {
       account_role: ["user", "admin"],
       account_status: ["locked", "active", "suspended"],
-      community_category: [
-        "car",
-        "motorcycle",
-        "bicycle",
-        "groups",
-      ],
+      community_category: ["car", "motorcycle", "bicycle", "groups"],
       event_kind: ["meeting", "event", "trip"],
       media_purpose: ["avatar", "cover", "vehicle"],
       media_status: ["uploading", "processing", "ready", "failed", "deleted"],

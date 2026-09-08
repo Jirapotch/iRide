@@ -128,10 +128,12 @@ const longitude = coordinate.min(-180).max(180);
 const dateTime = z.iso.datetime({ offset: true });
 const timezone = requiredText(64);
 
-const markerTagSchema = z.object({
-  kind: z.literal("event"),
-  id: z.uuid(),
-}).strict();
+const markerTagSchema = z
+  .object({
+    kind: z.literal("event"),
+    id: z.uuid(),
+  })
+  .strict();
 
 export const createPostSchema = z
   .object({
@@ -143,18 +145,26 @@ export const createPostSchema = z
   .superRefine((value, context) => {
     const keys = (value.markerTags ?? []).map((tag) => `${tag.kind}:${tag.id}`);
     if (new Set(keys).size !== keys.length) {
-      context.addIssue({ code: "custom", message: "duplicate_marker_tag", path: ["markerTags"] });
+      context.addIssue({
+        code: "custom",
+        message: "duplicate_marker_tag",
+        path: ["markerTags"],
+      });
     }
   });
 
 export const updatePostSchema = createPostSchema;
 
-export const createCommentSchema = z.object({
-  body: requiredText(1_000),
-  parentId: z.uuid().nullable(),
-}).strict();
+export const createCommentSchema = z
+  .object({
+    body: requiredText(1_000),
+    parentId: z.uuid().nullable(),
+  })
+  .strict();
 
-export const updateCommentSchema = z.object({ body: requiredText(1_000) }).strict();
+export const updateCommentSchema = z
+  .object({ body: requiredText(1_000) })
+  .strict();
 
 const vehicleFields = {
   kind: z.enum(vehicleKinds),
@@ -164,34 +174,58 @@ const vehicleFields = {
   nickname: nullableText(80),
   description: nullableText(1_000),
   visibility: z.enum(vehicleVisibilities),
-  mediaIds: z.array(z.uuid()).max(8).refine((ids) => new Set(ids).size === ids.length, "duplicate_media"),
+  mediaIds: z
+    .array(z.uuid())
+    .max(8)
+    .refine((ids) => new Set(ids).size === ids.length, "duplicate_media"),
 } as const;
 
 export const createVehicleSchema = z.object(vehicleFields).strict();
-export const updateVehicleSchema = z.object(
-  Object.fromEntries(Object.entries(vehicleFields).map(([key, value]) => [key, value.optional()])) as {
-    [Key in keyof typeof vehicleFields]: z.ZodOptional<(typeof vehicleFields)[Key]>;
-  },
-).strict().refine((value) => Object.keys(value).length > 0, "empty_update");
+export const updateVehicleSchema = z
+  .object(
+    Object.fromEntries(
+      Object.entries(vehicleFields).map(([key, value]) => [
+        key,
+        value.optional(),
+      ]),
+    ) as {
+      [Key in keyof typeof vehicleFields]: z.ZodOptional<
+        (typeof vehicleFields)[Key]
+      >;
+    },
+  )
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, "empty_update");
 
-export const mediaUploadRequestSchema = z.object({
-  filename: requiredText(255),
-  mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
-  bytes: z.number().int().positive().max(10 * 1024 * 1024),
-  purpose: z.enum(mediaPurposes),
-}).strict();
+export const mediaUploadRequestSchema = z
+  .object({
+    filename: requiredText(255),
+    mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+    bytes: z
+      .number()
+      .int()
+      .positive()
+      .max(10 * 1024 * 1024),
+    purpose: z.enum(mediaPurposes),
+  })
+  .strict();
+
+export const tripStopSchema = z
+  .object({ name: requiredText(160), latitude, longitude })
+  .strict();
 
 const eventFields = {
   kind: z.enum(eventKinds),
   title: requiredText(120),
   description: nullableText(2_000),
-  locationLabel: requiredText(160),
-  latitude,
-  longitude,
+  locationLabel: requiredText(160).nullable(),
+  latitude: latitude.nullable(),
+  longitude: longitude.nullable(),
+  stops: z.array(tripStopSchema).max(20).optional(),
   destinationLabel: nullableText(160).optional(),
   destinationLatitude: latitude.nullable().optional(),
   destinationLongitude: longitude.nullable().optional(),
-  startsAt: dateTime,
+  startsAt: dateTime.nullable(),
   endsAt: dateTime.nullable().optional(),
   timezone,
   vehicleKinds: z.array(z.enum(vehicleKinds)).min(1).max(vehicleKinds.length),
@@ -205,8 +239,15 @@ export const createEventSchema = z
 export const updateEventSchema = z
   .object(
     Object.fromEntries(
-      Object.entries(eventFields).map(([key, value]) => [key, value.optional()]),
-    ) as { [Key in keyof typeof eventFields]: z.ZodOptional<(typeof eventFields)[Key]> },
+      Object.entries(eventFields).map(([key, value]) => [
+        key,
+        value.optional(),
+      ]),
+    ) as {
+      [Key in keyof typeof eventFields]: z.ZodOptional<
+        (typeof eventFields)[Key]
+      >;
+    },
   )
   .strict()
   .refine((value) => Object.keys(value).length > 0, "empty_update")
@@ -218,6 +259,37 @@ function validateEvent(
 ) {
   validatePartialCoordinates(value, context);
   validateTimeRange(value, context);
+  if (
+    value.kind !== "trip" &&
+    (!value.locationLabel ||
+      value.latitude == null ||
+      value.longitude == null ||
+      !value.startsAt)
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "activity_location_and_start_required",
+      path: ["startsAt"],
+    });
+  }
+  const origin = [value.locationLabel, value.latitude, value.longitude];
+  if (
+    origin.some((part) => part != null) &&
+    origin.some((part) => part == null)
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "origin_fields_together",
+      path: ["locationLabel"],
+    });
+  }
+  if (value.kind !== "trip" && value.stops?.length) {
+    context.addIssue({
+      code: "custom",
+      message: "stops_trip_only",
+      path: ["stops"],
+    });
+  }
   if (
     value.kind === "trip" &&
     (!value.destinationLabel ||

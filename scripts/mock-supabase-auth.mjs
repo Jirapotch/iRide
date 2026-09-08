@@ -290,6 +290,20 @@ export function startMockSupabaseAuth() {
     }
 
     if (url.pathname === "/rest/v1/events") {
+      if (request.method === "PATCH") {
+        const id = filterValue(url.searchParams.get("id"));
+        const input = await readJsonBody(request);
+        const previous = events.get(id);
+        if (!previous)
+          return postgrestError(response, 404, "PGRST116", "event_not_found");
+        const event = {
+          ...previous,
+          ...input,
+          updated_at: new Date().toISOString(),
+        };
+        events.set(id, event);
+        return postgrestJson(response, postgrestBody(request, [event], event));
+      }
       if (request.method === "POST") {
         const input = await readJsonBody(request);
         if (!input || typeof input !== "object") {

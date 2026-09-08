@@ -65,24 +65,6 @@ export function HomeMiniMap({
               : "light";
           applyMapPalette(map, theme);
           if (coordinates.length > 1) {
-            map.addSource("home-route", {
-              type: "geojson",
-              data: {
-                type: "Feature",
-                properties: {},
-                geometry: { type: "LineString", coordinates },
-              },
-            });
-            map.addLayer({
-              id: "home-route-line",
-              type: "line",
-              source: "home-route",
-              paint: {
-                "line-color": "#4f6f52",
-                "line-width": 4,
-                "line-opacity": 0.9,
-              },
-            });
             const bounds = coordinates.reduce(
               (value, coordinate) => value.extend(coordinate),
               new maplibregl.LngLatBounds(origin, origin),
@@ -95,6 +77,12 @@ export function HomeMiniMap({
                 : 420,
             });
           }
+          coordinates.forEach((point, index) => {
+            const element = document.createElement("div");
+            element.className = "trip-point-marker";
+            element.textContent = String(index + 1);
+            new maplibregl.Marker({ element }).setLngLat(point).addTo(map!);
+          });
           setLoadState("ready");
         });
       })
@@ -135,9 +123,12 @@ export function HomeMiniMap({
 }
 
 function routeCoordinates(event: EventDto): [number, number][] {
-  const origin: [number, number] = [event.longitude, event.latitude];
-  return event.destinationLongitude !== null &&
-    event.destinationLatitude !== null
-    ? [origin, [event.destinationLongitude, event.destinationLatitude]]
-    : [origin];
+  const points: [number, number][] = [];
+  if (event.longitude != null && event.latitude != null)
+    points.push([event.longitude, event.latitude]);
+  for (const stop of event.stops ?? [])
+    points.push([stop.longitude, stop.latitude]);
+  if (event.destinationLongitude != null && event.destinationLatitude != null)
+    points.push([event.destinationLongitude, event.destinationLatitude]);
+  return points;
 }

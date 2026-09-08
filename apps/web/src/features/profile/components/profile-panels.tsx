@@ -78,12 +78,18 @@ export function ProfileActivities({
                 <MapPin size={15} />
                 {activity.subtitle}
               </p>
-              <time dateTime={activity.startsAt}>
-                {new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                }).format(new Date(activity.startsAt))}
-              </time>
+              {activity.startsAt ? (
+                <time dateTime={activity.startsAt}>
+                  {new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  }).format(new Date(activity.startsAt))}
+                </time>
+              ) : (
+                <span>
+                  {locale === "th" ? "ยังไม่กำหนดวันเวลา" : "Date not set"}
+                </span>
+              )}
             </div>
           </PendingLink>
         );

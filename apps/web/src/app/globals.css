@@ -783,7 +783,7 @@ a {
   filter: drop-shadow(0 8px 9px rgb(39 50 42 / 0.34));
 }
 .activity-marker::before {
-  content: "";
+  content: none;
   position: absolute;
   top: 9px;
   width: 18px;
@@ -3375,5 +3375,137 @@ input[type="datetime-local"] {
 @media (min-width: 700px) {
   .profile-activity-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Destination-first trip composer */
+.trip-composer {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.trip-section-heading h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+.trip-section-heading p {
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  margin: 0.4rem 0 0;
+}
+.trip-place-card {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1rem;
+  background: var(--surface);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.trip-place-card.is-active {
+  border-color: #548275;
+  box-shadow: 0 0 0 3px rgb(84 130 117 / 0.12);
+}
+.trip-place-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.trip-place-heading strong {
+  font-size: 0.9rem;
+}
+.trip-place-heading button,
+.trip-stop-actions button {
+  padding: 0.4rem 0.6rem;
+  min-height: 40px;
+  border-radius: 0.5rem;
+}
+.trip-stop-actions {
+  display: flex;
+  gap: 0.2rem;
+}
+.trip-select-place {
+  text-align: left;
+  color: #528879;
+  font-size: 0.8rem;
+  min-height: 40px;
+}
+.trip-place-card input {
+  width: 100%;
+  min-width: 0;
+}
+.trip-map-editor {
+  border-radius: 1rem;
+  overflow: hidden;
+  padding: 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.trip-map-editor .mini-map-preview {
+  height: clamp(280px, 45vh, 420px);
+  border-radius: 0.8rem;
+}
+.trip-map-editor .form-hint {
+  margin-bottom: 0.7rem;
+}
+.trip-options {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+.trip-options summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.trip-options .form-field {
+  margin-top: 1rem;
+}
+.trip-point-marker {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 3px;
+  background: #254f80;
+  color: white;
+  font: 700 12px/1 inherit;
+  border: 2px solid white;
+  box-shadow: 0 3px 10px #183b4b44;
+}
+.trip-point-marker.is-destination {
+  background: #bf5947;
+}
+.trip-sheet-itinerary {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--map-rule);
+}
+.trip-sheet-itinerary h3 {
+  font-size: 0.9rem;
+}
+.trip-sheet-itinerary ol {
+  padding-left: 1.3rem;
+  display: grid;
+  gap: 0.65rem;
+  font-size: 0.85rem;
+}
+.trip-destination {
+  font-weight: 700;
+}
+.activity-marker {
+  font-size: 0.8rem;
+}
+.activity-marker.is-selected {
+  background: #bf5947;
+}
+.activity-sheet-backdrop {
+  backdrop-filter: none;
+  background: rgb(28 46 42 / 0.12);
+}
+@media (min-width: 1024px) {
+  .activity-sheet-backdrop {
+    background: transparent;
   }
 }

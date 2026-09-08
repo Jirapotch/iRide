@@ -17,7 +17,11 @@ interface Config {
   readonly serviceRoleKey: string;
 }
 type Admin = ReturnType<typeof createAdminDatabaseClient>;
-type ViewerCapabilities = { readonly userId: string | null; readonly canWrite: boolean; readonly canManage: boolean };
+type ViewerCapabilities = {
+  readonly userId: string | null;
+  readonly canWrite: boolean;
+  readonly canManage: boolean;
+};
 
 export function createSocialRepository(config: Config): SocialRepository {
   const admin = createAdminDatabaseClient(config);
@@ -37,7 +41,11 @@ export function createSocialRepository(config: Config): SocialRepository {
         .is("deleted_at", null)
         .maybeSingle();
       ensure(postError);
-      if (!post || !(await isVisibleAccount(admin, post.author_id, viewer.canManage))) throw failure("CONTENT_NOT_FOUND", 404);
+      if (
+        !post ||
+        !(await isVisibleAccount(admin, post.author_id, viewer.canManage))
+      )
+        throw failure("CONTENT_NOT_FOUND", 404);
       const { data, error } = await admin
         .from("comments")
         .select("*")
@@ -68,7 +76,13 @@ export function createSocialRepository(config: Config): SocialRepository {
         .select("*")
         .single();
       ensureWrite(error, data);
-      return (await commentDtos(admin, [data!], await viewerCapabilities(admin, userId)))[0]!;
+      return (
+        await commentDtos(
+          admin,
+          [data!],
+          await viewerCapabilities(admin, userId),
+        )
+      )[0]!;
     },
     async updateComment(userId, token, id, input) {
       const viewer = await viewerCapabilities(admin, userId);
@@ -84,7 +98,11 @@ export function createSocialRepository(config: Config): SocialRepository {
       return (await commentDtos(admin, [data!], viewer))[0]!;
     },
     async deleteComment(userId, token, id) {
-      await assertOwner(await findComment(admin, id), "author_id", await viewerCapabilities(admin, userId));
+      await assertOwner(
+        await findComment(admin, id),
+        "author_id",
+        await viewerCapabilities(admin, userId),
+      );
       const { data, error } = await owner(token)
         .from("comments")
         .update({ deleted_at: new Date().toISOString() })
@@ -105,7 +123,9 @@ export function createSocialRepository(config: Config): SocialRepository {
       if (
         !profile ||
         !(await isVisibleAccount(admin, profile.id, viewer.canManage)) ||
-        (profile.visibility === "private" && profile.id !== viewer.userId && !viewer.canManage)
+        (profile.visibility === "private" &&
+          profile.id !== viewer.userId &&
+          !viewer.canManage)
       )
         return [];
       const query = admin
@@ -114,7 +134,8 @@ export function createSocialRepository(config: Config): SocialRepository {
         .eq("owner_id", profile.id)
         .is("archived_at", null)
         .order("created_at", { ascending: false });
-      if (profile.id !== viewer.userId && !viewer.canManage) query.eq("visibility", "public");
+      if (profile.id !== viewer.userId && !viewer.canManage)
+        query.eq("visibility", "public");
       const { data, error } = await query;
       ensure(error);
       return vehicleDtos(admin, data ?? [], viewer);
@@ -132,13 +153,15 @@ export function createSocialRepository(config: Config): SocialRepository {
         !profile.username ||
         !profile.display_name ||
         !(await isVisibleAccount(admin, profile.id, viewer.canManage)) ||
-        (profile.visibility === "private" && profile.id !== viewer.userId && !viewer.canManage)
+        (profile.visibility === "private" &&
+          profile.id !== viewer.userId &&
+          !viewer.canManage)
       )
         return [];
       const eventsResult = await admin
         .from("events")
         .select(
-          "id,kind,title,location_label,latitude,longitude,starts_at,ends_at",
+          "id,kind,title,location_label,latitude,longitude,destination_label,destination_latitude,destination_longitude,starts_at,ends_at",
         )
         .eq("organizer_id", profile.id)
         .is("deleted_at", null)
@@ -154,13 +177,17 @@ export function createSocialRepository(config: Config): SocialRepository {
           id: row.id,
           kind: row.kind,
           title: row.title,
-          subtitle: row.location_label,
-          latitude: row.latitude,
-          longitude: row.longitude,
+          subtitle: row.destination_label ?? row.location_label ?? "",
+          latitude:
+            row.kind === "trip" ? row.destination_latitude! : row.latitude!,
+          longitude:
+            row.kind === "trip" ? row.destination_longitude! : row.longitude!,
           startsAt: row.starts_at,
           endsAt: row.ends_at,
           author,
-          canEdit: viewer.canManage || (viewer.canWrite && profile.id === viewer.userId),
+          canEdit:
+            viewer.canManage ||
+            (viewer.canWrite && profile.id === viewer.userId),
         })),
       ];
       return orderProfileActivities(items).slice(0, 100);
@@ -171,7 +198,8 @@ export function createSocialRepository(config: Config): SocialRepository {
       if (
         !row ||
         !(await isVisibleAccount(admin, row.owner_id, viewer.canManage)) ||
-        (row.owner_id !== viewer.userId && !viewer.canManage &&
+        (row.owner_id !== viewer.userId &&
+          !viewer.canManage &&
           (row.archived_at || row.visibility !== "public"))
       )
         return null;
@@ -190,7 +218,13 @@ export function createSocialRepository(config: Config): SocialRepository {
       ensureWrite(error, id);
       const data = await findVehicle(admin, id!);
       ensureWrite(null, data);
-      return (await vehicleDtos(admin, [data!], await viewerCapabilities(admin, userId)))[0]!;
+      return (
+        await vehicleDtos(
+          admin,
+          [data!],
+          await viewerCapabilities(admin, userId),
+        )
+      )[0]!;
     },
     async updateVehicle(userId, token, id, input) {
       const current = await findVehicle(admin, id);
@@ -277,13 +311,17 @@ async function authors(
 ): Promise<Map<string, ContentAuthorDto>> {
   const unique = [...new Set(ids)];
   if (!unique.length) return new Map();
-  const [{ data, error }, { data: access, error: accessError }] = await Promise.all([
-    admin
-    .from("profiles")
-    .select("id,username,display_name")
-    .in("id", unique),
-    admin.from("account_access").select("user_id,status,transition_id").in("user_id", unique),
-  ]);
+  const [{ data, error }, { data: access, error: accessError }] =
+    await Promise.all([
+      admin
+        .from("profiles")
+        .select("id,username,display_name")
+        .in("id", unique),
+      admin
+        .from("account_access")
+        .select("user_id,status,transition_id")
+        .in("user_id", unique),
+    ]);
   ensure(error);
   ensure(accessError);
   const statuses = new Map((access ?? []).map((row) => [row.user_id, row]));
@@ -291,7 +329,12 @@ async function authors(
     (data ?? [])
       .filter((row) => {
         const access = statuses.get(row.id);
-        return Boolean(row.username && row.display_name && access?.transition_id === null && (includeSuspended || access.status !== "suspended"));
+        return Boolean(
+          row.username &&
+          row.display_name &&
+          access?.transition_id === null &&
+          (includeSuspended || access.status !== "suspended"),
+        );
       })
       .map((row) => [
         row.id,
@@ -327,7 +370,10 @@ async function commentDtos(
           ? (people.get(row.reply_to_user_id) ?? null)
           : null,
         deleted: Boolean(row.deleted_at),
-        canEdit: !row.deleted_at && (viewer.canManage || (viewer.canWrite && row.author_id === viewer.userId)),
+        canEdit:
+          !row.deleted_at &&
+          (viewer.canManage ||
+            (viewer.canWrite && row.author_id === viewer.userId)),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       },
@@ -342,7 +388,8 @@ async function vehicleDtos(
 ): Promise<VehicleDto[]> {
   const people = await authors(
     admin,
-    rows.map((row) => row.owner_id), viewer.canManage,
+    rows.map((row) => row.owner_id),
+    viewer.canManage,
   );
   const ids = rows.map((row) => row.id);
   const media = new Map<string, string[]>();
@@ -374,14 +421,15 @@ async function vehicleDtos(
         description: row.description,
         visibility: row.visibility,
         mediaIds: media.get(row.id) ?? [],
-        canEdit: viewer.canManage || (viewer.canWrite && row.owner_id === viewer.userId),
+        canEdit:
+          viewer.canManage ||
+          (viewer.canWrite && row.owner_id === viewer.userId),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       },
     ];
   });
 }
-
 
 function vehicleRpcInput(input: Omit<CreateVehicleInput, "mediaIds">) {
   return {
@@ -413,14 +461,22 @@ function orderProfileActivities(
   now = Date.now(),
 ) {
   const upcoming = items
-    .filter((item) => Date.parse(item.startsAt) >= now)
+    .filter(
+      (item) => (item.startsAt ? Date.parse(item.startsAt) : Infinity) >= now,
+    )
     .sort(
-      (left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt),
+      (left, right) =>
+        (left.startsAt ? Date.parse(left.startsAt) : Infinity) -
+        (right.startsAt ? Date.parse(right.startsAt) : Infinity),
     );
   const past = items
-    .filter((item) => Date.parse(item.startsAt) < now)
+    .filter(
+      (item) => (item.startsAt ? Date.parse(item.startsAt) : Infinity) < now,
+    )
     .sort(
-      (left, right) => Date.parse(right.startsAt) - Date.parse(left.startsAt),
+      (left, right) =>
+        (right.startsAt ? Date.parse(right.startsAt) : Infinity) -
+        (left.startsAt ? Date.parse(left.startsAt) : Infinity),
     );
   return [...upcoming, ...past];
 }
@@ -465,18 +521,40 @@ async function assertOwner<Row extends Record<Key, string>, Key extends string>(
     );
 }
 
-async function viewerCapabilities(admin: Admin, userId: string | null): Promise<ViewerCapabilities> {
+async function viewerCapabilities(
+  admin: Admin,
+  userId: string | null,
+): Promise<ViewerCapabilities> {
   if (!userId) return { userId: null, canWrite: false, canManage: false };
-  const { data, error } = await admin.from("account_access").select("role,status,transition_id").eq("user_id", userId).maybeSingle();
+  const { data, error } = await admin
+    .from("account_access")
+    .select("role,status,transition_id")
+    .eq("user_id", userId)
+    .maybeSingle();
   ensure(error);
   const active = data?.status === "active" && data.transition_id === null;
-  return { userId, canWrite: active, canManage: active && data?.role === "admin" };
+  return {
+    userId,
+    canWrite: active,
+    canManage: active && data?.role === "admin",
+  };
 }
 
-async function isVisibleAccount(admin: Admin, userId: string, includeSuspended: boolean): Promise<boolean> {
-  const { data, error } = await admin.from("account_access").select("status,transition_id").eq("user_id", userId).maybeSingle();
+async function isVisibleAccount(
+  admin: Admin,
+  userId: string,
+  includeSuspended: boolean,
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from("account_access")
+    .select("status,transition_id")
+    .eq("user_id", userId)
+    .maybeSingle();
   ensure(error);
-  return data?.transition_id === null && (includeSuspended || data.status !== "suspended");
+  return (
+    data?.transition_id === null &&
+    (includeSuspended || data.status !== "suspended")
+  );
 }
 function ensure(error: { code?: string; message?: string } | null) {
   if (error) throw failure("CONTENT_UNAVAILABLE", 503, error);

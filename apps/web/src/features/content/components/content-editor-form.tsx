@@ -20,6 +20,7 @@ import * as maplibregl from "maplibre-gl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { TripFields } from "./trip-fields";
 import { useTheme } from "@/app/_components/theme-provider";
 import { mapStyle } from "@/lib/app-navigation-domain";
 import type { Locale } from "@/lib/locale";
@@ -61,7 +62,7 @@ export function BackendForm({
     longitude: event?.longitude ?? 100.5018,
   });
   const isTrip = type === "trip";
-  const hasLocation = type !== "post";
+  const hasLocation = type === "activity";
   return (
     <form action={saveContent} className="form-stack">
       <input name="type" type="hidden" value={type} />
@@ -135,37 +136,7 @@ export function BackendForm({
           </Field>
         </>
       ) : null}
-      {isTrip ? (
-        <>
-          <Field label={locale === "th" ? "จุดหมาย" : "Destination"}>
-            <input
-              defaultValue={event?.destinationLabel ?? ""}
-              name="destinationLabel"
-              required
-            />
-          </Field>
-          <div className="coordinate-grid">
-            <Field label="Destination latitude">
-              <input
-                defaultValue={event?.destinationLatitude ?? 14.439}
-                name="destinationLatitude"
-                required
-                type="number"
-                step="any"
-              />
-            </Field>
-            <Field label="Destination longitude">
-              <input
-                defaultValue={event?.destinationLongitude ?? 101.372}
-                name="destinationLongitude"
-                required
-                type="number"
-                step="any"
-              />
-            </Field>
-          </div>
-        </>
-      ) : null}
+      {isTrip ? <TripFields event={event} locale={locale} /> : null}
       {type === "activity" || type === "trip" ? (
         <fieldset>
           <legend>
@@ -400,11 +371,17 @@ function PostFields({
   );
 }
 
-function CoordinatePicker({
+export function CoordinatePicker({
   coordinates,
   locale,
   onChange,
+  onImportName,
+  selected = true,
+  points = [],
 }: {
+  readonly onImportName?: (name: string) => void;
+  readonly selected?: boolean;
+  readonly points?: readonly MapPoint[];
   readonly coordinates: { latitude: number; longitude: number };
   readonly locale: Locale;
   readonly onChange: (value: { latitude: number; longitude: number }) => void;
@@ -452,50 +429,38 @@ function CoordinatePicker({
       if (!parsed) {
         setImportError(
           locale === "th"
-            ? "ลิงก์นี้ไม่มีพิกัดที่รองรับ"
-            : "This link does not contain a supported location",
+            ? "ลิงก์นี้ไม่มีพิกัดที่รองรับ กรุณาแชร์สถานที่ทีละจุด"
+            : "This link does not contain a supported location. Share one place at a time",
         );
         return;
       }
       onChange(parsed);
+      if (parsed.name) onImportName?.(parsed.name);
       setMessage(
         locale === "th"
           ? "นำเข้าตำแหน่งแล้ว คุณยังลาก Marker เพื่อปรับได้"
           : "Location imported. You can still drag the marker.",
       );
       closeImport();
+    } catch {
+      setImportError(
+        locale === "th"
+          ? "นำเข้าไม่ได้ กรุณาลองอีกครั้ง หรือแชร์สถานที่ทีละจุด"
+          : "Import failed. Retry or share one place at a time.",
+      );
     } finally {
       setPending(false);
     }
   }
   return (
     <div className="coordinate-picker">
-      <div className="coordinate-grid">
-        <Field label="Latitude">
-          <input
-            onChange={(event) =>
-              onChange({ ...coordinates, latitude: Number(event.target.value) })
-            }
-            step="any"
-            type="number"
-            value={coordinates.latitude}
-          />
-        </Field>
-        <Field label="Longitude">
-          <input
-            onChange={(event) =>
-              onChange({
-                ...coordinates,
-                longitude: Number(event.target.value),
-              })
-            }
-            step="any"
-            type="number"
-            value={coordinates.longitude}
-          />
-        </Field>
-      </div>
-      <MiniMap coordinates={coordinates} locale={locale} onChange={onChange} />
+      <MiniMap
+        coordinates={coordinates}
+        locale={locale}
+        onChange={onChange}
+        selected={selected}
+        points={points}
+      />
       <div className="location-action-row">
         <button className="secondary-action" onClick={locate} type="button">
           <Crosshair size={17} />
@@ -688,11 +653,24 @@ function GoogleMapsImportModal({
   );
 }
 
+type MapPoint = {
+  latitude: number;
+  longitude: number;
+  label: string;
+  name: string;
+  destination: boolean;
+  active: boolean;
+};
+
 function MiniMap({
   coordinates,
   locale,
   onChange,
+  selected = true,
+  points = [],
 }: {
+  readonly selected?: boolean;
+  readonly points?: readonly MapPoint[];
   readonly coordinates: { latitude: number; longitude: number };
   readonly locale: Locale;
   readonly onChange: (value: { latitude: number; longitude: number }) => void;
@@ -701,6 +679,7 @@ function MiniMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
+  const pointMarkersRef = useRef<maplibregl.Marker[]>([]);
   const onChangeRef = useRef(onChange);
   const coordinatesRef = useRef(coordinates);
   const themeRef = useRef(theme);
@@ -735,6 +714,10 @@ function MiniMap({
         zoom: 12,
         attributionControl: false,
       });
+      map.addControl(
+        new maplibregl.AttributionControl({ compact: true }),
+        "bottom-left",
+      );
       const markerElement = document.createElement("div");
       markerElement.className = "coordinate-marker";
       markerElement.setAttribute("role", "img");
@@ -778,9 +761,44 @@ function MiniMap({
     }
   }, [locale, synchronizeLocation]);
   useEffect(() => {
-    coordinatesRef.current = coordinates;
+    coordinatesRef.current = {
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+    };
     synchronizeLocation();
-  }, [coordinates, synchronizeLocation]);
+  }, [coordinates.latitude, coordinates.longitude, synchronizeLocation]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const marker = markerRef.current;
+    if (marker) {
+      const element = marker.getElement();
+      const activePoint = points.find((point) => point.active);
+      element.style.visibility = selected ? "visible" : "hidden";
+      element.textContent = activePoint?.label ?? "";
+      element.className =
+        "coordinate-marker" +
+        (activePoint ? " trip-point-marker" : "") +
+        (activePoint?.destination ? " is-destination" : "");
+    }
+    pointMarkersRef.current.forEach((point) => point.remove());
+    pointMarkersRef.current = points
+      .filter((point) => !point.active)
+      .map((point) => {
+        const element = document.createElement("div");
+        element.className =
+          "trip-point-marker" + (point.destination ? " is-destination" : "");
+        element.textContent = point.label;
+        element.title = point.name;
+        return new maplibregl.Marker({ element })
+          .setLngLat([point.longitude, point.latitude])
+          .addTo(map);
+      });
+    return () => {
+      pointMarkersRef.current.forEach((point) => point.remove());
+      pointMarkersRef.current = [];
+    };
+  }, [points, selected]);
   return (
     <div
       className="mini-map-preview on-map"

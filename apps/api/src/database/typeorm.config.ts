@@ -1,3 +1,4 @@
+import { DestinationFirstTrips20260908120000 } from "./migrations/20260908120000-destination-first-trips";
 import type { DataSourceOptions } from "typeorm";
 
 import { BaselineCurrentSchema20260906000000 } from "./migrations/20260906000000-baseline-current-schema";
@@ -35,6 +36,7 @@ export function createMigrationDataSourceOptions(input: {
     migrations: [
       BaselineCurrentSchema20260906000000,
       ScheduleJobDrain20260906001000,
+      DestinationFirstTrips20260908120000,
     ],
     extra: { max: 1 },
     ssl: sslOptions(input.migrationDatabaseUrl),

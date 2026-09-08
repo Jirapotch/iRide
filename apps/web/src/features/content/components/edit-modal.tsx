@@ -1,14 +1,18 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
+
+const subscribeToHydration = () => () => {};
 
 export function EditModal({
   children,
@@ -23,22 +27,38 @@ export function EditModal({
     dialogRef = useRef<HTMLDivElement>(null),
     returnFocus = useRef<HTMLElement | null>(null),
     [dirty, setDirty] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
   const close = useCallback(() => {
     if (dirty && !window.confirm("Discard unsaved changes?")) return;
     router.replace(closeUrl);
   }, [closeUrl, dirty, router]);
+  const closeRef = useRef(close);
   useEffect(() => {
+    closeRef.current = close;
+  }, [close]);
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     returnFocus.current = document.activeElement as HTMLElement;
-    const dialog = dialogRef.current;
-    dialog?.querySelector<HTMLElement>("button,input,textarea,select")?.focus();
+    const frame = requestAnimationFrame(() =>
+      dialogRef.current
+        ?.querySelector<HTMLElement>("button,input,textarea,select")
+        ?.focus(),
+    );
     const key = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
+      if (document.querySelector(".maps-import-modal")) return;
+      const dialog = dialogRef.current;
+      if (event.key === "Escape") closeRef.current();
       if (event.key === "Tab" && dialog) {
         const items = [
           ...dialog.querySelectorAll<HTMLElement>(
             "button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled])",
           ),
-        ];
+        ].filter((item) => item.getClientRects().length > 0);
         if (!items.length) return;
         const first = items[0]!,
           last = items.at(-1)!;
@@ -54,10 +74,13 @@ export function EditModal({
     document.addEventListener("keydown", key);
     return () => {
       document.removeEventListener("keydown", key);
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
       returnFocus.current?.focus();
     };
-  }, [close]);
-  return (
+  }, []);
+  if (!mounted) return null;
+  return createPortal(
     <div
       className="modal-backdrop"
       onMouseDown={(event) => {
@@ -79,6 +102,7 @@ export function EditModal({
         </header>
         <div onChange={() => setDirty(true)}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

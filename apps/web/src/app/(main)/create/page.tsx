@@ -99,7 +99,7 @@ async function MarkerOptionsLoader({
           kind: "event" as const,
           id: item.id,
           title: item.title,
-          subtitle: item.locationLabel,
+          subtitle: item.destinationLabel ?? item.locationLabel ?? "",
         }))
       : [];
   return (

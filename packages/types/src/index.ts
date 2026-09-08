@@ -158,18 +158,24 @@ export interface UpdateCommentInput {
   readonly body: string;
 }
 
+export interface TripStop {
+  readonly name: string;
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
 export interface EventDto {
   readonly id: string;
   readonly kind: EventKind;
   readonly title: string;
   readonly description: string | null;
-  readonly locationLabel: string;
-  readonly latitude: number;
-  readonly longitude: number;
+  readonly locationLabel: string | null;
+  readonly latitude: number | null;
+  readonly longitude: number | null;
   readonly destinationLabel: string | null;
   readonly destinationLatitude: number | null;
   readonly destinationLongitude: number | null;
-  readonly startsAt: string;
+  readonly startsAt: string | null;
   readonly endsAt: string | null;
   readonly timezone: string;
   readonly vehicleKinds: readonly VehicleKind[];
@@ -177,22 +183,24 @@ export interface EventDto {
   readonly canEdit: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly stops?: readonly TripStop[];
 }
 
 export interface CreateEventInput {
   readonly kind: EventKind;
   readonly title: string;
   readonly description: string | null;
-  readonly locationLabel: string;
-  readonly latitude: number;
-  readonly longitude: number;
+  readonly locationLabel: string | null;
+  readonly latitude: number | null;
+  readonly longitude: number | null;
   readonly destinationLabel?: string | null;
   readonly destinationLatitude?: number | null;
   readonly destinationLongitude?: number | null;
-  readonly startsAt: string;
+  readonly startsAt: string | null;
   readonly endsAt?: string | null;
   readonly timezone: string;
   readonly vehicleKinds: readonly VehicleKind[];
+  readonly stops?: readonly TripStop[];
 }
 
 export type UpdateEventInput = Partial<CreateEventInput>;
@@ -233,7 +241,13 @@ export type UpdateVehicleInput = Partial<CreateVehicleInput>;
 
 export const mediaPurposes = ["avatar", "cover", "vehicle"] as const;
 export type MediaPurpose = (typeof mediaPurposes)[number];
-export const mediaStatuses = ["uploading", "processing", "ready", "failed", "deleted"] as const;
+export const mediaStatuses = [
+  "uploading",
+  "processing",
+  "ready",
+  "failed",
+  "deleted",
+] as const;
 export type MediaStatus = (typeof mediaStatuses)[number];
 export type MediaVariantKind = "thumbnail" | "preview";
 
@@ -269,16 +283,13 @@ export interface ExploreFeatureDto {
   readonly subtitle: string;
   readonly latitude: number;
   readonly longitude: number;
-  readonly startsAt: string;
+  readonly startsAt: string | null;
   readonly endsAt: string | null;
   readonly author: ContentAuthorDto;
   readonly canEdit: boolean;
 }
 
-export type SearchResultKind =
-  | "profile"
-  | "post"
-  | "event";
+export type SearchResultKind = "profile" | "post" | "event";
 
 export interface SearchResultDto {
   readonly id: string;

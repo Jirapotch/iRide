@@ -1,0 +1,15 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path = public, extensions;
+select plan(9);
+select has_column('public', 'events', 'stops', 'trip stops are stored with the event');
+select col_is_null('public', 'events', 'starts_at', 'unscheduled trips are supported');
+select col_is_null('public', 'events', 'latitude', 'trip origin is optional');
+select ok(private.valid_trip_stops('[]'::jsonb), 'empty itinerary is valid');
+select ok(private.valid_trip_stops('[{"name":"เชียงใหม่","latitude":18.79,"longitude":98.98}]'::jsonb), 'named location is valid');
+select ok(not private.valid_trip_stops('[{"name":"","latitude":18,"longitude":98}]'::jsonb), 'empty stop name is rejected');
+select ok(not private.valid_trip_stops('[{"name":"Stop","latitude":91,"longitude":98}]'::jsonb), 'invalid coordinates are rejected');
+select ok(not private.valid_trip_stops((select jsonb_agg(jsonb_build_object('name','Stop','latitude',18,'longitude',98)) from generate_series(1,21))), 'twenty-one stops are rejected');
+select ok(exists (select 1 from pg_constraint where conrelid = 'public.events'::regclass and conname = 'events_activity_required'), 'activities retain required location and start');
+select * from finish();
+rollback;

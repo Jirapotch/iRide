@@ -6,14 +6,24 @@ export function sortProfileActivities(
 ): ExploreFeatureDto[] {
   const boundary = now.getTime();
   const upcoming = items
-    .filter((item) => new Date(item.startsAt).getTime() >= boundary)
+    .filter(
+      (item) =>
+        (item.startsAt ? Date.parse(item.startsAt) : Infinity) >= boundary,
+    )
     .sort(
-      (left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt),
+      (left, right) =>
+        (left.startsAt ? Date.parse(left.startsAt) : Infinity) -
+        (right.startsAt ? Date.parse(right.startsAt) : Infinity),
     );
   const past = items
-    .filter((item) => new Date(item.startsAt).getTime() < boundary)
+    .filter(
+      (item) =>
+        (item.startsAt ? Date.parse(item.startsAt) : Infinity) < boundary,
+    )
     .sort(
-      (left, right) => Date.parse(right.startsAt) - Date.parse(left.startsAt),
+      (left, right) =>
+        (right.startsAt ? Date.parse(right.startsAt) : Infinity) -
+        (left.startsAt ? Date.parse(left.startsAt) : Infinity),
     );
   return [...upcoming, ...past];
 }

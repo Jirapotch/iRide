@@ -16,7 +16,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
-import { createContentTypes, postDestination, type CreateContentType } from "@/lib/create-content-domain";
+import {
+  createContentTypes,
+  postDestination,
+  type CreateContentType,
+} from "@/lib/create-content-domain";
 import { resolveGoogleMapsCoordinates } from "@/lib/google-maps-resolver";
 import {
   createEvent,
@@ -33,7 +37,8 @@ export async function saveContent(formData: FormData) {
   const session = await getVerifiedWebSession();
   if (!session) redirect("/login?next=/create");
   const type = String(formData.get("type") ?? "post");
-  if (!createContentTypes.includes(type as CreateContentType)) throw new Error("CREATE_TYPE_UNAVAILABLE");
+  if (!createContentTypes.includes(type as CreateContentType))
+    throw new Error("CREATE_TYPE_UNAVAILABLE");
   const editId = optional(formData, "editId");
 
   if (type === "post") {
@@ -62,14 +67,20 @@ export async function saveContent(formData: FormData) {
     kind,
     title: String(formData.get("title") ?? ""),
     description: nullable(formData, "description"),
-    locationLabel: String(formData.get("locationLabel") ?? ""),
-    latitude: Number(formData.get("latitude")),
-    longitude: Number(formData.get("longitude")),
+    locationLabel: nullable(formData, "locationLabel"),
+    latitude: numberOrNull(formData, "latitude"),
+    longitude: numberOrNull(formData, "longitude"),
     destinationLabel: nullable(formData, "destinationLabel"),
     destinationLatitude: numberOrNull(formData, "destinationLatitude"),
     destinationLongitude: numberOrNull(formData, "destinationLongitude"),
-    startsAt: iso(formData, "startsAt"),
-    endsAt: optional(formData, "endsAt") ? iso(formData, "endsAt") : null,
+    startsAt: optional(formData, "startsAt")
+      ? iso(formData, "startsAt", type === "trip")
+      : null,
+    stops:
+      type === "trip" ? JSON.parse(String(formData.get("stops") ?? "[]")) : [],
+    endsAt: optional(formData, "endsAt")
+      ? iso(formData, "endsAt", type === "trip")
+      : null,
     timezone: String(formData.get("timezone") ?? "Asia/Bangkok"),
     vehicleKinds: formData.getAll("vehicleKinds").map(String),
   };
@@ -115,15 +126,20 @@ export async function removeContent(formData: FormData) {
   const session = await getVerifiedWebSession();
   if (!session) redirect("/login");
   const id = String(formData.get("id") ?? "");
-  const domain = String(formData.get("domain") ?? "") as
-    "posts" | "events";
+  const domain = String(formData.get("domain") ?? "") as "posts" | "events";
   if (!id || !["posts", "events"].includes(domain))
     throw new Error("INVALID_DELETE");
   await deleteContent(session.accessToken, domain, id);
   revalidatePath(domain === "posts" ? "/community" : "/maps");
   if (domain === "posts") {
-    const parsed = createPostSchema.shape.communityCategory.safeParse(String(formData.get("communityCategory") ?? "groups"));
-    redirect(postDestination(parsed.success ? parsed.data : "groups", id).split("?")[0]!);
+    const parsed = createPostSchema.shape.communityCategory.safeParse(
+      String(formData.get("communityCategory") ?? "groups"),
+    );
+    redirect(
+      postDestination(parsed.success ? parsed.data : "groups", id).split(
+        "?",
+      )[0]!,
+    );
   }
   redirect("/maps");
 }
@@ -145,14 +161,13 @@ function numberOrNull(data: FormData, key: string) {
   const value = optional(data, key);
   return value === null ? null : Number(value);
 }
-function iso(data: FormData, key: string) {
-  return new Date(String(data.get(key) ?? "")).toISOString();
+function iso(data: FormData, key: string, bangkok = false) {
+  const value = String(data.get(key) ?? "");
+  return new Date(bangkok ? `${value}+07:00` : value).toISOString();
 }
 function markerTags(data: FormData): MarkerTagInput[] {
   return data.getAll("markerTags").flatMap((value) => {
     const [kind, id] = String(value).split(":");
-    return kind === "event" && id
-      ? [{ kind, id }]
-      : [];
+    return kind === "event" && id ? [{ kind, id }] : [];
   });
 }

@@ -37,6 +37,7 @@ export default async function MapsPage({
         !initialEdit
       }
       initialEdit={initialEdit}
+      initialTrip={selectedContent?.kind === "trip" ? selectedContent : null}
       initialFeature={initialFeature}
       locale={locale}
       selectedFeatureUnavailable={selectedResult?.status === "error"}
@@ -49,9 +50,15 @@ function toExploreFeature(content: EventDto): ExploreFeatureDto {
     id: content.id,
     kind: content.kind,
     title: content.title,
-    subtitle: content.locationLabel,
-    latitude: content.latitude,
-    longitude: content.longitude,
+    subtitle: content.destinationLabel ?? content.locationLabel ?? "",
+    latitude:
+      content.kind === "trip"
+        ? content.destinationLatitude!
+        : content.latitude!,
+    longitude:
+      content.kind === "trip"
+        ? content.destinationLongitude!
+        : content.longitude!,
     startsAt: content.startsAt,
     endsAt: content.endsAt,
     author: content.organizer,

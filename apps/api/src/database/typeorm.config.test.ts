@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createMigrationDataSourceOptions, createRuntimeDataSourceOptions } from "./typeorm.config";
+import {
+  createMigrationDataSourceOptions,
+  createRuntimeDataSourceOptions,
+} from "./typeorm.config";
 import { ScheduleJobDrain20260906001000 } from "./migrations/20260906001000-schedule-job-drain";
 
 describe("TypeORM configuration", () => {
@@ -22,7 +25,7 @@ describe("TypeORM configuration", () => {
 
     expect(options.url).toBe("postgresql://direct.example/iride");
     expect(options.synchronize).toBe(false);
-    expect(options.migrations).toHaveLength(2);
+    expect(options.migrations).toHaveLength(3);
   });
 
   it("schedules the protected drain endpoint every minute via Vault", async () => {

@@ -71,12 +71,14 @@ export function ActivityHub({
   locale,
   initialFeature = null,
   initialEdit = null,
+  initialTrip = null,
   editDenied = false,
   selectedFeatureUnavailable = false,
 }: {
   readonly locale: Locale;
   readonly initialFeature?: ExploreFeatureDto | null;
   readonly initialEdit?: EventDto | null;
+  readonly initialTrip?: EventDto | null;
   readonly editDenied?: boolean;
   readonly selectedFeatureUnavailable?: boolean;
 }) {
@@ -96,6 +98,12 @@ export function ActivityHub({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [tripDetails, setTripDetails] = useState<{
+    id: string;
+    event: EventDto | null;
+    failed: boolean;
+  } | null>(null);
+  const [detailAttempt, setDetailAttempt] = useState(0);
   const [cameraDuration, setCameraDuration] = useState<number | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const rootRef = useRef<HTMLElement>(null);
@@ -110,6 +118,21 @@ export function ActivityHub({
   const returnFocusMarkerIdRef = useRef<string | null>(null);
   const selectedIdRef = useRef(selectedId);
   const pushedMarkerRef = useRef(false);
+  const initialFeatureRef = useRef(initialFeature);
+  const [lastInitialFeature, setLastInitialFeature] = useState(initialFeature);
+  if (initialFeature !== lastInitialFeature) {
+    setLastInitialFeature(initialFeature);
+    if (initialFeature) {
+      setFeatures((current) => [
+        initialFeature,
+        ...current.filter((item) => item.id !== initialFeature.id),
+      ]);
+      setSelectedId(initialFeature.id);
+    }
+  }
+  useEffect(() => {
+    initialFeatureRef.current = initialFeature;
+  }, [initialFeature]);
 
   useEffect(() => {
     enabledRef.current = enabled;
@@ -141,47 +164,54 @@ export function ActivityHub({
     if (map?.isStyleLoaded()) applyMapPalette(map, theme);
   }, [theme]);
 
-  const loadViewport = useCallback(
-    async (map: maplibregl.Map) => {
-      requestRef.current?.abort();
-      const controller = new AbortController();
-      requestRef.current = controller;
-      const bounds = map.getBounds();
-      setLoading(true);
-      try {
-        const active = enabledRef.current;
-        const layers = Array.from(
-          new Set(active.map((kind) => (kind === "trip" ? "trips" : "events"))),
-        );
-        const data = await getExploreContent(
-          [
-            bounds.getWest(),
-            bounds.getSouth(),
-            bounds.getEast(),
-            bounds.getNorth(),
-          ],
-          layers,
-          controller.signal,
-        );
-        setFeatures(
-          initialFeature && !data.some((item) => item.id === initialFeature.id)
-            ? [initialFeature, ...data]
-            : data,
-        );
-        setError(false);
-      } catch (caught) {
-        if (!(caught instanceof DOMException && caught.name === "AbortError"))
-          setError(true);
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    },
-    [initialFeature],
-  );
+  const loadViewport = useCallback(async (map: maplibregl.Map) => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const bounds = map.getBounds();
+    setLoading(true);
+    try {
+      const active = enabledRef.current;
+      const layers = Array.from(
+        new Set(active.map((kind) => (kind === "trip" ? "trips" : "events"))),
+      );
+      const data = await getExploreContent(
+        [
+          bounds.getWest(),
+          bounds.getSouth(),
+          bounds.getEast(),
+          bounds.getNorth(),
+        ],
+        layers,
+        controller.signal,
+      );
+      if (controller.signal.aborted || requestRef.current !== controller)
+        return;
+      setFeatures((current) => {
+        const retained =
+          current.find((item) => item.id === selectedIdRef.current) ??
+          initialFeatureRef.current;
+        return retained && !data.some((item) => item.id === retained.id)
+          ? [retained, ...data]
+          : data;
+      });
+      setError(false);
+    } catch (caught) {
+      if (
+        !controller.signal.aborted &&
+        requestRef.current === controller &&
+        !(caught instanceof DOMException && caught.name === "AbortError")
+      )
+        setError(true);
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
     try {
+      const initialFeature = initialFeatureRef.current;
       const map = new maplibregl.Map({
         container: containerRef.current,
         style: mapStyle(process.env.NEXT_PUBLIC_MAPTILER_KEY),
@@ -230,7 +260,7 @@ export function ActivityHub({
         setLoading(false);
       }, 0);
     }
-  }, [initialFeature, loadViewport]);
+  }, [loadViewport]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -266,7 +296,9 @@ export function ActivityHub({
                 : "C";
         button.dataset.featureId = feature.id;
         button.addEventListener("click", () => {
+          if (selectedIdRef.current === feature.id) return;
           markerTriggerRef.current = button;
+          selectedIdRef.current = feature.id;
           window.history.pushState(
             null,
             "",
@@ -307,6 +339,64 @@ export function ActivityHub({
     () => features.find((feature) => feature.id === selectedId) ?? null,
     [features, selectedId],
   );
+  const tripId = selected?.kind === "trip" ? selected.id : null;
+  useEffect(() => {
+    if (!tripId || initialTrip?.id === tripId) return;
+    const controller = new AbortController();
+    void fetch("/api/bff/events/" + encodeURIComponent(tripId), {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("trip_unavailable");
+        return response.json() as Promise<{ data: EventDto }>;
+      })
+      .then(({ data }) => {
+        if (!controller.signal.aborted)
+          setTripDetails({ id: tripId, event: data, failed: false });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setTripDetails({ id: tripId, event: null, failed: true });
+      });
+    return () => controller.abort();
+  }, [tripId, detailAttempt, initialTrip]);
+  const detail = useMemo(
+    () =>
+      initialTrip?.id === tripId
+        ? { id: tripId, event: initialTrip, failed: false }
+        : tripDetails?.id === tripId
+          ? tripDetails
+          : null,
+    [initialTrip, tripDetails, tripId],
+  );
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !detail?.event) return;
+    const event = detail.event;
+    const points = [
+      ...(event.latitude != null && event.longitude != null
+        ? [
+            {
+              name: event.locationLabel ?? "",
+              latitude: event.latitude,
+              longitude: event.longitude,
+            },
+          ]
+        : []),
+      ...(event.stops ?? []),
+    ];
+    const markers = points.map((point, index) => {
+      const element = document.createElement("div");
+      element.className = "trip-point-marker";
+      element.textContent = String(index + 1);
+      element.setAttribute("role", "img");
+      element.setAttribute("aria-label", point.name);
+      return new maplibregl.Marker({ element })
+        .setLngLat([point.longitude, point.latitude])
+        .addTo(map);
+    });
+    return () => markers.forEach((marker) => marker.remove());
+  }, [detail]);
   const visibleFeatureCount = useMemo(
     () => features.filter((feature) => enabled.includes(feature.kind)).length,
     [enabled, features],
@@ -342,8 +432,20 @@ export function ActivityHub({
     return () => context.revert();
   }, []);
 
+  const cameraId = selected?.id;
+  const cameraLatitude = selected?.latitude;
+  const cameraLongitude = selected?.longitude;
+  const cameraTarget = useMemo(
+    () =>
+      cameraId && cameraLatitude != null && cameraLongitude != null
+        ? { id: cameraId, latitude: cameraLatitude, longitude: cameraLongitude }
+        : null,
+    [cameraId, cameraLatitude, cameraLongitude],
+  );
+  const cameraItinerary = detail?.event ?? null;
   useEffect(() => {
     const map = mapRef.current;
+    const selected = cameraTarget;
     if (!map || !selected) return;
 
     const reducedMotion = window.matchMedia(
@@ -355,7 +457,31 @@ export function ActivityHub({
       reducedMotion,
     );
     setCameraDuration(camera.duration);
-    map.easeTo(camera);
+    const points = [
+      ...(cameraItinerary?.latitude != null && cameraItinerary.longitude != null
+        ? [
+            {
+              latitude: cameraItinerary.latitude,
+              longitude: cameraItinerary.longitude,
+            },
+          ]
+        : []),
+      ...(cameraItinerary?.stops ?? []),
+    ];
+    if (points.length) {
+      const end: [number, number] = [selected.longitude, selected.latitude];
+      const bounds = new maplibregl.LngLatBounds(end, end);
+      points.forEach((point) =>
+        bounds.extend([point.longitude, point.latitude]),
+      );
+      map.fitBounds(bounds, {
+        padding: camera.padding,
+        duration: camera.duration,
+        maxZoom: 13,
+      });
+    } else {
+      map.easeTo(camera);
+    }
 
     let context: gsap.Context | undefined;
     const frame = window.requestAnimationFrame(() => {
@@ -415,7 +541,7 @@ export function ActivityHub({
       window.cancelAnimationFrame(frame);
       context?.revert();
     };
-  }, [selected]);
+  }, [cameraTarget, cameraItinerary]);
   const closeFeatureSheet = useCallback(() => {
     const markerId = selectedId;
     returnFocusMarkerIdRef.current = markerId;
@@ -604,6 +730,9 @@ export function ActivityHub({
       {selected && !initialEdit ? (
         <ActivityFeatureSheet
           feature={selected}
+          trip={detail?.event ?? null}
+          tripFailed={detail?.failed ?? false}
+          onRetryTrip={() => setDetailAttempt((value) => value + 1)}
           locale={locale}
           onClose={closeFeatureSheet}
         />

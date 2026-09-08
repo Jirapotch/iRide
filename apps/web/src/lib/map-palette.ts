@@ -33,21 +33,21 @@ export interface MapPalette {
 }
 
 export const matchaLattePalette: MapPalette = {
-  ground: "#F6F3E8",
-  block: "#D9DFC7",
-  block2: "#E7E1D3",
-  road: "#D5D8D2",
-  edge: "#BEC4BC",
-  outline: "#C8D1C3",
+  ground: "#F1F2EF",
+  block: "#C4D8A7",
+  block2: "#FFFFFF",
+  road: "#FFFFFF",
+  edge: "#CCD0CC",
+  outline: "#D5DAD2",
   boundary: "#C8D1C3",
-  water: "#BCD7D0",
-  label: "#4B5D51",
+  water: "#AED3D8",
+  label: "#45534B",
   labelHalo: "#FBFAF5",
   veil: "rgb(79 111 82 / .08)",
-  rasterSaturation: -0.55,
+  rasterSaturation: -0.12,
   rasterContrast: -0.08,
   rasterBrightnessMax: 0.92,
-  rasterOpacity: 0.82,
+  rasterOpacity: 1,
 };
 
 export const mapPalettes: Record<AppTheme, MapPalette> = {
@@ -58,7 +58,7 @@ export const mapPalettes: Record<AppTheme, MapPalette> = {
 export const contentKindColors: Record<ExploreFeatureKind, string> = {
   meeting: "#4F6F52",
   event: "#6B7F5B",
-  trip: "#4F7770",
+  trip: "#254F80",
 };
 
 interface MapStyleLayer {

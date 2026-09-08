@@ -117,7 +117,7 @@ export async function CommunityEditRegion({
         markerOptions={events.map((event) => ({
           id: event.id,
           kind: "event" as const,
-          subtitle: event.locationLabel,
+          subtitle: event.destinationLabel ?? event.locationLabel ?? "",
           title: event.title,
         }))}
         type="post"
