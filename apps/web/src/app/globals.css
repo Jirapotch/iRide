@@ -921,6 +921,42 @@ a {
     0 -30px 70px var(--map-shadow),
     inset 0 1px 0 var(--map-edge-lit);
 }
+.activity-sheet-header {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--map-rule-soft);
+  background: color-mix(in srgb, var(--map-paper-raised) 96%, transparent);
+  backdrop-filter: blur(10px);
+}
+.activity-sheet-header > div {
+  min-width: 0;
+}
+.activity-sheet-header h2 {
+  overflow: hidden;
+  margin: 0.3rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sheet-detail-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  border: 1px solid var(--map-rule-soft);
+  border-radius: 0.75rem;
+  background: var(--map-paper-muted);
+  color: var(--map-accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
 .sheet-handle {
   width: 42px;
   height: 4px;
@@ -929,10 +965,7 @@ a {
   background: var(--map-rule);
 }
 .sheet-close {
-  position: absolute;
-  right: 0.75rem;
-  top: 0.7rem;
-  z-index: 2;
+  position: static;
   width: 40px;
   height: 40px;
   display: grid;
@@ -3119,8 +3152,33 @@ input[type="datetime-local"] {
 .map-actions-stack .map-locate-fab {
   position: static;
 }
+.discover-map[data-sheet-open="true"] .map-actions-stack {
+  z-index: 81;
+  bottom: calc(50dvh + var(--mobile-nav-height) + 1rem);
+}
+.discover-map[data-sheet-open="true"] .map-filter-menu {
+  z-index: 81;
+  top: calc(var(--header-height) + 1rem);
+  right: auto;
+  bottom: auto;
+  left: 1rem;
+}
 .map-filter-menu {
   bottom: 8.8rem;
+}
+@media (min-width: 1024px) {
+  .discover-map[data-sheet-open="true"] .map-actions-stack,
+  .discover-map[data-sheet-open="true"] .map-filter-menu {
+    right: calc(min(390px, calc(100% - 2rem)) + 2rem);
+    left: auto;
+  }
+  .discover-map[data-sheet-open="true"] .map-actions-stack {
+    bottom: 1rem;
+  }
+  .discover-map[data-sheet-open="true"] .map-filter-menu {
+    top: auto;
+    bottom: 8.8rem;
+  }
 }
 .user-location-marker {
   width: 20px;
@@ -3523,6 +3581,12 @@ input[type="datetime-local"] {
 .activity-sheet-backdrop {
   backdrop-filter: none;
   background: rgb(28 46 42 / 0.12);
+}
+.activity-sheet-backdrop.on-map {
+  pointer-events: none;
+}
+.activity-sheet-backdrop.on-map .activity-sheet {
+  pointer-events: auto;
 }
 @media (min-width: 1024px) {
   .activity-sheet-backdrop {

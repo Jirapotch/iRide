@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   activityStatus,
+  coordinateRoutePointsForEvent,
   filterAndSortActivities,
   formatActivityDate,
   projectRoutePoints,
@@ -116,15 +117,72 @@ it("orders trip route points from start through stops to destination", () => {
   ]);
 });
 
-it("projects a coordinate route into padded SVG coordinates", () => {
+it("projects a vertical route north-up without inventing horizontal spread", () => {
   expect(
     projectRoutePoints([
       { role: "start", name: "A", latitude: 10, longitude: 100 },
-      { role: "destination", name: "B", latitude: 20, longitude: 110 },
+      { role: "destination", name: "B", latitude: 20, longitude: 100 },
     ]),
   ).toEqual([
-    { x: 12, y: 88 },
-    { x: 88, y: 12 },
+    { x: 50, y: 88 },
+    { x: 50, y: 12 },
+  ]);
+});
+
+it("preserves timeline indexes when route points without coordinates are omitted from the map", () => {
+  const points = coordinateRoutePointsForEvent(
+    event({
+      kind: "trip",
+      locationLabel: "Start",
+      latitude: null,
+      longitude: null,
+      stops: [{ name: "Mapped stop", latitude: 14, longitude: 101 }],
+      destinationLabel: "Finish",
+      destinationLatitude: 15,
+      destinationLongitude: 102,
+    }),
+  );
+
+  expect(points.map(({ index, point }) => [index, point.name])).toEqual([
+    [1, "Mapped stop"],
+    [2, "Finish"],
+  ]);
+});
+
+it("uses one scale for both axes instead of stretching a shallow route", () => {
+  const points = projectRoutePoints([
+    { role: "start", name: "A", latitude: 0, longitude: 0 },
+    { role: "destination", name: "B", latitude: 1, longitude: 10 },
+  ]);
+
+  expect(points[0]!.x).toBe(12);
+  expect(points[1]!.x).toBe(88);
+  expect(points[0]!.y).toBeCloseTo(53.8, 1);
+  expect(points[1]!.y).toBeCloseTo(46.2, 1);
+});
+
+it("centers a single coordinate and ignores points without coordinates", () => {
+  expect(
+    projectRoutePoints([
+      { role: "start", name: "A", latitude: null, longitude: null },
+      { role: "destination", name: "B", latitude: 20, longitude: 100 },
+    ]),
+  ).toEqual([{ x: 50, y: 50 }]);
+  expect(
+    projectRoutePoints([
+      { role: "start", name: "A", latitude: null, longitude: null },
+    ]),
+  ).toEqual([]);
+});
+
+it("clamps polar latitudes to finite Web Mercator coordinates", () => {
+  const points = projectRoutePoints([
+    { role: "start", name: "South", latitude: -90, longitude: 0 },
+    { role: "destination", name: "North", latitude: 90, longitude: 0 },
+  ]);
+  expect(points).toEqual([
+    { x: 50, y: 88 },
+    { x: 50, y: 12 },
   ]);
 });
 

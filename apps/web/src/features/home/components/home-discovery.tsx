@@ -24,7 +24,7 @@ const RECENT_KEY = "iride.home.recent.v1";
 
 const copy = {
   th: {
-    heroKicker: "COMMUNITY • GAMES • ACTIVITIES",
+    heroKicker: "COMMUNITY • ACTIVITIES • GAMES",
     heroTitle: "ทุกเส้นทาง มีเรื่องราว",
     heroBody: "พบผู้คน เล่นสนุก และออกไปสร้างความทรงจำบนเส้นทางเดียวกัน",
     hello: "สวัสดี",
@@ -62,7 +62,7 @@ const copy = {
     footer: "สร้างขึ้นเพื่อทุกคนที่เชื่อว่าเส้นทางมีความหมายมากกว่าจุดหมาย",
   },
   en: {
-    heroKicker: "COMMUNITY • GAMES • ACTIVITIES",
+    heroKicker: "COMMUNITY • ACTIVITIES • GAMES",
     heroTitle: "Every road has a story",
     heroBody: "Meet people, play, and create new memories along the same road.",
     hello: "Hello",

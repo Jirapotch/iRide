@@ -20,7 +20,7 @@ export function RouteThumbnail({ event }: { readonly event: EventDto }) {
 
   return (
     <div aria-hidden="true" className={styles.thumbnail}>
-      <svg preserveAspectRatio="none" viewBox="0 0 100 100">
+      <svg preserveAspectRatio="xMidYMid meet" viewBox="0 0 100 100">
         <defs>
           <pattern
             id={`route-grid-${event.id}`}

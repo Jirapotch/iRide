@@ -19,6 +19,7 @@ import type { Locale } from "@/lib/locale";
 import { contentKindColors } from "@/lib/map-palette";
 
 import { getActivityKindLabel } from "../activity-kind-label";
+import type { ActivityRoutePoint } from "../activity-presentation-domain";
 import { RouteStops } from "./route-stops";
 
 const subscribeToHydration = () => () => {};
@@ -30,10 +31,17 @@ export function ActivityFeatureSheet({
   trip = null,
   tripFailed = false,
   onRetryTrip,
+  onSelectRoutePoint,
+  selectedRoutePointIndex = null,
 }: {
   readonly trip?: EventDto | null;
   readonly tripFailed?: boolean;
   readonly onRetryTrip?: () => void;
+  readonly onSelectRoutePoint?: (
+    point: ActivityRoutePoint,
+    index: number,
+  ) => void;
+  readonly selectedRoutePointIndex?: number | null;
   readonly feature: ExploreFeatureDto;
   readonly locale: Locale;
   readonly onClose: () => void;
@@ -114,30 +122,41 @@ export function ActivityFeatureSheet({
         aria-modal={desktop ? undefined : "true"}
         className="activity-sheet"
         data-feature-sheet={feature.id}
+        data-route-focus={selectedRoutePointIndex ?? undefined}
         ref={sheetRef}
         role="dialog"
       >
-        <button
-          aria-label="Close"
-          className="sheet-close"
-          onClick={onClose}
-          ref={closeButtonRef}
-          type="button"
-        >
-          <X size={18} />
-        </button>
-        <div className="activity-sheet-body">
-          <span
-            className="kind-badge"
-            style={
-              {
-                "--marker-color": contentKindColors[feature.kind],
-              } as CSSProperties
-            }
+        <header className="activity-sheet-header">
+          <div>
+            <span
+              className="kind-badge"
+              style={
+                {
+                  "--marker-color": contentKindColors[feature.kind],
+                } as CSSProperties
+              }
+            >
+              {getActivityKindLabel(feature.kind, locale)}
+            </span>
+            <h2>{feature.title}</h2>
+          </div>
+          <PendingLink
+            className="sheet-detail-link"
+            href={`/activities/${encodeURIComponent(feature.id)}`}
           >
-            {getActivityKindLabel(feature.kind, locale)}
-          </span>
-          <h2>{feature.title}</h2>
+            {locale === "th" ? "รายละเอียด" : "Details"}
+          </PendingLink>
+          <button
+            aria-label="Close"
+            className="sheet-close"
+            onClick={onClose}
+            ref={closeButtonRef}
+            type="button"
+          >
+            <X size={18} />
+          </button>
+        </header>
+        <div className="activity-sheet-body">
           <p>{feature.subtitle}</p>
           <p>
             <PendingLink href={`/users/${feature.author.username}`}>
@@ -163,7 +182,14 @@ export function ActivityFeatureSheet({
                 {locale === "th" ? "จุดหมายและที่แวะ" : "Destination and stops"}
               </h3>
               {trip ? (
-                <RouteStops event={trip} locale={locale} />
+                <RouteStops
+                  event={trip}
+                  locale={locale}
+                  selectedIndex={selectedRoutePointIndex}
+                  {...(onSelectRoutePoint
+                    ? { onSelectPoint: onSelectRoutePoint }
+                    : {})}
+                />
               ) : tripFailed ? (
                 <button type="button" onClick={onRetryTrip}>
                   {locale === "th"

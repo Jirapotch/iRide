@@ -8,15 +8,22 @@ import type { EventDto } from "@iride/types";
 
 import { googleMapsLocationUrl } from "@/lib/google-maps-domain";
 import type { Locale } from "@/lib/locale";
-import { routePointsForEvent } from "../activity-presentation-domain";
+import {
+  type ActivityRoutePoint,
+  routePointsForEvent,
+} from "../activity-presentation-domain";
 import styles from "./activities.module.css";
 
 export function RouteStops({
   event,
   locale,
+  onSelectPoint,
+  selectedIndex = null,
 }: {
   readonly event: EventDto;
   readonly locale: Locale;
+  readonly onSelectPoint?: (point: ActivityRoutePoint, index: number) => void;
+  readonly selectedIndex?: number | null;
 }) {
   const points = routePointsForEvent(event);
   if (!points.length) {
@@ -60,15 +67,41 @@ export function RouteStops({
             : point.role === "destination"
               ? FlagCheckered
               : MapPin;
+        const markerContent =
+          point.role === "stop" ? (
+            stopNumber
+          ) : (
+            <Icon aria-hidden size={16} weight="fill" />
+          );
+        const canSelect =
+          onSelectPoint &&
+          point.latitude != null &&
+          point.longitude != null;
         return (
-          <li data-route-stop key={`${point.role}-${index}-${point.name}`}>
-            <span className={styles.routeMarker}>
-              {point.role === "stop" ? (
-                stopNumber
-              ) : (
-                <Icon aria-hidden size={16} weight="fill" />
-              )}
-            </span>
+          <li
+            className={
+              point.role === "destination" ? "trip-destination" : undefined
+            }
+            data-route-stop
+            key={`${point.role}-${index}-${point.name}`}
+          >
+            {canSelect ? (
+              <button
+                aria-label={
+                  locale === "th"
+                    ? `แสดง ${point.name} บนแผนที่`
+                    : `Show ${point.name} on map`
+                }
+                aria-pressed={selectedIndex === index}
+                className={`${styles.routeMarker} ${styles.routeMarkerButton}`}
+                onClick={() => onSelectPoint(point, index)}
+                type="button"
+              >
+                {markerContent}
+              </button>
+            ) : (
+              <span className={styles.routeMarker}>{markerContent}</span>
+            )}
             <div className={styles.routeStopBody}>
               <small>{label}</small>
               <strong>{point.name}</strong>

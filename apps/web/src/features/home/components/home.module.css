@@ -131,19 +131,6 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
   margin-top: 2rem;
-  transition: grid-template-columns var(--motion-base) var(--ease-emphasized);
-}
-
-.featureGrid[data-active="community"] {
-  grid-template-columns: 1.8fr 0.9fr 0.9fr;
-}
-
-.featureGrid[data-active="games"] {
-  grid-template-columns: 0.9fr 1.8fr 0.9fr;
-}
-
-.featureGrid[data-active="activities"] {
-  grid-template-columns: 0.9fr 0.9fr 1.8fr;
 }
 
 .featureCard {

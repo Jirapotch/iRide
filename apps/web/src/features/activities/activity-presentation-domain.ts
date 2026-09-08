@@ -17,6 +17,14 @@ export interface ActivityRoutePoint {
   readonly longitude: number | null;
 }
 
+export interface CoordinateActivityRoutePoint {
+  readonly index: number;
+  readonly point: ActivityRoutePoint & {
+    readonly latitude: number;
+    readonly longitude: number;
+  };
+}
+
 export function activityStatus(
   event: EventDto,
   now = new Date(),
@@ -100,6 +108,17 @@ export function routePointsForEvent(event: EventDto): ActivityRoutePoint[] {
   return points;
 }
 
+export function coordinateRoutePointsForEvent(
+  event: EventDto,
+): CoordinateActivityRoutePoint[] {
+  return routePointsForEvent(event)
+    .map((point, index) => ({ point, index }))
+    .filter(
+      (entry): entry is CoordinateActivityRoutePoint =>
+        hasCoordinates(entry.point.latitude, entry.point.longitude),
+    );
+}
+
 export function projectRoutePoints(
   points: readonly Pick<
     ActivityRoutePoint,
@@ -113,25 +132,45 @@ export function projectRoutePoints(
   if (!coordinates.length) return [];
   if (coordinates.length === 1) return [{ x: 50, y: 50 }];
 
-  const longitudes = coordinates.map(({ longitude }) => longitude);
-  const latitudes = coordinates.map(({ latitude }) => latitude);
-  const minLongitude = Math.min(...longitudes);
-  const maxLongitude = Math.max(...longitudes);
-  const minLatitude = Math.min(...latitudes);
-  const maxLatitude = Math.max(...latitudes);
-  const longitudeSpan = maxLongitude - minLongitude;
-  const latitudeSpan = maxLatitude - minLatitude;
-
-  return coordinates.map(({ latitude, longitude }, index) => ({
-    x:
-      longitudeSpan === 0
-        ? 12 + (76 * index) / (coordinates.length - 1)
-        : 12 + ((longitude - minLongitude) / longitudeSpan) * 76,
-    y:
-      latitudeSpan === 0
-        ? 88 - (76 * index) / (coordinates.length - 1)
-        : 88 - ((latitude - minLatitude) / latitudeSpan) * 76,
+  const projected = coordinates.map(({ latitude, longitude }) => ({
+    x: degreesToRadians(longitude),
+    y: webMercatorY(latitude),
   }));
+  const xs = projected.map(({ x }) => x);
+  const ys = projected.map(({ y }) => y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const span = Math.max(maxX - minX, maxY - minY);
+  if (span === 0) return projected.map(() => ({ x: 50, y: 50 }));
+
+  const scale = 76 / span;
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  return projected.map(({ x, y }) => ({
+    x: roundedSvgCoordinate(50 + (x - centerX) * scale),
+    y: roundedSvgCoordinate(50 - (y - centerY) * scale),
+  }));
+}
+
+const MAX_MERCATOR_LATITUDE = 85.05112878;
+
+function degreesToRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function webMercatorY(latitude: number) {
+  const clamped = Math.max(
+    -MAX_MERCATOR_LATITUDE,
+    Math.min(MAX_MERCATOR_LATITUDE, latitude),
+  );
+  const radians = degreesToRadians(clamped);
+  return Math.log(Math.tan(Math.PI / 4 + radians / 2));
+}
+
+function roundedSvgCoordinate(value: number) {
+  return Number(value.toFixed(6));
 }
 
 export function formatActivityDate(event: EventDto, locale: Locale) {

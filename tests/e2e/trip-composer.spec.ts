@@ -164,14 +164,14 @@ test("creates a destination-only trip and preserves editable stops and cleared s
   await expect(page.locator(".trip-destination")).toContainText(
     "New destination",
   );
-  await expect(page.locator(".trip-sheet-itinerary li").first()).toHaveText(
-    "Second stop",
-  );
+  await expect(
+    page.locator(".trip-sheet-itinerary li").first().locator("strong"),
+  ).toHaveText("Second stop");
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Updated trip", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".trip-point-marker")).toHaveCount(2);
+  await expect(page.locator(".trip-point-marker")).toHaveCount(3);
   await expect(page.locator(".trip-point-marker").first()).toBeInViewport();
   await expect(page.locator(".trip-point-marker").last()).toBeInViewport();
   await page.screenshot({

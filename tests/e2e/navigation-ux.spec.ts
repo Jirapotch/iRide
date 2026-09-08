@@ -45,7 +45,7 @@ test("pointer focus does not leave a feature card selected while navigation wait
   await expect(page).toHaveURL(/\/games$/);
 });
 
-test("keyboard focus remains visible and expands the focused feature", async ({
+test("feature cards keep equal widths and the requested order on focus", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -56,11 +56,26 @@ test("keyboard focus remains visible and expands the focused feature", async ({
     name: "Community",
     exact: true,
   });
+  const cards = grid.locator("[data-feature-card]");
+  await expect(page.getByText("COMMUNITY • ACTIVITIES • GAMES")).toBeVisible();
+  await expect(cards).toHaveCount(3);
+  expect(
+    await cards.evaluateAll((items) =>
+      items.map((item) => item.getAttribute("data-feature-card")),
+    ),
+  ).toEqual(["community", "activities", "games"]);
+  const widthsBefore = await cards.evaluateAll((items) =>
+    items.map((item) => item.getBoundingClientRect().width),
+  );
   await community.focus();
 
   await expect(community).toBeFocused();
   await expect(community).toHaveCSS("outline-style", "solid");
   await expect(grid).toHaveAttribute("data-active", "community");
+  const widthsAfter = await cards.evaluateAll((items) =>
+    items.map((item) => item.getBoundingClientRect().width),
+  );
+  expect(widthsAfter).toEqual(widthsBefore);
 });
 
 test("main navigation stays available while a destination shell loads", async ({

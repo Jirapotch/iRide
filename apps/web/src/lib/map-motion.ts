@@ -20,6 +20,11 @@ export interface MapSelectionCameraOptions {
   };
 }
 
+export interface MapRoutePointCameraOptions
+  extends MapSelectionCameraOptions {
+  readonly zoom: 13;
+}
+
 export function mapSelectionCamera(
   point: MapPoint,
   viewport: ViewportSize,
@@ -39,5 +44,16 @@ export function mapSelectionCamera(
           bottom: Math.round(viewport.height * 0.45),
           left: 24,
         },
+  };
+}
+
+export function mapRoutePointCamera(
+  point: MapPoint,
+  viewport: ViewportSize,
+  reducedMotion: boolean,
+): MapRoutePointCameraOptions {
+  return {
+    ...mapSelectionCamera(point, viewport, reducedMotion),
+    zoom: 13,
   };
 }

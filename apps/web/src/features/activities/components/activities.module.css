@@ -244,7 +244,7 @@
 .routeStops li {
   position: relative;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
   min-height: 78px;
@@ -255,7 +255,7 @@
   position: absolute;
   top: 54px;
   bottom: -24px;
-  left: 16px;
+  left: 21px;
   width: 2px;
   background: var(--border);
   content: "";
@@ -273,6 +273,24 @@
   color: var(--primary);
   font-size: 0.8rem;
   font-weight: 900;
+  justify-self: center;
+}
+
+.routeMarkerButton {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.routeMarkerButton[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.routeMarkerButton:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 38%, transparent);
+  outline-offset: 3px;
 }
 
 .routeStopBody {
@@ -343,7 +361,7 @@
   }
 
   .routeStops li {
-    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-columns: 44px minmax(0, 1fr);
   }
 
   .mapLink {

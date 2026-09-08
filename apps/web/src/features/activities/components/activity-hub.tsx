@@ -36,11 +36,16 @@ import {
 import { getExploreContent } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
 import { applyMapPalette, contentKindColors } from "@/lib/map-palette";
-import { mapSelectionCamera } from "@/lib/map-motion";
+import { mapRoutePointCamera, mapSelectionCamera } from "@/lib/map-motion";
 import { motionTokens } from "@/shared/theme/tokens";
 import { BackendForm } from "@/features/content/components/content-editor-form";
 import { EditModal } from "@/features/content/components/edit-modal";
 import { getActivityKindLabel } from "../activity-kind-label";
+import {
+  type ActivityRoutePoint,
+  coordinateRoutePointsForEvent,
+  routePointsForEvent,
+} from "../activity-presentation-domain";
 import { ActivityFeatureSheet } from "./activity-feature-sheet";
 
 const center: [number, number] = [100.5018, 13.7563];
@@ -118,6 +123,12 @@ export function ActivityHub({
   } | null>(null);
   const [detailAttempt, setDetailAttempt] = useState(0);
   const [cameraDuration, setCameraDuration] = useState<number | null>(null);
+  const [routeFocus, setRouteFocus] = useState<{
+    featureId: string;
+    index: number;
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const rootRef = useRef<HTMLElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -136,6 +147,7 @@ export function ActivityHub({
   if (initialFeature !== lastInitialFeature) {
     setLastInitialFeature(initialFeature);
     if (initialFeature) {
+      setRouteFocus(null);
       setFeatures((current) => [
         initialFeature,
         ...current.filter((item) => item.id !== initialFeature.id),
@@ -167,6 +179,7 @@ export function ActivityHub({
         ),
       );
       pushedMarkerRef.current = false;
+      setRouteFocus(null);
       setEnabled(restoredKinds);
       setSelectedId(selectedIdRef.current);
       const markerId = returnFocusMarkerIdRef.current;
@@ -248,7 +261,6 @@ export function ActivityHub({
         }),
         "top-right",
       );
-      map.addControl(new maplibregl.FullscreenControl(), "top-right");
       map.addControl(
         new maplibregl.AttributionControl({ compact: true }),
         "bottom-left",
@@ -318,6 +330,7 @@ export function ActivityHub({
         button.addEventListener("click", () => {
           if (selectedIdRef.current === feature.id) return;
           setActivityOriginActive(false);
+          setRouteFocus(null);
           markerTriggerRef.current = button;
           selectedIdRef.current = feature.id;
           window.history.pushState(
@@ -390,25 +403,21 @@ export function ActivityHub({
           : null,
     [initialTrip, tripDetails, tripId],
   );
+  const selectedRoutePointIndex = useMemo(() => {
+    if (routeFocus?.featureId !== selectedId || !detail?.event) return null;
+    const point = routePointsForEvent(detail.event)[routeFocus.index];
+    return point?.latitude === routeFocus.latitude &&
+      point.longitude === routeFocus.longitude
+      ? routeFocus.index
+      : null;
+  }, [detail, routeFocus, selectedId]);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !detail?.event) return;
-    const event = detail.event;
-    const points = [
-      ...(event.latitude != null && event.longitude != null
-        ? [
-            {
-              name: event.locationLabel ?? "",
-              latitude: event.latitude,
-              longitude: event.longitude,
-            },
-          ]
-        : []),
-      ...(event.stops ?? []),
-    ];
-    const markers = points.map((point, index) => {
+    const points = coordinateRoutePointsForEvent(detail.event);
+    const markers = points.map(({ point, index }) => {
       const element = document.createElement("div");
-      element.className = "trip-point-marker";
+      element.className = `trip-point-marker${point.role === "destination" ? " is-destination" : ""}${selectedRoutePointIndex === index ? " is-selected" : ""}`;
       element.textContent = String(index + 1);
       element.setAttribute("role", "img");
       element.setAttribute("aria-label", point.name);
@@ -417,7 +426,38 @@ export function ActivityHub({
         .addTo(map);
     });
     return () => markers.forEach((marker) => marker.remove());
-  }, [detail]);
+  }, [detail, selectedRoutePointIndex]);
+
+  const focusRoutePoint = useCallback(
+    (point: ActivityRoutePoint, index: number) => {
+      const map = mapRef.current;
+      const featureId = selectedIdRef.current;
+      if (
+        !map ||
+        !featureId ||
+        point.latitude == null ||
+        point.longitude == null
+      )
+        return;
+      const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      const camera = mapRoutePointCamera(
+        { latitude: point.latitude, longitude: point.longitude },
+        { width: window.innerWidth, height: window.innerHeight },
+        reducedMotion,
+      );
+      setRouteFocus({
+        featureId,
+        index,
+        latitude: point.latitude,
+        longitude: point.longitude,
+      });
+      setCameraDuration(camera.duration);
+      map.easeTo(camera);
+    },
+    [],
+  );
   const visibleFeatureCount = useMemo(
     () => features.filter((feature) => enabled.includes(feature.kind)).length,
     [enabled, features],
@@ -565,6 +605,7 @@ export function ActivityHub({
   }, [cameraTarget, cameraItinerary]);
   const closeFeatureSheet = useCallback(() => {
     const markerId = selectedId;
+    setRouteFocus(null);
     returnFocusMarkerIdRef.current = markerId;
     if (pushedMarkerRef.current) {
       pushedMarkerRef.current = false;
@@ -654,6 +695,7 @@ export function ActivityHub({
       className="discover-map on-map"
       aria-label={locale === "th" ? "แผนที่ค้นพบ" : "Discover map"}
       data-camera-duration={cameraDuration ?? undefined}
+      data-sheet-open={selectedId ? "true" : undefined}
       ref={rootRef}
     >
       <h1 className="sr-only" data-route-heading tabIndex={-1}>
@@ -768,6 +810,8 @@ export function ActivityHub({
           trip={detail?.event ?? null}
           tripFailed={detail?.failed ?? false}
           onRetryTrip={() => setDetailAttempt((value) => value + 1)}
+          onSelectRoutePoint={focusRoutePoint}
+          selectedRoutePointIndex={selectedRoutePointIndex}
           locale={locale}
           onClose={closeFeatureSheet}
         />
