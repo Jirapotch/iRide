@@ -12,12 +12,12 @@ import {
 } from "@/lib/create-content-domain";
 import { legacyEditRedirect } from "@/lib/edit-modal-domain";
 import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
-import { CreateContentScreen } from "../_components/create-content-screen";
-import { Breadcrumbs } from "../_components/breadcrumbs";
+import { CreateContentScreen } from "@/features/content/components/create-content-screen";
+import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
 import {
   CreateMarkerOptionsHydrator,
   CreateMarkerOptionsProvider,
-} from "../_components/create-marker-options-context";
+} from "@/features/content/create-marker-options-context";
 import { captureData } from "@/lib/data-result";
 
 export default async function CreatePage({

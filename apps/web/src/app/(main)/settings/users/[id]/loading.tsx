@@ -1,5 +1,7 @@
-import { AdminDetailSkeleton } from "../../../_components/page-skeletons";
+import { AdminDetailSkeleton } from "@/features/loading/components/page-skeletons";
+import { getRequestLocale } from "@/lib/request-locale";
 
-export default function AdminUserLoading() {
-  return <AdminDetailSkeleton />;
+export default async function AdminUserLoading() {
+  const locale = await getRequestLocale();
+  return <AdminDetailSkeleton locale={locale} />;
 }

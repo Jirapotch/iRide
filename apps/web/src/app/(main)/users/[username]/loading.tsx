@@ -1,5 +1,7 @@
-import { ProfileSkeleton } from "../../_components/page-skeletons";
+import { ProfileSkeleton } from "@/features/loading/components/page-skeletons";
+import { getRequestLocale } from "@/lib/request-locale";
 
-export default function UserProfileLoading() {
-  return <ProfileSkeleton />;
+export default async function UserProfileLoading() {
+  const locale = await getRequestLocale();
+  return <ProfileSkeleton locale={locale} />;
 }

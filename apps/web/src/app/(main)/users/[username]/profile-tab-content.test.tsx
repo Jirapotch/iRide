@@ -7,7 +7,7 @@ vi.mock("@/lib/content-api", () => ({
   getGarage: vi.fn(),
   getProfileActivities: vi.fn(),
 }));
-vi.mock("./user-profile-screen", () => ({
+vi.mock("@/features/profile/components/profile-panels", () => ({
   GaragePanel: () => null,
   ProfileActivities: () => null,
 }));

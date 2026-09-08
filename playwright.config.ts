@@ -12,5 +12,9 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${webPort}`,
     trace: "on-first-retry",
   },
-  projects: [{ name: "mobile-chrome", use: { ...devices["Pixel 7"] } }],
+  projects: [
+    { name: "desktop-chrome", use: { ...devices["Desktop Chrome"] } },
+    { name: "mobile-chrome", use: { ...devices["Pixel 7"] } },
+    { name: "mobile-webkit", use: { ...devices["iPhone 13"] } },
+  ],
 });

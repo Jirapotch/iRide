@@ -3,8 +3,11 @@ import type { OwnProfileDto } from "@iride/types";
 import { getGarage, getProfileActivities } from "@/lib/content-api";
 import { captureData } from "@/lib/data-result";
 import type { Locale } from "@/lib/locale";
-import { SectionError } from "../../_components/section-error";
-import { GaragePanel, ProfileActivities } from "./user-profile-screen";
+import { SectionError } from "@/features/errors/components/section-error";
+import {
+  GaragePanel,
+  ProfileActivities,
+} from "@/features/profile/components/profile-panels";
 
 export interface ProfileTabContentProps {
   readonly accessToken: string | undefined;
@@ -41,6 +44,7 @@ export async function ProfileTabContent(props: ProfileTabContentProps) {
     );
     return result.status === "error" ? (
       <SectionError
+        category={result.error.category}
         message={text.activitiesMessage}
         retryLabel={text.retry}
         title={text.activitiesTitle}
@@ -56,6 +60,7 @@ export async function ProfileTabContent(props: ProfileTabContentProps) {
     );
     return result.status === "error" ? (
       <SectionError
+        category={result.error.category}
         message={text.garageMessage}
         retryLabel={text.retry}
         title={text.garageTitle}

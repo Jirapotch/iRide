@@ -109,6 +109,15 @@ a {
   outline-offset: 3px;
 }
 
+:where([data-route-heading], [data-navigation-focus-target]):focus {
+  outline: none;
+}
+
+:where([data-route-heading], [data-navigation-focus-target]):focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 4px;
+}
+
 .primary-link-button {
   min-height: 44px;
   display: inline-flex;
@@ -2811,40 +2820,6 @@ a[aria-busy="true"] {
     transform: scaleX(0.72);
   }
 }
-.skeleton-stack {
-  display: grid;
-  gap: 0.8rem;
-  width: min(100%, 760px);
-}
-.section-error {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.75rem;
-  width: min(100%, 760px);
-  padding: 0.9rem 1rem;
-  border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--border));
-  border-radius: 1rem;
-  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
-  color: var(--foreground);
-}
-.section-error > svg {
-  color: var(--danger);
-}
-.section-error p {
-  margin-top: 0.2rem;
-  color: var(--muted-foreground);
-  font-size: 0.78rem;
-}
-.section-error button {
-  min-height: 40px;
-  padding: 0 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--surface);
-  color: var(--foreground);
-  font-weight: 800;
-}
 .route-error {
   display: grid;
   gap: 0.85rem;
@@ -2857,53 +2832,6 @@ a[aria-busy="true"] {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-}
-.skeleton-card {
-  display: grid;
-  gap: 0.72rem;
-  min-height: 132px;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  background: var(--surface);
-}
-.skeleton-line,
-.skeleton-heading,
-.skeleton-cover {
-  display: block;
-  border-radius: 999px;
-  background: linear-gradient(
-    100deg,
-    var(--muted) 30%,
-    color-mix(in srgb, var(--muted) 55%, var(--surface)) 50%,
-    var(--muted) 70%
-  );
-  background-size: 220% 100%;
-  animation: skeleton-shimmer 1.4s ease-in-out infinite;
-}
-.skeleton-line {
-  width: 100%;
-  height: 0.75rem;
-}
-.skeleton-line.is-short {
-  width: 30%;
-}
-.skeleton-line.is-medium {
-  width: 68%;
-}
-.skeleton-heading {
-  width: min(56%, 18rem);
-  height: 2.5rem;
-  margin-bottom: 1.25rem;
-}
-.skeleton-cover {
-  height: 190px;
-  border-radius: 1rem;
-}
-@keyframes skeleton-shimmer {
-  to {
-    background-position-x: -220%;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,

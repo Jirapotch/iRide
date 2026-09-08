@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { PendingLink } from "./_components/pending-link";
+import { PendingLink } from "@/features/navigation/components/pending-link";
 
 const subscribeToLocale = () => () => undefined;
 const readClientLocale = () => document.documentElement.lang === "th";

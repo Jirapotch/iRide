@@ -1,9 +1,9 @@
 "use client";
 
 import { ArrowLeft, Gauge, RoadHorizon } from "@phosphor-icons/react";
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { PendingLink } from "@/features/navigation/components/pending-link";
 import {
   finishRun,
   initialSession,
@@ -238,10 +238,10 @@ export function TrafficEndlessRideGame({
 
   return (
     <main className={styles.page} data-game-mode={session.mode}>
-      <Link className={styles.backLink} href="/games" prefetch={false}>
+      <PendingLink className={styles.backLink} href="/games">
         <ArrowLeft aria-hidden size={18} />
         {text.back}
-      </Link>
+      </PendingLink>
       <div className={styles.stage} ref={stageRef}>
         <div className={styles.board} data-ui="game-board" ref={boardRef}>
           <div className={styles.roadBackground} />

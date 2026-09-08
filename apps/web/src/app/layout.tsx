@@ -9,6 +9,8 @@ import { StoreProvider } from "@/store/provider";
 import { ThemeProvider } from "./_components/theme-provider";
 
 import "./globals.css";
+import "@/features/errors/errors.css";
+import "@/features/loading/loading.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://iride-ecru.vercel.app"),

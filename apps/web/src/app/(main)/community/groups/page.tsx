@@ -1,6 +1,6 @@
 import { UsersThreeIcon } from "@phosphor-icons/react/dist/ssr";
-import { Breadcrumbs } from "../../_components/breadcrumbs";
-import { CommunityFeedPage } from "../../_components/community-feed-page";
+import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
+import { CommunityFeedPage } from "@/features/community/components/community-feed-page";
 import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 import { getRequestLocale } from "@/lib/request-locale";
 
@@ -30,7 +30,7 @@ export default async function GroupsPage({
       <header>
         <UsersThreeIcon size={44} weight="duotone" />
         <h1 data-route-heading tabIndex={-1}>
-          {text['group']}
+          {text["group"]}
         </h1>
       </header>
       <CommunityFeedPage

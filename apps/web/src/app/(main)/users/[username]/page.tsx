@@ -5,10 +5,10 @@ import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getOwnProfile, getPublicProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
-import { Breadcrumbs } from "../../_components/breadcrumbs";
-import { ProfileSkeleton } from "../../_components/page-skeletons";
+import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
+import { ProfileSkeleton } from "@/features/loading/components/page-skeletons";
 import { ProfileTabContent } from "./profile-tab-content";
-import { UserProfileScreen } from "./user-profile-screen";
+import { UserProfileScreen } from "@/features/profile/components/user-profile-screen";
 
 export default async function UserProfilePage({
   params,
@@ -57,7 +57,7 @@ export default async function UserProfilePage({
         profile={profile}
         tabContent={
           tab === "overview" ? null : (
-            <Suspense fallback={<ProfileSkeleton />}>
+            <Suspense fallback={<ProfileSkeleton locale={locale} />}>
               <ProfileTabContent
                 accessToken={session?.accessToken}
                 canManage={ownProfile?.canManage ?? false}

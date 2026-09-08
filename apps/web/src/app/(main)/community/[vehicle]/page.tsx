@@ -1,15 +1,9 @@
-import {
-  Bicycle,
-  Car,
-  ChatCircle,
-  Motorcycle,
-} from "@phosphor-icons/react/dist/ssr";
+import { Bicycle, Car, Motorcycle } from "@phosphor-icons/react/dist/ssr";
 import { notFound } from "next/navigation";
 import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 import { getRequestLocale } from "@/lib/request-locale";
-import { Breadcrumbs } from "../../_components/breadcrumbs";
-import { PendingLink } from "../../_components/pending-link";
-import { CommunityFeedPage } from "../../_components/community-feed-page";
+import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
+import { CommunityFeedPage } from "@/features/community/components/community-feed-page";
 import { CommunityCategory } from "@iride/types";
 
 const vehicles = {

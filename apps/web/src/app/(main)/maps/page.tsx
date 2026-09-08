@@ -3,7 +3,7 @@ import type { EventDto, ExploreFeatureDto } from "@iride/types";
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getEvent } from "@/lib/content-api";
 import { getRequestLocale } from "@/lib/request-locale";
-import { ActivityHub } from "../_components/activity-hub";
+import { ActivityHub } from "@/features/activities/components/activity-hub";
 import { captureData } from "@/lib/data-result";
 
 export default async function MapsPage({

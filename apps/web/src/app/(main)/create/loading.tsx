@@ -1,5 +1,7 @@
-import { CreateFormSkeleton } from "../_components/page-skeletons";
+import { CreateFormSkeleton } from "@/features/loading/components/page-skeletons";
+import { getRequestLocale } from "@/lib/request-locale";
 
-export default function CreateLoading() {
-  return <CreateFormSkeleton />;
+export default async function CreateLoading() {
+  const locale = await getRequestLocale();
+  return <CreateFormSkeleton locale={locale} />;
 }

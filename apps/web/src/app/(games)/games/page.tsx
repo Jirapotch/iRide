@@ -6,9 +6,9 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 
 import { BrandMark } from "@/app/_components/brand-mark";
+import { PendingLink } from "@/features/navigation/components/pending-link";
 import { getRequestLocale } from "@/lib/request-locale";
 
 import { RouteHeading } from "./_components/route-heading";
@@ -56,16 +56,12 @@ export default async function GamesPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link
-          aria-label="iRide home"
-          className={styles.brand}
-          href="/"
-        >
+        <PendingLink aria-label="iRide home" className={styles.brand} href="/">
           <BrandMark />
-        </Link>
-        <Link className={styles.back} href="/">
+        </PendingLink>
+        <PendingLink className={styles.back} href="/">
           <ArrowLeftIcon aria-hidden size={18} /> {text.back}
-        </Link>
+        </PendingLink>
       </header>
 
       <section className={styles.intro} aria-labelledby="games-title">
@@ -77,7 +73,7 @@ export default async function GamesPage() {
       </section>
 
       <section className={styles.catalog} aria-label={text.title}>
-        <Link
+        <PendingLink
           aria-label={`${text.play}: Traffic Endless Ride`}
           className={styles.gameCard}
           href="/games/traffic-endless-ride"
@@ -114,7 +110,7 @@ export default async function GamesPage() {
               {text.play} <ArrowRight aria-hidden size={19} />
             </strong>
           </div>
-        </Link>
+        </PendingLink>
       </section>
     </main>
   );

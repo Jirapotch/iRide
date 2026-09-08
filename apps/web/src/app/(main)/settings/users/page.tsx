@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import Form from "next/form";
+
+import { ActionSubmitButton } from "@/features/content/components/action-submit-button";
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import { listAdminUsers } from "@/lib/admin-users-api";
 import { getOwnProfile } from "@/lib/profile-api";
@@ -9,10 +12,10 @@ import {
   adminUsersHref,
   resolveBreadcrumbs,
 } from "@/lib/app-navigation-domain";
-import { Breadcrumbs } from "../../_components/breadcrumbs";
-import { PendingLink } from "../../_components/pending-link";
-import { AdminListSkeleton } from "../../_components/page-skeletons";
-import { SectionError } from "../../_components/section-error";
+import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
+import { PendingLink } from "@/features/navigation/components/pending-link";
+import { AdminListSkeleton } from "@/features/loading/components/page-skeletons";
+import { SectionError } from "@/features/errors/components/section-error";
 import { captureData } from "@/lib/data-result";
 
 export default async function AdminUsersPage({
@@ -47,7 +50,7 @@ export default async function AdminUsersPage({
           {locale === "th" ? "ค้นหาและจัดการบัญชี" : "Find and manage accounts"}
         </p>
       </header>
-      <form className="admin-user-search">
+      <Form action="/settings/users" className="admin-user-search">
         <input
           aria-label={locale === "th" ? "ค้นหาผู้ใช้" : "Search users"}
           defaultValue={q}
@@ -58,21 +61,30 @@ export default async function AdminUsersPage({
               : "Search name, username, or email"
           }
         />
-        <button type="submit">{locale === "th" ? "ค้นหา" : "Search"}</button>
+        <ActionSubmitButton
+          pendingLabel={locale === "th" ? "กำลังค้นหา…" : "Searching…"}
+        >
+          {locale === "th" ? "ค้นหา" : "Search"}
+        </ActionSubmitButton>
         {q ? (
           <PendingLink className="admin-search-clear" href="/settings/users">
             {locale === "th" ? "ล้างการค้นหา" : "Clear search"}
           </PendingLink>
         ) : null}
-      </form>
-      <Suspense fallback={<AdminListSkeleton />} key={`${q}:${page}`}>
-        <AdminUsersRegion
-          accessToken={session.accessToken}
-          locale={locale}
-          page={page}
-          q={q}
-        />
-      </Suspense>
+      </Form>
+      <section data-navigation-focus-target="admin-results" tabIndex={-1}>
+        <Suspense
+          fallback={<AdminListSkeleton locale={locale} />}
+          key={`${q}:${page}`}
+        >
+          <AdminUsersRegion
+            accessToken={session.accessToken}
+            locale={locale}
+            page={page}
+            q={q}
+          />
+        </Suspense>
+      </section>
     </main>
   );
 }
@@ -94,6 +106,7 @@ async function AdminUsersRegion({
   if (resultState.status === "error") {
     return (
       <SectionError
+        category={resultState.error.category}
         message={
           locale === "th"
             ? "ยังโหลดรายชื่อผู้ใช้ไม่ได้ ส่วนค้นหาและเมนูยังใช้งานได้"

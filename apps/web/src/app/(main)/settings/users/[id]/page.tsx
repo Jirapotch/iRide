@@ -6,10 +6,10 @@ import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getOwnProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 import { changeUserAccess, removeAdminContent } from "../actions";
-import { Breadcrumbs } from "../../../_components/breadcrumbs";
-import { HistoryBackButton } from "../../../_components/history-back-button";
-import { ActionSubmitButton } from "../../../_components/action-submit-button";
-import { PendingLink } from "../../../_components/pending-link";
+import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
+import { HistoryBackButton } from "@/features/navigation/components/history-back-button";
+import { ActionSubmitButton } from "@/features/content/components/action-submit-button";
+import { PendingLink } from "@/features/navigation/components/pending-link";
 
 export default async function AdminUserPage({
   params,

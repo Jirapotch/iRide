@@ -1,6 +1,6 @@
 import { getRequestLocale } from "@/lib/request-locale";
 
-import { SearchScreen } from "../_components/search-screen";
+import { SearchScreen } from "@/features/search/components/search-screen";
 
 export default async function SearchPage({
   searchParams,

@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 
 import type { Locale } from "@/lib/locale";
+import { BottomNavigation } from "@/features/navigation/components/bottom-navigation";
+import { HeaderActions } from "@/features/navigation/components/header-actions";
+import { PendingLink } from "@/features/navigation/components/pending-link";
+import { RouteFocusManager } from "@/features/navigation/components/route-focus-manager";
+import { RouteTransition } from "@/features/navigation/components/route-transition";
 import { BrandMark } from "../../_components/brand-mark";
-import { BottomNavigation, HeaderActions } from "./app-navigation";
-import { MockAppProvider } from "./mock-app-provider";
-import { PendingLink } from "./pending-link";
-import { RouteFocusManager } from "./route-focus-manager";
-import { RouteTransition } from "./route-transition";
+import { MockAppProvider } from "@/features/notifications/mock-app-provider";
 
 export function AppShell({
   authenticated,

@@ -1,5 +1,5 @@
 import styles from "./community.module.css";
-import { PendingLink } from "../_components/pending-link";
+import { PendingLink } from "@/features/navigation/components/pending-link";
 import {
   ArrowRightIcon,
   BicycleIcon,
@@ -8,7 +8,7 @@ import {
   UsersThreeIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { getRequestLocale } from "@/lib/request-locale";
-import { Breadcrumbs } from "../_components/breadcrumbs";
+import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
 import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 
 const copy = {
