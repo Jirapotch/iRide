@@ -14,6 +14,8 @@ async function importPlace(
     .fill(
       `https://www.google.com/maps/place/${encodeURIComponent(name)}/data=!3d${latitude}!4d${longitude}`,
     );
+  await page.getByRole("button", { name: "Check link", exact: true }).click();
+  await expect(page.getByText(name, { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "Use this location", exact: true })
     .click();

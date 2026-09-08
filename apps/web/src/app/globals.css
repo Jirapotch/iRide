@@ -3081,6 +3081,26 @@ input[type="datetime-local"] {
 .maps-import-modal-body input {
   min-width: 0;
 }
+.maps-import-preview {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface-elevated);
+}
+.maps-import-preview .mini-map-preview {
+  height: 180px;
+}
+.maps-import-preview > div {
+  display: grid;
+  gap: 0.2rem;
+}
+.maps-import-preview span {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
 .maps-import-modal > footer {
   display: flex;
   justify-content: flex-end;

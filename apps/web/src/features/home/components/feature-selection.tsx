@@ -82,7 +82,7 @@ const copy = {
 const features = [
   { kind: "community", href: "/community", number: "01" },
   { kind: "games", href: "/games", number: "02" },
-  { kind: "activities", href: "/maps", number: "03" },
+  { kind: "activities", href: "/activities", number: "03" },
 ] as const;
 
 export function FeatureSelection({

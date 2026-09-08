@@ -9,7 +9,9 @@ export type LoadingSurface =
   | "map"
   | "games"
   | "game"
-  | "shell";
+  | "shell"
+  | "activities"
+  | "activity-detail";
 
 const labels: Record<Locale, Record<LoadingSurface, string>> = {
   th: {
@@ -22,6 +24,8 @@ const labels: Record<Locale, Record<LoadingSurface, string>> = {
     games: "กำลังโหลดรายการเกมส์",
     game: "กำลังเตรียมเกมส์",
     shell: "กำลังเตรียมพื้นที่ iRide",
+    activities: "กำลังโหลดรายการกิจกรรม",
+    "activity-detail": "กำลังโหลดรายละเอียดกิจกรรม",
   },
   en: {
     community: "Loading community stories",
@@ -33,6 +37,8 @@ const labels: Record<Locale, Record<LoadingSurface, string>> = {
     games: "Loading games",
     game: "Loading game",
     shell: "Loading iRide",
+    activities: "Loading activities",
+    "activity-detail": "Loading activity details",
   },
 };
 

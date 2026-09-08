@@ -76,6 +76,35 @@ export function AdminDetailSkeleton({ locale }: SkeletonProps) {
   );
 }
 
+export function ActivitiesSkeleton({ locale }: SkeletonProps) {
+  return (
+    <section
+      aria-busy="true"
+      aria-label={getLoadingLabel(locale, "activities")}
+      className="skeleton-stack"
+      data-ui="activities-skeleton"
+    >
+      {Array.from({ length: 4 }, (_, index) => (
+        <SkeletonCard lines={3} key={index} />
+      ))}
+    </section>
+  );
+}
+
+export function ActivityDetailSkeleton({ locale }: SkeletonProps) {
+  return (
+    <section
+      aria-busy="true"
+      aria-label={getLoadingLabel(locale, "activity-detail")}
+      className="skeleton-stack"
+      data-ui="activity-detail-skeleton"
+    >
+      <div aria-hidden="true" className="skeleton-cover" />
+      <SkeletonCard lines={5} />
+    </section>
+  );
+}
+
 export function CreateFormSkeleton({ locale }: SkeletonProps) {
   return (
     <main

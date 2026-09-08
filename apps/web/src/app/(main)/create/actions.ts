@@ -146,7 +146,7 @@ export async function removeContent(formData: FormData) {
 
 export async function resolveGoogleMapsLocation(input: string) {
   const session = await getVerifiedWebSession();
-  if (!session) return null;
+  if (!session) return { ok: false, code: "redirect-failed" } as const;
   return resolveGoogleMapsCoordinates(input);
 }
 

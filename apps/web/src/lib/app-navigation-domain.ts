@@ -16,6 +16,8 @@ export interface BreadcrumbItem {
 export interface BreadcrumbContext {
   readonly locale: Locale;
   readonly entityLabel?: string;
+  readonly entityHref?: string;
+  readonly from?: string;
   readonly parentHref?: string;
   readonly tab?: string;
 }
@@ -73,6 +75,39 @@ export function resolveBreadcrumbs(
 
   if (pathname === "/") return [home];
 
+  if (
+    pathname === "/maps" &&
+    context.from === "activities" &&
+    context.entityLabel &&
+    context.entityHref
+  ) {
+    return [
+      home,
+      { key: "activities", label: labels.activities, href: "/activities" },
+      {
+        key: "activity",
+        label: context.entityLabel,
+        href: context.entityHref,
+      },
+      { key: "maps", label: labels.maps },
+    ];
+  }
+
+  if (pathname === "/activities") {
+    return [home, { key: "activities", label: labels.activities }];
+  }
+
+  if (/^\/activities\/[^/]+$/.test(pathname)) {
+    return [
+      home,
+      { key: "activities", label: labels.activities, href: "/activities" },
+      {
+        key: "activity",
+        label: context.entityLabel ?? labels.activities,
+      },
+    ];
+  }
+
   const community =
     /^\/community\/(car|motorcycle|bicycle|groups)(?:\/(talk))?$/.exec(
       pathname,
@@ -96,11 +131,11 @@ export function resolveBreadcrumbs(
 
     return community[2]
       ? [
-        home,
-        communityItem,
-        categoryItem,
-        { key: "community-talk", label: labels.talk },
-      ]
+          home,
+          communityItem,
+          categoryItem,
+          { key: "community-talk", label: labels.talk },
+        ]
       : [home, communityItem, categoryItem];
   }
 
@@ -133,8 +168,8 @@ export function resolveBreadcrumbs(
       label: profileLabel,
       ...(context.tab === "garage" || context.tab === "activities"
         ? {
-          href: `/users/${canonicalPathSegment(profile[1] ?? "")}`,
-        }
+            href: `/users/${canonicalPathSegment(profile[1] ?? "")}`,
+          }
         : {}),
     };
     if (context.tab === "garage") {
@@ -263,10 +298,12 @@ export function mapStateHref({
   kinds,
   marker,
   modal,
+  from,
 }: {
   readonly kinds: readonly MapKind[];
   readonly marker?: string | null;
   readonly modal?: string | null;
+  readonly from?: "activities" | null;
 }): string {
   const query = new URLSearchParams();
   const ordered = mapKindOrder.filter((kind) => kinds.includes(kind));
@@ -274,7 +311,20 @@ export function mapStateHref({
     query.set("layers", ordered.join(","));
   if (marker) query.set("marker", marker);
   if (modal) query.set("modal", modal);
+  if (from === "activities" && marker) query.set("from", from);
   return query.size ? `/maps?${query}` : "/maps";
+}
+
+export function isActivityMapOriginActive(
+  from: string | null | undefined,
+  originMarkerId: string | null | undefined,
+  selectedMarkerId: string | null | undefined,
+): boolean {
+  return (
+    from === "activities" &&
+    Boolean(originMarkerId) &&
+    originMarkerId === selectedMarkerId
+  );
 }
 
 export const communityRooms = [

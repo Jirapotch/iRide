@@ -19,6 +19,7 @@ import type { Locale } from "@/lib/locale";
 import { contentKindColors } from "@/lib/map-palette";
 
 import { getActivityKindLabel } from "../activity-kind-label";
+import { RouteStops } from "./route-stops";
 
 const subscribeToHydration = () => () => {};
 
@@ -162,20 +163,7 @@ export function ActivityFeatureSheet({
                 {locale === "th" ? "จุดหมายและที่แวะ" : "Destination and stops"}
               </h3>
               {trip ? (
-                <ol>
-                  {trip.locationLabel ? (
-                    <li>
-                      {locale === "th" ? "เริ่ม: " : "Start: "}
-                      {trip.locationLabel}
-                    </li>
-                  ) : null}
-                  {(trip.stops ?? []).map((point, index) => (
-                    <li key={index}>{point.name}</li>
-                  ))}
-                  <li className="trip-destination">
-                    ⚑ {trip.destinationLabel}
-                  </li>
-                </ol>
+                <RouteStops event={trip} locale={locale} />
               ) : tripFailed ? (
                 <button type="button" onClick={onRetryTrip}>
                   {locale === "th"
@@ -189,18 +177,22 @@ export function ActivityFeatureSheet({
               )}
             </div>
           ) : null}
-          <a
-            className="google-maps-action"
-            href={googleMapsSearchUrl({
-              latitude: feature.latitude,
-              longitude: feature.longitude,
-            })}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <ArrowSquareOut size={17} />
-            {locale === "th" ? "นำทางด้วย Google Maps" : "Open in Google Maps"}
-          </a>
+          {feature.kind !== "trip" ? (
+            <a
+              className="google-maps-action"
+              href={googleMapsSearchUrl({
+                latitude: feature.latitude,
+                longitude: feature.longitude,
+              })}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <ArrowSquareOut size={17} />
+              {locale === "th"
+                ? "นำทางด้วย Google Maps"
+                : "Open in Google Maps"}
+            </a>
+          ) : null}
           {feature.canEdit ? (
             <div className="owner-actions">
               <PendingLink href={`/maps?marker=${feature.id}&modal=edit`}>

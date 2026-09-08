@@ -5,11 +5,17 @@ import { getEvent } from "@/lib/content-api";
 import { getRequestLocale } from "@/lib/request-locale";
 import { ActivityHub } from "@/features/activities/components/activity-hub";
 import { captureData } from "@/lib/data-result";
+import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
+import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 
 export default async function MapsPage({
   searchParams,
 }: {
-  readonly searchParams: Promise<{ marker?: string; modal?: string }>;
+  readonly searchParams: Promise<{
+    marker?: string;
+    modal?: string;
+    from?: string;
+  }>;
 }) {
   const [locale, params, session] = await Promise.all([
     getRequestLocale(),
@@ -31,6 +37,24 @@ export default async function MapsPage({
       : null;
   return (
     <ActivityHub
+      activityBreadcrumbMarkerId={
+        params.from === "activities" && selectedContent
+          ? selectedContent.id
+          : null
+      }
+      breadcrumbs={
+        params.from === "activities" && selectedContent ? (
+          <Breadcrumbs
+            items={resolveBreadcrumbs("/maps", {
+              locale,
+              from: "activities",
+              entityLabel: selectedContent.title,
+              entityHref: `/activities/${encodeURIComponent(selectedContent.id)}`,
+            })}
+            locale={locale}
+          />
+        ) : null
+      }
       editDenied={
         params.modal === "edit" &&
         selectedResult?.status === "success" &&

@@ -25,7 +25,10 @@ import { useTheme } from "@/app/_components/theme-provider";
 import { mapStyle } from "@/lib/app-navigation-domain";
 import type { Locale } from "@/lib/locale";
 import { applyMapPalette } from "@/lib/map-palette";
-import { parseGoogleMapsCoordinates } from "@/lib/google-maps-domain";
+import {
+  parseGoogleMapsCoordinates,
+  type Coordinates,
+} from "@/lib/google-maps-domain";
 import { synchronizeMapLocation } from "@/lib/map-location-sync";
 import {
   applyMarkerMention,
@@ -38,6 +41,7 @@ import {
   saveContent,
 } from "@/app/(main)/create/actions";
 import { ActionSubmitButton } from "@/features/content/components/action-submit-button";
+import { googleMapsImportErrorMessage } from "../google-maps-import-domain";
 import { type MarkerOption } from "../create-marker-options-context";
 
 type CreateType = "post" | "activity" | "trip";
@@ -389,6 +393,7 @@ export function CoordinatePicker({
   const [importOpen, setImportOpen] = useState(false),
     [mapsUrl, setMapsUrl] = useState(""),
     [importError, setImportError] = useState<string | null>(null),
+    [preview, setPreview] = useState<Coordinates | null>(null),
     [message, setMessage] = useState<string | null>(null),
     [pending, setPending] = useState(false);
   const importButtonRef = useRef<HTMLButtonElement>(null);
@@ -396,6 +401,7 @@ export function CoordinatePicker({
     setImportOpen(false);
     setMapsUrl("");
     setImportError(null);
+    setPreview(null);
     window.requestAnimationFrame(() => importButtonRef.current?.focus());
   }, []);
   function locate() {
@@ -420,28 +426,19 @@ export function CoordinatePicker({
         ),
     );
   }
-  async function importLocation() {
+  async function checkLocation() {
     setPending(true);
+    setImportError(null);
     try {
-      const parsed =
-        parseGoogleMapsCoordinates(mapsUrl) ??
-        (await resolveGoogleMapsLocation(mapsUrl));
-      if (!parsed) {
-        setImportError(
-          locale === "th"
-            ? "ลิงก์นี้ไม่มีพิกัดที่รองรับ กรุณาแชร์สถานที่ทีละจุด"
-            : "This link does not contain a supported location. Share one place at a time",
-        );
+      const direct = parseGoogleMapsCoordinates(mapsUrl);
+      const result = direct
+        ? ({ ok: true, location: direct } as const)
+        : await resolveGoogleMapsLocation(mapsUrl);
+      if (!result.ok) {
+        setImportError(googleMapsImportErrorMessage(result.code, locale));
         return;
       }
-      onChange(parsed);
-      if (parsed.name) onImportName?.(parsed.name);
-      setMessage(
-        locale === "th"
-          ? "นำเข้าตำแหน่งแล้ว คุณยังลาก Marker เพื่อปรับได้"
-          : "Location imported. You can still drag the marker.",
-      );
-      closeImport();
+      setPreview(result.location);
     } catch {
       setImportError(
         locale === "th"
@@ -451,6 +448,17 @@ export function CoordinatePicker({
     } finally {
       setPending(false);
     }
+  }
+  function applyLocation() {
+    if (!preview) return;
+    onChange(preview);
+    if (preview.name) onImportName?.(preview.name);
+    setMessage(
+      locale === "th"
+        ? "นำเข้าตำแหน่งแล้ว คุณยังลาก Marker เพื่อปรับได้"
+        : "Location imported. You can still drag the marker.",
+    );
+    closeImport();
   }
   return (
     <div className="coordinate-picker">
@@ -488,12 +496,19 @@ export function CoordinatePicker({
           error={importError}
           locale={locale}
           mapsUrl={mapsUrl}
-          onChange={setMapsUrl}
+          onChange={(value) => {
+            setMapsUrl(value);
+            setPreview(null);
+            setImportError(null);
+          }}
           onClose={() => {
             if (!pending) closeImport();
           }}
-          onConfirm={() => void importLocation()}
+          onApply={applyLocation}
+          onCheck={() => void checkLocation()}
+          onPreviewChange={setPreview}
           pending={pending}
+          preview={preview}
         />
       ) : null}
       {message ? (
@@ -511,16 +526,22 @@ function GoogleMapsImportModal({
   mapsUrl,
   onChange,
   onClose,
-  onConfirm,
+  onApply,
+  onCheck,
+  onPreviewChange,
   pending,
+  preview,
 }: {
   readonly error: string | null;
   readonly locale: Locale;
   readonly mapsUrl: string;
   readonly onChange: (value: string) => void;
   readonly onClose: () => void;
-  readonly onConfirm: () => void;
+  readonly onApply: () => void;
+  readonly onCheck: () => void;
+  readonly onPreviewChange: (value: Coordinates) => void;
   readonly pending: boolean;
+  readonly preview: Coordinates | null;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -599,12 +620,14 @@ function GoogleMapsImportModal({
             <input
               aria-describedby={error ? "google-maps-import-error" : undefined}
               aria-invalid={error ? true : undefined}
+              disabled={pending}
               inputMode="url"
               onChange={(event) => onChange(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && mapsUrl.trim() && !pending) {
                   event.preventDefault();
-                  onConfirm();
+                  if (preview) onApply();
+                  else onCheck();
                 }
               }}
               placeholder="https://maps.app.goo.gl/…"
@@ -622,6 +645,29 @@ function GoogleMapsImportModal({
               {error}
             </p>
           ) : null}
+          {pending ? (
+            <p aria-live="polite" className="form-hint" role="status">
+              {locale === "th" ? "กำลังตรวจสอบลิงก์…" : "Resolving link…"}
+            </p>
+          ) : null}
+          {preview ? (
+            <div className="maps-import-preview">
+              <MiniMap
+                coordinates={preview}
+                locale={locale}
+                onChange={onPreviewChange}
+              />
+              <div>
+                <strong>
+                  {preview.name ??
+                    (locale === "th" ? "ตำแหน่งที่พบ" : "Resolved location")}
+                </strong>
+                <span>
+                  {preview.latitude.toFixed(6)}, {preview.longitude.toFixed(6)}
+                </span>
+              </div>
+            </div>
+          ) : null}
         </div>
         <footer>
           <button
@@ -635,16 +681,20 @@ function GoogleMapsImportModal({
           <button
             className="primary-action"
             disabled={pending || !mapsUrl.trim()}
-            onClick={onConfirm}
+            onClick={preview ? onApply : onCheck}
             type="button"
           >
             {pending
               ? locale === "th"
                 ? "กำลังตรวจสอบ…"
                 : "Checking…"
-              : locale === "th"
-                ? "ตกลง"
-                : "Use this location"}
+              : preview
+                ? locale === "th"
+                  ? "ใช้ตำแหน่งนี้"
+                  : "Use this location"
+                : locale === "th"
+                  ? "ตรวจสอบลิงก์"
+                  : "Check link"}
           </button>
         </footer>
       </div>

@@ -1,0 +1,360 @@
+.page {
+  width: min(100%, 1060px);
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 3rem) 1rem 7rem;
+}
+
+.heading {
+  display: grid;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.heading p,
+.cardBody p,
+.routeStopBody span {
+  color: var(--muted-foreground);
+}
+
+.heading h1,
+.heading p,
+.cardBody h2,
+.cardBody p {
+  margin: 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.filters > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.filters button,
+.errorPanel button {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.filters button[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 13%, var(--surface));
+  color: var(--primary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1.2rem;
+  background: var(--surface);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--foreground) 7%, transparent);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  box-shadow: 0 16px 38px color-mix(in srgb, var(--foreground) 11%, transparent);
+}
+
+.card:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.thumbnail {
+  position: relative;
+  height: 168px;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 72% 24%,
+      color-mix(in srgb, var(--primary) 22%, transparent),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      var(--surface-elevated),
+      color-mix(in srgb, var(--primary) 7%, var(--surface))
+    );
+  color: color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+.thumbnail svg {
+  width: 100%;
+  height: 100%;
+}
+
+.thumbnail polyline {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.thumbnail circle {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.thumbnail .finishDot {
+  fill: var(--primary);
+}
+
+.thumbnail > span {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.32rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  color: var(--foreground);
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.cardBody {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+}
+
+.cardBody h2 {
+  font-size: 1.08rem;
+}
+
+.cardBody p {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.86rem;
+}
+
+.cardMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.cardMeta [data-status="past"] {
+  color: var(--muted-foreground);
+}
+
+.detailCard {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1.3rem;
+  background: var(--surface);
+}
+
+.detailCover {
+  height: min(32vw, 260px);
+  min-height: 190px;
+}
+
+.detailCover .thumbnail {
+  height: 100%;
+}
+
+.detailBody {
+  display: grid;
+  gap: 1.25rem;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.detailMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 1.2rem;
+  color: var(--muted-foreground);
+}
+
+.detailMeta a {
+  color: var(--primary);
+  font-weight: 750;
+}
+
+.detailSection {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.detailSection h2,
+.detailSection p {
+  margin: 0;
+}
+
+.mapCta,
+.mapLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  border-radius: 0.75rem;
+  font-weight: 800;
+}
+
+.mapCta {
+  justify-self: start;
+  padding: 0.65rem 1rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.routeStops {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.routeStops li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 78px;
+  padding: 0.55rem 0;
+}
+
+.routeStops li:not(:last-child)::after {
+  position: absolute;
+  top: 54px;
+  bottom: -24px;
+  left: 16px;
+  width: 2px;
+  background: var(--border);
+  content: "";
+}
+
+.routeMarker {
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.routeStopBody {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.routeStopBody small {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.routeStopBody span {
+  font-size: 0.76rem;
+}
+
+.mapLink {
+  padding: 0.55rem 0.7rem;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.mapLink:hover {
+  background: var(--surface-elevated);
+  color: var(--foreground);
+}
+
+.emptyRoute,
+.errorPanel {
+  padding: 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 1rem;
+  color: var(--muted-foreground);
+}
+
+.errorPanel {
+  display: grid;
+  justify-items: start;
+  gap: 0.7rem;
+  min-height: 220px;
+  align-content: center;
+}
+
+.errorPanel p {
+  margin: 0;
+}
+
+.errorPanel button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+@media (max-width: 680px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters {
+    display: grid;
+  }
+
+  .filters > div {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+  }
+
+  .routeStops li {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .mapLink {
+    grid-column: 2;
+    justify-self: start;
+    padding-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}

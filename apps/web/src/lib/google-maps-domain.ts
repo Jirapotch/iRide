@@ -62,6 +62,20 @@ export function googleMapsSearchUrl(coordinates: Coordinates): string {
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
+export function googleMapsLocationUrl(location: {
+  readonly latitude?: number | null;
+  readonly longitude?: number | null;
+  readonly name?: string | null;
+}): string | null {
+  const query =
+    location.latitude != null && location.longitude != null
+      ? `${location.latitude},${location.longitude}`
+      : location.name?.trim();
+  return query
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+    : null;
+}
+
 function parseCoordinatePair(value: string | null): Coordinates | null {
   const match = value
     ?.trim()

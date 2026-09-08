@@ -18,6 +18,7 @@ import * as maplibregl from "maplibre-gl";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   type CSSProperties,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -27,6 +28,7 @@ import {
 
 import { useTheme } from "@/app/_components/theme-provider";
 import {
+  isActivityMapOriginActive,
   mapStateHref,
   mapStyle,
   parseMapKinds,
@@ -74,6 +76,8 @@ export function ActivityHub({
   initialTrip = null,
   editDenied = false,
   selectedFeatureUnavailable = false,
+  breadcrumbs = null,
+  activityBreadcrumbMarkerId = null,
 }: {
   readonly locale: Locale;
   readonly initialFeature?: ExploreFeatureDto | null;
@@ -81,6 +85,8 @@ export function ActivityHub({
   readonly initialTrip?: EventDto | null;
   readonly editDenied?: boolean;
   readonly selectedFeatureUnavailable?: boolean;
+  readonly breadcrumbs?: ReactNode;
+  readonly activityBreadcrumbMarkerId?: string | null;
 }) {
   const { theme } = useTheme();
   const router = useRouter();
@@ -93,6 +99,13 @@ export function ActivityHub({
   );
   const [selectedId, setSelectedId] = useState<string | null>(
     params.get("marker"),
+  );
+  const [activityOriginActive, setActivityOriginActive] = useState(() =>
+    isActivityMapOriginActive(
+      params.get("from"),
+      activityBreadcrumbMarkerId,
+      params.get("marker"),
+    ),
   );
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -146,6 +159,13 @@ export function ActivityHub({
       const restoredKinds = parseMapKinds(query.get("layers"));
       enabledRef.current = restoredKinds;
       selectedIdRef.current = query.get("marker");
+      setActivityOriginActive(
+        isActivityMapOriginActive(
+          query.get("from"),
+          activityBreadcrumbMarkerId,
+          selectedIdRef.current,
+        ),
+      );
       pushedMarkerRef.current = false;
       setEnabled(restoredKinds);
       setSelectedId(selectedIdRef.current);
@@ -157,7 +177,7 @@ export function ActivityHub({
     };
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
-  }, []);
+  }, [activityBreadcrumbMarkerId]);
   useEffect(() => {
     themeRef.current = theme;
     const map = mapRef.current;
@@ -297,6 +317,7 @@ export function ActivityHub({
         button.dataset.featureId = feature.id;
         button.addEventListener("click", () => {
           if (selectedIdRef.current === feature.id) return;
+          setActivityOriginActive(false);
           markerTriggerRef.current = button;
           selectedIdRef.current = feature.id;
           window.history.pushState(
@@ -549,6 +570,7 @@ export function ActivityHub({
       pushedMarkerRef.current = false;
       window.history.back();
     } else {
+      setActivityOriginActive(false);
       setSelectedId(null);
       selectedIdRef.current = null;
       window.history.replaceState(
@@ -571,7 +593,17 @@ export function ActivityHub({
       window.history.replaceState(
         null,
         "",
-        mapStateHref({ kinds: next, marker: selectedIdRef.current }),
+        mapStateHref({
+          kinds: next,
+          marker: selectedIdRef.current,
+          from: isActivityMapOriginActive(
+            activityOriginActive ? "activities" : null,
+            activityBreadcrumbMarkerId,
+            selectedIdRef.current,
+          )
+            ? "activities"
+            : null,
+        }),
       );
       return next;
     });
@@ -627,6 +659,9 @@ export function ActivityHub({
       <h1 className="sr-only" data-route-heading tabIndex={-1}>
         {locale === "th" ? "แผนที่" : "Maps"}
       </h1>
+      {breadcrumbs && activityOriginActive ? (
+        <div className="map-breadcrumbs">{breadcrumbs}</div>
+      ) : null}
       <div className="map-canvas" ref={containerRef} />
       <div
         aria-label={locale === "th" ? "ผลลัพธ์บนแผนที่" : "Map results"}

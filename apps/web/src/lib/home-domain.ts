@@ -18,7 +18,7 @@ export type TrendingFilter = "all" | Exclude<CommunityCategory, "groups">;
 
 const featureHrefs = {
   community: "/community",
-  activities: "/maps",
+  activities: "/activities",
   games: "/games",
 } as const;
 
