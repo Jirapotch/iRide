@@ -151,7 +151,7 @@ export function mountTrafficEndlessRide({
       element.className = "gameProp";
       const right = index % 2 === 1;
       element.innerHTML = right
-        ? '<svg width="22" height="46" viewBox="0 0 22 46" aria-hidden="true"><rect x="9" y="10" width="4" height="36" fill="#4a4f57"/><ellipse cx="11" cy="10" rx="10" ry="11" fill="#2f6b3d"/><ellipse cx="11" cy="7" rx="7" ry="7" fill="#3d8450"/></svg>'
+        ? '<svg width="22" height="46" viewBox="0 0 22 46" aria-hidden="true"><rect x="9" y="10" width="4" height="36" fill="#4a4f57"/><ellipse cx="11" cy="13" rx="13" ry="17" fill="#243e2c"/><ellipse cx="8" cy="8" rx="11" ry="13" fill="#486641"/><circle cx="4" cy="4" r="6" fill="#80905a"/><circle cx="12" cy="0" r="7" fill="#657f4b"/><circle cx="13" cy="13" r="7" fill="#385537"/><circle cx="4" cy="13" r="5" fill="#5f7848"/></svg>'
         : '<svg width="18" height="44" viewBox="0 0 18 44" aria-hidden="true"><rect x="7" y="8" width="4" height="36" fill="#8b939c"/><rect width="18" height="12" rx="3" fill="#d9dee3"/><rect x="3" y="3" width="12" height="6" rx="2" fill="#3a4150"/></svg>';
       elements.scenery.appendChild(element);
       props.push({ element, x: right ? WIDTH - 24 : 2, y: index * 104 - 100 });
@@ -513,6 +513,10 @@ export function mountTrafficEndlessRide({
       );
     const gain = speed * delta * 0.085;
     distance += gain;
+    elements.board.style.setProperty(
+      "--road-offset",
+      `${(distance / 0.085) % 640}px`,
+    );
     score += gain * ride.multiplier;
 
     if (keyLeft || keyRight) {
