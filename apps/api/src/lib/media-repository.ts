@@ -10,6 +10,17 @@ interface Config {
   readonly publishableKey: string;
   readonly serviceRoleKey: string;
 }
+
+/** A safe domain outcome; raw PostgreSQL constraint details stay in the repository. */
+export class MediaUploadAlreadyExistsError extends Error {
+  readonly code = "MEDIA_UPLOAD_CONFLICT";
+  readonly status = 409;
+
+  constructor() {
+    super("MEDIA_UPLOAD_CONFLICT");
+  }
+}
+
 export function createMediaRepository(config: Config): MediaRepository {
   const admin = createAdminDatabaseClient(config);
   const owner = (token: string) =>
@@ -42,6 +53,7 @@ export function createMediaRepository(config: Config): MediaRepository {
         bytes: input.bytes,
         storage_provider: input.storageProvider,
       });
+      if (error?.code === "23505") throw new MediaUploadAlreadyExistsError();
       ensure(error);
     },
     async findOwnedUpload(userId, id) {

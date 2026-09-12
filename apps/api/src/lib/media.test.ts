@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { MediaUploadAlreadyExistsError } from "./media-repository";
 
 import {
   handleMediaReauthorize,
@@ -58,7 +59,7 @@ describe("media API handlers", () => {
     const rows = new Map<string, unknown>();
     vi.mocked(deps.repository.createUpload).mockImplementation(
       async (input) => {
-        if (rows.has(input.id)) throw { code: "23505" };
+        if (rows.has(input.id)) throw new MediaUploadAlreadyExistsError();
         rows.set(input.id, { ...input, status: "uploading" });
       },
     );
@@ -113,9 +114,9 @@ describe("media API handlers", () => {
     "rejects an idempotency identity with conflicting %s",
     async (conflict) => {
       const deps = setup();
-      vi.mocked(deps.repository.createUpload).mockRejectedValue({
-        code: "23505",
-      });
+      vi.mocked(deps.repository.createUpload).mockRejectedValue(
+        new MediaUploadAlreadyExistsError(),
+      );
       vi.mocked(deps.repository.findOwnedUpload).mockResolvedValue(
         conflict === "owner"
           ? null

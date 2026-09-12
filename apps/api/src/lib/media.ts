@@ -22,7 +22,10 @@ import type {
 import { mediaUploadRequestSchema } from "@iride/validation";
 
 import { createCorsDecision } from "./cors";
-import { createMediaRepository } from "./media-repository";
+import {
+  createMediaRepository,
+  MediaUploadAlreadyExistsError,
+} from "./media-repository";
 
 interface OwnedUpload {
   readonly id: string;
@@ -151,7 +154,7 @@ export function handleMediaUpload(
         bearer(request),
       );
     } catch (reason) {
-      if (!input.uploadId || (reason as { code?: string }).code !== "23505")
+      if (!input.uploadId || !(reason instanceof MediaUploadAlreadyExistsError))
         throw reason;
       const existing = await dependencies.repository.findOwnedUpload(
         auth.userId,
