@@ -1,6 +1,6 @@
 # ADR 0003: Private Cloudflare R2 media
 
-- Status: Accepted
+- Status: Superseded by [ADR 0010](0010-private-supabase-media.md) for new uploads; retained for legacy reads/deletes
 - Date: 2026-08-27
 
 ## Decision

@@ -1,0 +1,88 @@
+name: media-storage-cutover
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Export and validate only (no deletion)
+        type: boolean
+        default: true
+        required: true
+      confirm_project_ref:
+        description: Type bgflnssilreepfzxoqpc
+        type: string
+        required: true
+      confirmation:
+        description: Apply requires DELETE ALL LEGACY MEDIA
+        type: string
+        default: ""
+      manifest_run_id:
+        description: Previous run ID to reuse its exact manifest (required for partial-failure retries)
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: media-storage-cutover-production
+  cancel-in-progress: false
+
+jobs:
+  cutover:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 60
+    env:
+      DRY_RUN: ${{ inputs.dry_run }}
+      CONFIRM_PROJECT_REF: ${{ inputs.confirm_project_ref }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_CA_CERT_PATH: ${{ github.workspace }}/apps/api/certs/supabase-root-ca-bundle.crt
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: corepack prepare pnpm@12.3.4 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Test cutover safeguards
+        run: node --test scripts/media-storage-cutover.test.mjs
+      - name: Download existing immutable manifest
+        if: inputs.manifest_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: legacy-media-manifest
+          path: cutover-manifest
+          run-id: ${{ inputs.manifest_run_id }}
+          github-token: ${{ github.token }}
+      - name: Export exact R2 manifest
+        if: inputs.manifest_run_id == ''
+        run: node scripts/media-storage-cutover.mjs export
+      - name: Validate target, confirmation and manifest integrity
+        run: node scripts/media-storage-cutover.mjs validate
+      - name: Preserve manifest before any deletion
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-media-manifest
+          path: cutover-manifest/
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: false
+      - name: Delete only confirmed manifest objects and then detach records
+        if: inputs.dry_run == false
+        run: node scripts/media-storage-cutover.mjs apply
+      - name: Preserve apply result including partial failures
+        if: always() && inputs.dry_run == false
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-media-cutover-result
+          path: cutover-result.json
+          if-no-files-found: ignore
+          retention-days: 90

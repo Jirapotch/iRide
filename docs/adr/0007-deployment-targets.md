@@ -5,7 +5,7 @@
 
 ## Decision
 
-Deploy `apps/web` and `apps/api` as separate Node 24 Vercel projects, data/auth/pgmq/Cron to Supabase, and private media to Cloudflare R2. Supabase Cron invokes the protected bounded Nest job endpoint every minute; no paid always-on worker host is required.
+Deploy `apps/web` and `apps/api` as separate Node 24 Vercel projects, data/auth/pgmq/Cron and new private media to Supabase. Retain Cloudflare R2 for legacy media reads/deletes until the [manual storage cutover](../media-storage-rollout.md) proves zero legacy rows. Supabase Cron invokes the protected bounded Nest job endpoint every minute; no paid always-on worker host is required.
 
 ## Consequences
 

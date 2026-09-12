@@ -54,6 +54,8 @@ next-env.d.ts
 
 # Supabase local state and production backup artifacts
 /backups/
+/cutover-manifest/
+/cutover-result.json
 /supabase/.branches/
 /supabase/.temp/
 
