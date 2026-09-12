@@ -31,19 +31,17 @@ export function createMediaRepository(config: Config): MediaRepository {
         : null;
     },
     async createUpload(input, token) {
-      const { error } = await owner(token)
-        .from("media")
-        .insert({
-          id: input.id,
-          owner_id: input.ownerId,
-          purpose: input.purpose,
-          status: "uploading",
-          original_object_key: input.objectKey,
-          filename: input.filename,
-          mime_type: input.mimeType,
-          bytes: input.bytes,
-          storage_provider: input.storageProvider,
-        });
+      const { error } = await owner(token).from("media").insert({
+        id: input.id,
+        owner_id: input.ownerId,
+        purpose: input.purpose,
+        status: "uploading",
+        original_object_key: input.objectKey,
+        filename: input.filename,
+        mime_type: input.mimeType,
+        bytes: input.bytes,
+        storage_provider: input.storageProvider,
+      });
       ensure(error);
     },
     async findOwnedUpload(userId, id) {
@@ -63,6 +61,7 @@ export function createMediaRepository(config: Config): MediaRepository {
             status: data.status,
             objectKey: data.original_object_key,
             mimeType: data.mime_type,
+            filename: data.filename,
             bytes: data.bytes,
             storageProvider: provider(data.storage_provider),
           }

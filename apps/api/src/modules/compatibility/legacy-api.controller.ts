@@ -1,8 +1,18 @@
 import { All, Controller, Req, Res } from "@nestjs/common";
-import type { Request as ExpressRequest, Response as ExpressResponse } from "express";
+import type {
+  Request as ExpressRequest,
+  Response as ExpressResponse,
+} from "express";
 
-import { handleAdminModeration, handleAdminModerationOptions } from "../../lib/admin-moderation";
-import { handleAdminUser, handleAdminUsers, handleAdminUsersOptions } from "../../lib/admin-users";
+import {
+  handleAdminModeration,
+  handleAdminModerationOptions,
+} from "../../lib/admin-moderation";
+import {
+  handleAdminUser,
+  handleAdminUsers,
+  handleAdminUsersOptions,
+} from "../../lib/admin-users";
 import { handleAuthMe, handleAuthOptions } from "../../lib/auth-me";
 import {
   handleContentCollection,
@@ -13,6 +23,7 @@ import {
 } from "../../lib/content";
 import {
   handleMediaComplete,
+  handleMediaReauthorize,
   handleMediaOptions,
   handleMediaUpload,
   handleMediaVariant,
@@ -32,7 +43,10 @@ import {
   handleVehicleCollection,
   handleVehicleItem,
 } from "../../lib/social";
-import { sendWebResponse, toWebRequest } from "../../common/http/web-handler.adapter";
+import {
+  sendWebResponse,
+  toWebRequest,
+} from "../../common/http/web-handler.adapter";
 
 @Controller()
 export class LegacyApiController {
@@ -61,7 +75,9 @@ async function dispatch(request: Request, path: string): Promise<Response> {
       : handleGetOwnProfile(request);
   }
   if (path === "/api/v1/admin/users") {
-    return options ? handleAdminUsersOptions(request) : handleAdminUsers(request);
+    return options
+      ? handleAdminUsersOptions(request)
+      : handleAdminUsers(request);
   }
   if (path === "/api/v1/admin/moderation") {
     return options
@@ -113,7 +129,9 @@ async function dispatch(request: Request, path: string): Promise<Response> {
   }
   const garage = match(path, /^\/api\/v1\/users\/([^/]+)\/garage$/);
   if (garage) {
-    return options ? handleSocialOptions(request) : handleGarage(request, garage);
+    return options
+      ? handleSocialOptions(request)
+      : handleGarage(request, garage);
   }
   const postComments = match(path, /^\/api\/v1\/posts\/([^/]+)\/comments$/);
   if (postComments) {
@@ -145,13 +163,24 @@ async function dispatch(request: Request, path: string): Promise<Response> {
       ? handleSocialOptions(request)
       : handleVehicleItem(request, vehicle);
   }
+  const mediaReauthorize = match(
+    path,
+    /^\/api\/v1\/media\/([^/]+)\/authorize$/,
+  );
+  if (mediaReauthorize) {
+    return options
+      ? handleMediaOptions(request)
+      : handleMediaReauthorize(request, mediaReauthorize);
+  }
   const mediaComplete = match(path, /^\/api\/v1\/media\/([^/]+)\/complete$/);
   if (mediaComplete) {
     return options
       ? handleMediaOptions(request)
       : handleMediaComplete(request, mediaComplete);
   }
-  const mediaVariant = /^\/api\/v1\/media\/([^/]+)\/variants\/([^/]+)$/.exec(path);
+  const mediaVariant = /^\/api\/v1\/media\/([^/]+)\/variants\/([^/]+)$/.exec(
+    path,
+  );
   if (mediaVariant?.[1] && mediaVariant[2]) {
     return options
       ? handleMediaOptions(request)

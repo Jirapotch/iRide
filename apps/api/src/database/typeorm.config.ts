@@ -1,5 +1,6 @@
 import { DestinationFirstTrips20260908120000 } from "./migrations/20260908120000-destination-first-trips";
 import { SupabaseMediaStorage20260912155026 } from "./migrations/20260912155026-supabase-media-storage";
+import { MediaSourceRetention20260912162442 } from "./migrations/20260912162442-media-source-retention";
 import type { DataSourceOptions } from "typeorm";
 
 import { BaselineCurrentSchema20260906000000 } from "./migrations/20260906000000-baseline-current-schema";
@@ -39,6 +40,7 @@ export function createMigrationDataSourceOptions(input: {
       ScheduleJobDrain20260906001000,
       DestinationFirstTrips20260908120000,
       SupabaseMediaStorage20260912155026,
+      MediaSourceRetention20260912162442,
     ],
     extra: { max: 1 },
     ssl: sslOptions(input.migrationDatabaseUrl),

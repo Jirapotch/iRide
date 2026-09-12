@@ -263,6 +263,7 @@ export interface MediaAssetDto {
 }
 
 export interface MediaUploadRequest {
+  readonly uploadId?: string | undefined;
   readonly filename: string;
   readonly mimeType: "image/jpeg" | "image/png" | "image/webp";
   readonly bytes: number;

@@ -1,6 +1,7 @@
 import type { WorkerEnv } from "@iride/config/worker";
 import { QUEUE_NAMES, QUEUE_POLICIES, type Json } from "@iride/database";
 import { createMediaStorage, type StorageProvider } from "@iride/storage";
+import { createAdminDatabaseClient } from "@iride/database/admin";
 
 import {
   createPgmqRepository,
@@ -16,12 +17,18 @@ export interface MediaCleanupJob {
   readonly objects: readonly {
     objectKey: string;
     storageProvider: StorageProvider;
+    sourceMediaId?: string;
   }[];
 }
 
 export interface MediaCleanupJobDependencies {
   readonly queue: PgmqRepository;
   readonly remove: (key: string, provider: StorageProvider) => Promise<void>;
+  readonly clearSource?: (
+    mediaId: string,
+    key: string,
+    provider: StorageProvider,
+  ) => Promise<void>;
 }
 
 export async function runMediaCleanupBatch(
@@ -54,8 +61,18 @@ export async function runMediaCleanupBatch(
       continue;
     }
     try {
-      for (const object of message.objects)
+      for (const object of message.objects) {
         await dependencies.remove(object.objectKey, object.storageProvider);
+        if (object.sourceMediaId) {
+          if (!dependencies.clearSource)
+            throw new Error("MEDIA_SOURCE_CLEANUP_UNAVAILABLE");
+          await dependencies.clearSource(
+            object.sourceMediaId,
+            object.objectKey,
+            object.storageProvider,
+          );
+        }
+      }
       await dependencies.queue.archive(
         QUEUE_NAMES.MEDIA_CLEANUP,
         job.messageId,
@@ -84,12 +101,29 @@ export function createMediaCleanupJobDependencies(
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     },
   });
+  const admin = createAdminDatabaseClient({
+    url: env.SUPABASE_URL,
+    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+  });
   return {
     queue: createPgmqRepository({
       supabaseUrl: env.SUPABASE_URL,
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     }),
     remove: (key, provider) => storage.remove(key, provider),
+    async clearSource(mediaId, key, provider) {
+      const { error } = await admin
+        .from("media")
+        .update({
+          original_object_key: null,
+          original_cleaned_at: new Date().toISOString(),
+        })
+        .eq("id", mediaId)
+        .eq("original_object_key", key)
+        .eq("storage_provider", provider)
+        .eq("status", "ready");
+      if (error) throw error;
+    },
   };
 }
 
@@ -108,20 +142,32 @@ export function parseMediaCleanupMessage(value: Json): MediaCleanupJob | null {
   let objects: MediaCleanupJob["objects"];
   if (item.objects !== undefined) {
     if (!Array.isArray(item.objects)) return null;
-    const parsed: { objectKey: string; storageProvider: StorageProvider }[] =
-      [];
+    const parsed: {
+      objectKey: string;
+      storageProvider: StorageProvider;
+      sourceMediaId?: string;
+    }[] = [];
     for (const value of item.objects) {
       if (
         typeof value !== "object" ||
         value === null ||
         Array.isArray(value) ||
         typeof value.objectKey !== "string" ||
-        (value.storageProvider !== "r2" && value.storageProvider !== "supabase")
+        (value.storageProvider !== "r2" &&
+          value.storageProvider !== "supabase") ||
+        (value.sourceMediaId !== undefined &&
+          (typeof value.sourceMediaId !== "string" ||
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+              value.sourceMediaId,
+            )))
       )
         return null;
       parsed.push({
         objectKey: value.objectKey,
         storageProvider: value.storageProvider,
+        ...(typeof value.sourceMediaId === "string"
+          ? { sourceMediaId: value.sourceMediaId }
+          : {}),
       });
     }
     objects = parsed;

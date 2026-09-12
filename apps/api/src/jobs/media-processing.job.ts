@@ -92,12 +92,36 @@ export function createMediaProcessingJobDependencies(
   return {
     queue,
     process: async (message) => {
-      await admin
+      const { data: media, error: readError } = await admin
+        .from("media")
+        .select(
+          "status,deleted_at,original_object_key,storage_provider,purpose",
+        )
+        .eq("id", message.mediaId)
+        .eq("owner_id", message.ownerId)
+        .maybeSingle();
+      if (readError) throw readError;
+      if (
+        !media ||
+        media.deleted_at ||
+        media.status === "ready" ||
+        media.status === "deleted"
+      )
+        return;
+      if (
+        !["processing", "failed"].includes(media.status) ||
+        media.original_object_key !== message.objectKey ||
+        media.storage_provider !== (message.storageProvider ?? "r2") ||
+        media.purpose !== message.purpose
+      )
+        throw new Error("MEDIA_PROCESSING_STATE_INVALID");
+      const { error: updateError } = await admin
         .from("media")
         .update({ status: "processing", failure_reason: null })
         .eq("id", message.mediaId)
         .eq("owner_id", message.ownerId)
         .in("status", ["processing", "failed"]);
+      if (updateError) throw updateError;
       await processMediaJob(message, {
         storage,
         repository: {

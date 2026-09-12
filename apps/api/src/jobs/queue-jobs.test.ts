@@ -24,6 +24,95 @@ const processingMessage = {
 };
 
 describe("migrated pgmq jobs", () => {
+  it("keeps source metadata on delete failure and clears it only after a successful retry", async () => {
+    const events: string[] = [];
+    let failDelete = true;
+    const message = {
+      version: 1,
+      jobId: "source-1",
+      idempotencyKey: "source:m1",
+      attempt: 0,
+      objects: [
+        {
+          objectKey: "source.webp",
+          storageProvider: "supabase",
+          sourceMediaId: "20000000-0000-4000-8000-000000000001",
+        },
+      ],
+    };
+    const deps = {
+      queue: {
+        read: async () => [{ messageId: 1, readCount: 10, message }],
+        archive: async () => {
+          events.push("archive");
+        },
+      },
+      remove: async () => {
+        events.push("delete");
+        if (failDelete) throw new Error("offline");
+      },
+      clearSource: async (mediaId: string, key: string, provider: string) => {
+        events.push(`clear:${mediaId}:${key}:${provider}`);
+      },
+    };
+    expect(
+      await runMediaCleanupBatch(deps, {
+        batchSize: 1,
+        shouldContinue: () => true,
+      }),
+    ).toEqual({ processed: 1, failed: 1, archived: 0 });
+    expect(events).toEqual(["delete"]);
+    failDelete = false;
+    await runMediaCleanupBatch(deps, {
+      batchSize: 1,
+      shouldContinue: () => true,
+    });
+    expect(events).toEqual([
+      "delete",
+      "delete",
+      "clear:20000000-0000-4000-8000-000000000001:source.webp:supabase",
+      "archive",
+    ]);
+  });
+
+  it("retries source metadata persistence failures without archiving", async () => {
+    const archive = vi.fn();
+    const deps = {
+      queue: {
+        read: async () => [
+          {
+            messageId: 1,
+            readCount: 2,
+            message: {
+              version: 1,
+              jobId: "j",
+              idempotencyKey: "s",
+              attempt: 0,
+              objects: [
+                {
+                  objectKey: "original",
+                  storageProvider: "supabase",
+                  sourceMediaId: "20000000-0000-4000-8000-000000000001",
+                },
+              ],
+            },
+          },
+        ],
+        archive,
+      },
+      remove: async () => {},
+      clearSource: async () => {
+        throw new Error("db down");
+      },
+    };
+    expect(
+      await runMediaCleanupBatch(deps, {
+        batchSize: 1,
+        shouldContinue: () => true,
+      }),
+    ).toEqual({ processed: 1, failed: 1, archived: 0 });
+    expect(archive).not.toHaveBeenCalled();
+  });
   it("defaults legacy processing payloads to R2 and preserves explicit Supabase routing", () => {
     expect(parseMediaProcessingMessage(processingMessage)).toMatchObject({
       storageProvider: "r2",

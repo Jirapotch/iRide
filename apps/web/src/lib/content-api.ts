@@ -27,15 +27,19 @@ export class ContentApiError extends Error {
   }
 }
 
-export function getPosts(accessToken?: string, communityCategory?: import("@iride/types").CommunityCategory) {
-  const query = communityCategory ? `?communityCategory=${encodeURIComponent(communityCategory)}` : "";
+export function getPosts(
+  accessToken?: string,
+  communityCategory?: import("@iride/types").CommunityCategory,
+) {
+  const query = communityCategory
+    ? `?communityCategory=${encodeURIComponent(communityCategory)}`
+    : "";
   return contentGet<PostDto[]>(`/api/v1/posts${query}`, accessToken);
 }
 
 export function getEvents(accessToken?: string) {
   return contentGet<EventDto[]>("/api/v1/events", accessToken);
 }
-
 
 export function getComments(postId: string, accessToken?: string) {
   return contentGet<CommentDto[]>(
@@ -136,6 +140,14 @@ export function completeMediaUpload(accessToken: string, id: string) {
     {},
   );
 }
+export function reauthorizeMediaUpload(accessToken: string, id: string) {
+  return contentMutation<MediaUploadAuthorizationDto>(
+    `/api/v1/media/${encodeURIComponent(id)}/authorize`,
+    accessToken,
+    "POST",
+    {},
+  );
+}
 export function mediaVariantUrl(
   id: string,
   kind: "thumbnail" | "preview" = "preview",
@@ -156,7 +168,6 @@ export function getEvent(id: string, accessToken?: string) {
     accessToken,
   );
 }
-
 
 export function createPost(accessToken: string, input: CreatePostInput) {
   return contentMutation<PostDto>("/api/v1/posts", accessToken, "POST", input);

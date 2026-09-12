@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  handleMediaReauthorize,
   handleMediaComplete,
   handleMediaUpload,
   handleMediaVariant,
@@ -20,33 +21,27 @@ function setup(): MediaDependencies {
         .fn()
         .mockResolvedValue({ status: "active", transitionId: null }),
       createUpload: vi.fn().mockResolvedValue(undefined),
-      findOwnedUpload: vi
-        .fn()
-        .mockResolvedValue({
-          id: mediaId,
-          ownerId: userId,
-          purpose: "avatar",
-          status: "uploading",
-          objectKey: key,
-          mimeType: "image/webp",
-          bytes: 1024,
-        }),
+      findOwnedUpload: vi.fn().mockResolvedValue({
+        id: mediaId,
+        ownerId: userId,
+        purpose: "avatar",
+        status: "uploading",
+        objectKey: key,
+        mimeType: "image/webp",
+        bytes: 1024,
+      }),
       markProcessingAndEnqueue: vi.fn().mockResolvedValue(undefined),
-      findDeliverableVariant: vi
-        .fn()
-        .mockResolvedValue({
-          objectKey: `users/${userId}/avatar/${mediaId}/preview.webp`,
-        }),
+      findDeliverableVariant: vi.fn().mockResolvedValue({
+        objectKey: `users/${userId}/avatar/${mediaId}/preview.webp`,
+      }),
     },
     storage: {
-      signUpload: vi
-        .fn()
-        .mockResolvedValue({
-          bucketId: "media",
-          objectPath: key,
-          uploadToken: "signed-token",
-          expiresAt: "2026-09-13T01:00:00.000Z",
-        }),
+      signUpload: vi.fn().mockResolvedValue({
+        bucketId: "media",
+        objectPath: key,
+        uploadToken: "signed-token",
+        expiresAt: "2026-09-13T01:00:00.000Z",
+      }),
       head: vi
         .fn()
         .mockResolvedValue({ bytes: 1024, contentType: "image/webp" }),
@@ -56,6 +51,199 @@ function setup(): MediaDependencies {
 }
 
 describe("media API handlers", () => {
+  it("returns the same row after an ambiguous initial response without duplicating media", async () => {
+    const deps = setup();
+    const requestedId = "20000000-0000-4000-8000-000000000099";
+    const objectKey = `users/${userId}/avatar/${requestedId}/original`;
+    const rows = new Map<string, unknown>();
+    vi.mocked(deps.repository.createUpload).mockImplementation(
+      async (input) => {
+        if (rows.has(input.id)) throw { code: "23505" };
+        rows.set(input.id, { ...input, status: "uploading" });
+      },
+    );
+    vi.mocked(deps.repository.findOwnedUpload).mockImplementation(
+      async (owner, id) => {
+        const row = rows.get(id) as Awaited<
+          ReturnType<typeof deps.repository.findOwnedUpload>
+        >;
+        return row?.ownerId === owner ? row : null;
+      },
+    );
+    vi.mocked(deps.storage.signUpload).mockImplementation(async (path) => ({
+      bucketId: "media",
+      objectPath: path,
+      uploadToken: "token",
+      expiresAt: "2099-01-01",
+    }));
+    const request = () =>
+      new Request("https://api.test/media/uploads", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer jwt",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          uploadId: requestedId,
+          purpose: "avatar",
+          filename: "avatar.webp",
+          mimeType: "image/webp",
+          bytes: 1024,
+        }),
+      });
+    expect((await handleMediaUpload(request(), deps)).status).toBe(201);
+    const retry = await handleMediaUpload(request(), deps);
+    expect(retry.status).toBe(201);
+    expect(await retry.json()).toMatchObject({
+      data: { mediaId: requestedId, objectPath: objectKey },
+    });
+    expect(rows.size).toBe(1);
+  });
+
+  it.each([
+    "owner",
+    "bytes",
+    "purpose",
+    "status",
+    "provider",
+    "filename",
+    "mime",
+    "key",
+  ])(
+    "rejects an idempotency identity with conflicting %s",
+    async (conflict) => {
+      const deps = setup();
+      vi.mocked(deps.repository.createUpload).mockRejectedValue({
+        code: "23505",
+      });
+      vi.mocked(deps.repository.findOwnedUpload).mockResolvedValue(
+        conflict === "owner"
+          ? null
+          : {
+              id: mediaId,
+              ownerId: userId,
+              purpose: conflict === "purpose" ? "cover" : "avatar",
+              status: conflict === "status" ? "ready" : "uploading",
+              objectKey: conflict === "key" ? "different-key" : key,
+              filename:
+                conflict === "filename" ? "different.webp" : "avatar.webp",
+              mimeType: conflict === "mime" ? "image/png" : "image/webp",
+              bytes: conflict === "bytes" ? 2048 : 1024,
+              storageProvider: conflict === "provider" ? "r2" : "supabase",
+            },
+      );
+      const request = new Request("https://api.test/media/uploads", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer jwt",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          uploadId: mediaId,
+          purpose: "avatar",
+          filename: "avatar.webp",
+          mimeType: "image/webp",
+          bytes: 1024,
+        }),
+      });
+      const response = await handleMediaUpload(request, deps);
+      expect(response.status).toBe(409);
+      expect(await response.text()).not.toContain("signed-token");
+    },
+  );
+  it("does not disclose a renewed token if media became ready while signing", async () => {
+    const deps = setup();
+    const media = {
+      id: mediaId,
+      ownerId: userId,
+      purpose: "avatar" as const,
+      status: "uploading" as const,
+      objectKey: key,
+      mimeType: "image/webp",
+      bytes: 1024,
+      storageProvider: "supabase" as const,
+    };
+    vi.mocked(deps.repository.findOwnedUpload)
+      .mockResolvedValueOnce(media)
+      .mockResolvedValueOnce({ ...media, status: "ready" });
+    const response = await handleMediaReauthorize(
+      new Request("https://api.test/media/renew", {
+        method: "POST",
+        headers: { authorization: "Bearer signed.jwt" },
+      }),
+      mediaId,
+      deps,
+    );
+    expect(response.status).toBe(409);
+    expect(await response.text()).not.toContain("signed-token");
+  });
+  it("renews authorization for the same owned Supabase upload without creating a row", async () => {
+    const deps = setup();
+    vi.mocked(deps.repository.findOwnedUpload).mockResolvedValue({
+      id: mediaId,
+      ownerId: userId,
+      purpose: "avatar",
+      status: "uploading",
+      objectKey: key,
+      mimeType: "image/webp",
+      bytes: 1024,
+      storageProvider: "supabase",
+    });
+    const response = await handleMediaReauthorize(
+      new Request("https://api.test/media/renew", {
+        method: "POST",
+        headers: { authorization: "Bearer signed.jwt" },
+      }),
+      mediaId,
+      deps,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      data: {
+        mediaId,
+        bucketId: "media",
+        objectPath: key,
+        uploadToken: "signed-token",
+        expiresAt: "2026-09-13T01:00:00.000Z",
+      },
+    });
+    expect(deps.repository.createUpload).not.toHaveBeenCalled();
+    expect(deps.repository.findOwnedUpload).toHaveBeenCalledWith(
+      userId,
+      mediaId,
+    );
+  });
+
+  it.each([null, "ready", "processing", "failed", "r2"])(
+    "refuses renewal for unavailable/non-uploading media: %s",
+    async (state) => {
+      const deps = setup();
+      vi.mocked(deps.repository.findOwnedUpload).mockResolvedValue(
+        state === null
+          ? null
+          : {
+              id: mediaId,
+              ownerId: userId,
+              purpose: "avatar",
+              status: state === "r2" ? "uploading" : (state as "ready"),
+              objectKey: key,
+              mimeType: "image/webp",
+              bytes: 1024,
+              storageProvider: state === "r2" ? "r2" : "supabase",
+            },
+      );
+      const response = await handleMediaReauthorize(
+        new Request("https://api.test/media/renew", {
+          method: "POST",
+          headers: { authorization: "Bearer signed.jwt" },
+        }),
+        mediaId,
+        deps,
+      );
+      expect(response.status).toBe(state === null ? 404 : 409);
+      expect(deps.storage.signUpload).not.toHaveBeenCalled();
+    },
+  );
   it("authorizes a bounded Supabase upload with the exact browser SDK contract", async () => {
     const dependencies = setup();
     const response = await handleMediaUpload(
@@ -160,12 +348,10 @@ describe("media API handlers", () => {
         getAccountAccess: (userId: string) => Promise<unknown>;
       };
     };
-    dependencies.repository.getAccountAccess = vi
-      .fn()
-      .mockResolvedValue({
-        status: "active",
-        transitionId: "33333333-3333-4333-8333-333333333333",
-      });
+    dependencies.repository.getAccountAccess = vi.fn().mockResolvedValue({
+      status: "active",
+      transitionId: "33333333-3333-4333-8333-333333333333",
+    });
 
     const response = await handleMediaUpload(
       new Request("https://api.test/media/uploads", {
@@ -358,6 +544,7 @@ describe("media API handlers", () => {
       dependencies,
     );
     expect(response.status).toBe(503);
+    expect(dependencies.repository.createUpload).not.toHaveBeenCalled();
     expect(await response.json()).toEqual({
       error: { code: "MEDIA_UNAVAILABLE", message: "MEDIA_UNAVAILABLE" },
     });

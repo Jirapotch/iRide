@@ -199,6 +199,7 @@ export const updateVehicleSchema = z
 
 export const mediaUploadRequestSchema = z
   .object({
+    uploadId: z.uuid().optional(),
     filename: requiredText(255),
     mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
     bytes: z

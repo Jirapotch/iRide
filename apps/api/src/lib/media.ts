@@ -31,6 +31,7 @@ interface OwnedUpload {
   readonly status: MediaStatus;
   readonly objectKey: string | null;
   readonly mimeType: string;
+  readonly filename?: string;
   readonly bytes: number;
   readonly storageProvider?: StorageProvider;
 }
@@ -46,9 +47,7 @@ interface ProcessingMessage {
   readonly storageProvider: StorageProvider;
 }
 export interface MediaRepository {
-  readonly getAccountAccess: (
-    userId: string,
-  ) => Promise<{
+  readonly getAccountAccess: (userId: string) => Promise<{
     readonly status: "locked" | "active" | "suspended";
     readonly transitionId: string | null;
   } | null>;
@@ -125,35 +124,97 @@ export function handleMediaUpload(
       request,
       mediaUploadRequestSchema,
     );
-    const id = dependencies.newId();
+    const id = input.uploadId ?? dependencies.newId();
     const objectKey = mediaObjectKey(
       auth.userId,
       input.purpose,
       input.filename,
       id,
     );
-    await dependencies.repository.createUpload(
-      {
-        id,
-        ownerId: auth.userId,
-        purpose: input.purpose,
-        objectKey,
-        filename: input.filename,
-        mimeType: input.mimeType,
-        bytes: input.bytes,
-        storageProvider: "supabase",
-      },
-      bearer(request),
-    );
     const authorization = await dependencies.storage.signUpload(
       objectKey,
       input.mimeType,
       input.bytes,
     );
+    try {
+      await dependencies.repository.createUpload(
+        {
+          id,
+          ownerId: auth.userId,
+          purpose: input.purpose,
+          objectKey,
+          filename: input.filename,
+          mimeType: input.mimeType,
+          bytes: input.bytes,
+          storageProvider: "supabase",
+        },
+        bearer(request),
+      );
+    } catch (reason) {
+      if (!input.uploadId || (reason as { code?: string }).code !== "23505")
+        throw reason;
+      const existing = await dependencies.repository.findOwnedUpload(
+        auth.userId,
+        id,
+      );
+      if (
+        !existing ||
+        existing.status !== "uploading" ||
+        existing.storageProvider !== "supabase" ||
+        existing.objectKey !== objectKey ||
+        existing.purpose !== input.purpose ||
+        existing.filename !== input.filename ||
+        existing.mimeType !== input.mimeType ||
+        existing.bytes !== input.bytes
+      )
+        throw new MediaError("MEDIA_UPLOAD_CONFLICT", 409);
+    }
     return Response.json(
       { data: { mediaId: id, ...authorization } },
       { status: 201 },
     );
+  });
+}
+
+export function handleMediaReauthorize(
+  request: Request,
+  id: string,
+  dependencies = productionDependencies(),
+) {
+  return execute(request, dependencies, async () => {
+    requireUuid(id);
+    if (request.method !== "POST") return methodNotAllowed();
+    const auth = await dependencies.authenticate(request);
+    await requireActiveAccount(dependencies.repository, auth.userId);
+    const media = await dependencies.repository.findOwnedUpload(
+      auth.userId,
+      id,
+    );
+    if (!media) throw new MediaError("MEDIA_NOT_FOUND", 404);
+    if (
+      media.status !== "uploading" ||
+      !media.objectKey ||
+      media.storageProvider !== "supabase"
+    )
+      throw new MediaError("MEDIA_UPLOAD_NOT_RETRYABLE", 409);
+    const authorization = await dependencies.storage.signUpload(
+      media.objectKey,
+      media.mimeType,
+      media.bytes,
+    );
+    // Signing is an external request: do not return a new capability after a
+    // concurrent completion has closed the upload window.
+    const latest = await dependencies.repository.findOwnedUpload(
+      auth.userId,
+      id,
+    );
+    if (
+      latest?.status !== "uploading" ||
+      latest.objectKey !== media.objectKey ||
+      latest.storageProvider !== "supabase"
+    )
+      throw new MediaError("MEDIA_UPLOAD_NOT_RETRYABLE", 409);
+    return Response.json({ data: { mediaId: id, ...authorization } });
   });
 }
 

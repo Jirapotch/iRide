@@ -59,6 +59,8 @@ export async function processMediaJob(
       job.objectKey,
       job.storageProvider ?? "r2",
     );
+    if (input.byteLength === 0 || input.byteLength > 10 * 1024 * 1024)
+      throw new Error("MEDIA_UPLOAD_INVALID");
     let metadata: Metadata;
     try {
       metadata = await sharp(input, {
@@ -88,7 +90,7 @@ export async function processMediaJob(
           fit: spec.fit,
           withoutEnlargement: spec.fit === "inside",
         })
-        .webp({ quality: 82 })
+        .webp({ quality: 80 })
         .toBuffer({ resolveWithObject: true });
       const objectKey = mediaVariantObjectKey(
         job.ownerId,
@@ -117,7 +119,8 @@ export async function processMediaJob(
     });
   } catch (reason) {
     const code =
-      reason instanceof Error && reason.message === "MEDIA_DECODE_FAILED"
+      reason instanceof Error &&
+      ["MEDIA_DECODE_FAILED", "MEDIA_UPLOAD_INVALID"].includes(reason.message)
         ? reason.message
         : "MEDIA_PROCESSING_FAILED";
     await dependencies.repository.markFailed(job.mediaId, code);
