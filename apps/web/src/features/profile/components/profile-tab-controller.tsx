@@ -131,7 +131,7 @@ function profileTabHref(username: string, tab: ProfileTab) {
   return tab === "overview" ? profileHref : `${profileHref}?tab=${tab}`;
 }
 
-function ProfileTabSkeleton({
+export function ProfileTabSkeleton({
   locale,
   tab,
 }: {
@@ -154,6 +154,7 @@ function ProfileTabSkeleton({
 
   return (
     <div
+      aria-busy="true"
       aria-label={label}
       className={`${styles.pendingPanel} ${tab === "activities" ? styles.activitiesSkeleton : ""}`}
       data-skeleton-tab={tab}

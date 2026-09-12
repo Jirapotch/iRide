@@ -6,7 +6,7 @@ import { getVerifiedWebSession } from "@/lib/auth-session";
 import { getOwnProfile, getPublicProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
-import { ProfileSkeleton } from "@/features/loading/components/page-skeletons";
+import { ProfileTabSkeleton } from "@/features/profile/components/profile-tab-controller";
 import { ProfileTabContent } from "./profile-tab-content";
 import { UserProfileScreen } from "@/features/profile/components/user-profile-screen";
 
@@ -57,7 +57,9 @@ export default async function UserProfilePage({
         profile={profile}
         tabContent={
           tab === "overview" ? null : (
-            <Suspense fallback={<ProfileSkeleton locale={locale} />}>
+            <Suspense
+              fallback={<ProfileTabSkeleton locale={locale} tab={tab} />}
+            >
               <ProfileTabContent
                 accessToken={session?.accessToken}
                 canManage={ownProfile?.canManage ?? false}
