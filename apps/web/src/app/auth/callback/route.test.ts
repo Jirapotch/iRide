@@ -175,6 +175,26 @@ describe("Google OAuth callback", () => {
     );
   });
 
+  it("records profile lookup failure while preserving the onboarding fallback", async () => {
+    const correlationId = "dddddddddddddddddddddddddddddddd";
+    mocks.getOwnProfile.mockRejectedValueOnce(new Error("profile unavailable"));
+
+    const response = await GET(
+      new Request(
+        `https://iride.test/auth/callback?code=secret-code&sb_flow_id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&intent=profile&correlation_id=${correlationId}`,
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://iride.test/onboarding",
+    );
+    expect(mocks.consoleInfo).toHaveBeenLastCalledWith({
+      event: "profile_redirect",
+      correlation_id: correlationId,
+      outcome: "profile_lookup_failed",
+    });
+  });
+
   it("retains retry context when code exchange fails", async () => {
     mocks.exchangeCodeForSession.mockResolvedValueOnce({
       error: new Error("expired verifier"),

@@ -61,16 +61,26 @@ export async function GET(request: Request) {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
-      const profile = accessToken
-        ? await getOwnProfile(accessToken).catch(() => null)
-        : null;
+      let profile: Awaited<ReturnType<typeof getOwnProfile>> | null = null;
+      let profileLookupFailed = false;
+      if (accessToken) {
+        try {
+          profile = await getOwnProfile(accessToken);
+        } catch {
+          profileLookupFailed = true;
+        }
+      }
       const profilePath = profile?.username
         ? `/users/${profile.username}`
         : "/onboarding";
       logOAuthEvent(
         "profile_redirect",
         correlationId,
-        profile?.username ? "existing_profile" : "onboarding",
+        profile?.username
+          ? "existing_profile"
+          : profileLookupFailed
+            ? "profile_lookup_failed"
+            : "onboarding",
       );
       return noStoreRedirect(new URL(profilePath, getAppOrigin()));
     } catch {
