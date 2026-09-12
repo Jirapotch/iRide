@@ -17,7 +17,9 @@ select is((select storage_provider from public.media where id = '40000000-0000-4
 select throws_ok($$update public.media set storage_provider = 'unknown' where id = '40000000-0000-4000-8000-000000000030'$$, '23514', null, 'unsupported provider is rejected');
 select throws_ok($$update public.media set original_object_key = null where id = '40000000-0000-4000-8000-000000000030'$$, '23514', null, 'source key cannot disappear before cleanup is recorded');
 select throws_ok($$update public.media set original_object_key = null, original_cleaned_at = now() where id = '40000000-0000-4000-8000-000000000030'$$, '23514', null, 'uploading media must retain its source');
+set local role service_role;
 select lives_ok($$update public.media set status = 'ready', original_object_key = null, original_cleaned_at = now() where id = '40000000-0000-4000-8000-000000000030'$$, 'ready media can record successful source cleanup');
+reset role;
 select lives_ok($$update public.media set storage_provider = 'r2' where id = '40000000-0000-4000-8000-000000000030'$$, 'legacy R2 provider remains valid');
 
 -- Both cleanup producers must retain provider information before deleting metadata.

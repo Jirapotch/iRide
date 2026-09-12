@@ -18,6 +18,26 @@ begin
 end;
 $$;
 
+-- Clients create uploading rows and read their own media. All later state belongs
+-- to the service-role completion/processing/cleanup flow, including app admins.
+revoke update on table public.media from public, anon, authenticated;
+drop policy if exists media_owner_update on public.media;
+
+-- A direct Data API insert must not import another object's path, choose a legacy
+-- provider, or claim that server processing/cleanup has already happened.
+drop policy if exists media_upload_initial_state on public.media;
+create policy media_upload_initial_state on public.media
+as restrictive for insert to authenticated
+with check (
+  owner_id = (select auth.uid())
+  and storage_provider = 'supabase'
+  and original_object_key = 'users/' || owner_id::text || '/' || purpose::text || '/' || id::text || '/original'
+  and original_cleaned_at is null
+  and status = 'uploading'
+  and width is null and height is null
+  and failure_reason is null and deleted_at is null
+);
+
 -- Supported bucket configuration only: no changes to Storage-managed objects or policies.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('media', 'media', false, 10485760, array['image/jpeg', 'image/png', 'image/webp'])
