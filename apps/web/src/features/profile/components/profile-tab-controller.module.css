@@ -1,0 +1,69 @@
+.tabs {
+  display: flex;
+  overflow-x: auto;
+  margin: 1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 800;
+  border-bottom: 2px solid transparent;
+  transition:
+    color 0.14s ease,
+    border-color 0.14s ease,
+    opacity 0.14s ease;
+}
+
+.tab[aria-current="page"] {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -4px;
+}
+
+.tab:active {
+  opacity: 0.82;
+}
+
+.panel {
+  min-height: 10rem;
+}
+
+.pendingPanel {
+  display: grid;
+  align-content: start;
+  min-height: 12rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.skeleton {
+  width: 100%;
+}
+
+.activitiesSkeleton {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab {
+    transition: none;
+  }
+
+  .skeleton :global(.ant-skeleton-title::after),
+  .skeleton :global(.ant-skeleton-paragraph > li::after) {
+    animation: none !important;
+  }
+}

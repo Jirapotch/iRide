@@ -14,6 +14,7 @@ import { mediaVariantUrl } from "@/lib/content-api";
 import type { Locale } from "@/lib/locale";
 
 import { MediaUploader } from "./media-uploader";
+import { ProfileTabController } from "./profile-tab-controller";
 
 interface Props {
   readonly initialTab?: string;
@@ -32,10 +33,6 @@ export function UserProfileScreen({
 }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const tab =
-    initialTab === "garage" || initialTab === "activities"
-      ? initialTab
-      : "overview";
   const initials = profile.displayName.slice(0, 2).toUpperCase();
   const text =
     locale === "th"
@@ -168,50 +165,33 @@ export function UserProfileScreen({
                 <dd className="mt-1 font-medium">{profile.locationName}</dd>
               </dl>
             ) : null}
-            <nav
-              className="profile-tabs"
-              aria-label={
-                locale === "th" ? "ส่วนของโปรไฟล์" : "Profile sections"
+            <ProfileTabController
+              initialTab={initialTab}
+              locale={locale}
+              username={profile.username}
+              overviewContent={
+                <section className="profile-overview-grid">
+                  <article className="premium-card p-5">
+                    <p className="premium-kicker">
+                      {locale === "th" ? "พื้นที่" : "Area"}
+                    </p>
+                    <p>
+                      {profile.locationName ??
+                        (locale === "th"
+                          ? "ยังไม่ระบุพื้นที่"
+                          : "No area added")}
+                    </p>
+                  </article>
+                  <article className="premium-card p-5">
+                    <p className="premium-kicker">Garage</p>
+                    <PendingLink href={`/users/${profile.username}?tab=garage`}>
+                      {locale === "th" ? "เปิด Garage" : "View garage"}
+                    </PendingLink>
+                  </article>
+                </section>
               }
-            >
-              {(["overview", "garage", "activities"] as const).map((value) => (
-                <PendingLink
-                  aria-current={tab === value ? "page" : undefined}
-                  href={`/users/${profile.username}${value === "overview" ? "" : `?tab=${value}`}`}
-                  key={value}
-                >
-                  {text[value]}
-                </PendingLink>
-              ))}
-            </nav>
-            {tab === "overview" ? (
-              <section
-                className="profile-overview-grid"
-                data-navigation-focus-target="profile-panel"
-                tabIndex={-1}
-              >
-                <article className="premium-card p-5">
-                  <p className="premium-kicker">
-                    {locale === "th" ? "พื้นที่" : "Area"}
-                  </p>
-                  <p>
-                    {profile.locationName ??
-                      (locale === "th" ? "ยังไม่ระบุพื้นที่" : "No area added")}
-                  </p>
-                </article>
-                <article className="premium-card p-5">
-                  <p className="premium-kicker">Garage</p>
-                  <PendingLink href={`/users/${profile.username}?tab=garage`}>
-                    {locale === "th" ? "เปิด Garage" : "View garage"}
-                  </PendingLink>
-                </article>
-              </section>
-            ) : null}
-            {tab !== "overview" ? (
-              <div data-navigation-focus-target="profile-panel" tabIndex={-1}>
-                {tabContent}
-              </div>
-            ) : null}
+              tabContent={tabContent}
+            />
           </>
         )}
       </div>
