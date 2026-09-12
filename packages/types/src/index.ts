@@ -271,8 +271,9 @@ export interface MediaUploadRequest {
 
 export interface MediaUploadAuthorizationDto {
   readonly mediaId: string;
-  readonly uploadUrl: string;
-  readonly headers: Readonly<Record<string, string>>;
+  readonly bucketId: string;
+  readonly objectPath: string;
+  readonly uploadToken: string;
   readonly expiresAt: string;
 }
 

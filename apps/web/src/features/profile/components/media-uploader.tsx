@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { authorizeMediaAction, completeMediaAction } from "@/app/media-actions";
 import type { Locale } from "@/lib/locale";
+import { uploadAuthorizedMedia } from "@/lib/media-upload";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export function MediaUploader({
   cropRatio,
@@ -63,12 +65,7 @@ export function MediaUploader({
         bytes: blob.size,
         purpose,
       });
-      const response = await fetch(auth.uploadUrl, {
-        method: "PUT",
-        headers: auth.headers,
-        body: blob,
-      });
-      if (!response.ok) throw new Error("MEDIA_UPLOAD_FAILED");
+      await uploadAuthorizedMedia(auth, blob, createBrowserSupabaseClient());
       let state = await completeMediaAction(auth.mediaId);
       for (let count = 0; state.status !== "ready" && count < 30; count++) {
         await new Promise((resolve) => setTimeout(resolve, 2000));

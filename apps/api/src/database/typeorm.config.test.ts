@@ -25,7 +25,7 @@ describe("TypeORM configuration", () => {
 
     expect(options.url).toBe("postgresql://direct.example/iride");
     expect(options.synchronize).toBe(false);
-    expect(options.migrations).toHaveLength(3);
+    expect(options.migrations).toHaveLength(4);
   });
 
   it("schedules the protected drain endpoint every minute via Vault", async () => {

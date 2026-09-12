@@ -1,9 +1,12 @@
 import type { WorkerEnv } from "@iride/config/worker";
 import { QUEUE_NAMES, QUEUE_POLICIES, type Json } from "@iride/database";
 import { createAdminDatabaseClient } from "@iride/database/admin";
-import { createR2Storage } from "@iride/storage";
+import { createMediaStorage } from "@iride/storage";
 
-import { createPgmqRepository, type PgmqRepository } from "../queues/pgmq.repository";
+import {
+  createPgmqRepository,
+  type PgmqRepository,
+} from "../queues/pgmq.repository";
 import type { JobBatchResult } from "./job-result";
 import { processMediaJob, type MediaProcessingJob } from "./media-processor";
 
@@ -14,7 +17,10 @@ export interface MediaProcessingJobDependencies {
 
 export async function runMediaProcessingBatch(
   dependencies: MediaProcessingJobDependencies,
-  options: { readonly batchSize: number; readonly shouldContinue: () => boolean },
+  options: {
+    readonly batchSize: number;
+    readonly shouldContinue: () => boolean;
+  },
 ): Promise<JobBatchResult> {
   const jobs = await dependencies.queue.read(
     QUEUE_NAMES.MEDIA_PROCESSING,
@@ -31,18 +37,27 @@ export async function runMediaProcessingBatch(
     const message = parseMediaProcessingMessage(job.message);
     if (!message) {
       failed += 1;
-      await dependencies.queue.archive(QUEUE_NAMES.MEDIA_PROCESSING, job.messageId);
+      await dependencies.queue.archive(
+        QUEUE_NAMES.MEDIA_PROCESSING,
+        job.messageId,
+      );
       archived += 1;
       continue;
     }
     try {
       await dependencies.process(message);
-      await dependencies.queue.archive(QUEUE_NAMES.MEDIA_PROCESSING, job.messageId);
+      await dependencies.queue.archive(
+        QUEUE_NAMES.MEDIA_PROCESSING,
+        job.messageId,
+      );
       archived += 1;
     } catch {
       failed += 1;
       if (job.readCount >= QUEUE_POLICIES.MEDIA_PROCESSING.maxAttempts) {
-        await dependencies.queue.archive(QUEUE_NAMES.MEDIA_PROCESSING, job.messageId);
+        await dependencies.queue.archive(
+          QUEUE_NAMES.MEDIA_PROCESSING,
+          job.messageId,
+        );
         archived += 1;
       }
     }
@@ -61,11 +76,17 @@ export function createMediaProcessingJobDependencies(
     url: env.SUPABASE_URL,
     serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
   });
-  const storage = createR2Storage({
-    accountId: env.CLOUDFLARE_ACCOUNT_ID,
-    accessKeyId: env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-    bucket: env.R2_BUCKET,
+  const storage = createMediaStorage({
+    r2: {
+      accountId: env.CLOUDFLARE_ACCOUNT_ID,
+      accessKeyId: env.R2_ACCESS_KEY_ID,
+      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+      bucket: env.R2_BUCKET,
+    },
+    supabase: {
+      url: env.SUPABASE_URL,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    },
   });
 
   return {
@@ -109,8 +130,11 @@ export function createMediaProcessingJobDependencies(
   };
 }
 
-export function parseMediaProcessingMessage(value: Json): MediaProcessingJob | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+export function parseMediaProcessingMessage(
+  value: Json,
+): MediaProcessingJob | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return null;
   const item = value as Record<string, Json | undefined>;
   const purposes = ["avatar", "cover", "vehicle"] as const;
   if (
@@ -121,6 +145,9 @@ export function parseMediaProcessingMessage(value: Json): MediaProcessingJob | n
     typeof item.mediaId !== "string" ||
     typeof item.ownerId !== "string" ||
     typeof item.objectKey !== "string" ||
+    (item.storageProvider !== undefined &&
+      item.storageProvider !== "r2" &&
+      item.storageProvider !== "supabase") ||
     !purposes.includes(item.purpose as never)
   ) {
     return null;
@@ -134,5 +161,6 @@ export function parseMediaProcessingMessage(value: Json): MediaProcessingJob | n
     ownerId: item.ownerId,
     purpose: item.purpose as MediaProcessingJob["purpose"],
     objectKey: item.objectKey,
+    storageProvider: item.storageProvider ?? "r2",
   };
 }

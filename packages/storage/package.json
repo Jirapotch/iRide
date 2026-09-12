@@ -15,7 +15,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.1121.0",
     "@aws-sdk/s3-request-presigner": "3.1121.0",
-    "@iride/types": "workspace:*"
+    "@iride/types": "workspace:*",
+    "@supabase/supabase-js": "2.112.4"
   },
   "devDependencies": {
     "typescript": "^5.9.2",

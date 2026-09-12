@@ -1,8 +1,11 @@
 import type { WorkerEnv } from "@iride/config/worker";
 import { QUEUE_NAMES, QUEUE_POLICIES, type Json } from "@iride/database";
-import { createR2Storage } from "@iride/storage";
+import { createMediaStorage, type StorageProvider } from "@iride/storage";
 
-import { createPgmqRepository, type PgmqRepository } from "../queues/pgmq.repository";
+import {
+  createPgmqRepository,
+  type PgmqRepository,
+} from "../queues/pgmq.repository";
 import type { JobBatchResult } from "./job-result";
 
 export interface MediaCleanupJob {
@@ -10,17 +13,23 @@ export interface MediaCleanupJob {
   readonly jobId: string;
   readonly idempotencyKey: string;
   readonly attempt: number;
-  readonly objectKeys: readonly string[];
+  readonly objects: readonly {
+    objectKey: string;
+    storageProvider: StorageProvider;
+  }[];
 }
 
 export interface MediaCleanupJobDependencies {
   readonly queue: PgmqRepository;
-  readonly remove: (key: string) => Promise<void>;
+  readonly remove: (key: string, provider: StorageProvider) => Promise<void>;
 }
 
 export async function runMediaCleanupBatch(
   dependencies: MediaCleanupJobDependencies,
-  options: { readonly batchSize: number; readonly shouldContinue: () => boolean },
+  options: {
+    readonly batchSize: number;
+    readonly shouldContinue: () => boolean;
+  },
 ): Promise<JobBatchResult> {
   const jobs = await dependencies.queue.read(
     QUEUE_NAMES.MEDIA_CLEANUP,
@@ -37,17 +46,24 @@ export async function runMediaCleanupBatch(
     const message = parseMediaCleanupMessage(job.message);
     if (!message) {
       failed += 1;
-      await dependencies.queue.archive(QUEUE_NAMES.MEDIA_CLEANUP, job.messageId);
+      await dependencies.queue.archive(
+        QUEUE_NAMES.MEDIA_CLEANUP,
+        job.messageId,
+      );
       archived += 1;
       continue;
     }
     try {
-      for (const key of message.objectKeys) await dependencies.remove(key);
-      await dependencies.queue.archive(QUEUE_NAMES.MEDIA_CLEANUP, job.messageId);
+      for (const object of message.objects)
+        await dependencies.remove(object.objectKey, object.storageProvider);
+      await dependencies.queue.archive(
+        QUEUE_NAMES.MEDIA_CLEANUP,
+        job.messageId,
+      );
       archived += 1;
     } catch {
       failed += 1;
-      // Cleanup remains retryable at every read count to avoid orphaning R2 objects.
+      // Cleanup remains retryable at every read count to avoid orphaning objects.
     }
   }
   return { processed, failed, archived };
@@ -56,39 +72,75 @@ export async function runMediaCleanupBatch(
 export function createMediaCleanupJobDependencies(
   env: WorkerEnv,
 ): MediaCleanupJobDependencies {
-  const storage = createR2Storage({
-    accountId: env.CLOUDFLARE_ACCOUNT_ID,
-    accessKeyId: env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-    bucket: env.R2_BUCKET,
+  const storage = createMediaStorage({
+    r2: {
+      accountId: env.CLOUDFLARE_ACCOUNT_ID,
+      accessKeyId: env.R2_ACCESS_KEY_ID,
+      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+      bucket: env.R2_BUCKET,
+    },
+    supabase: {
+      url: env.SUPABASE_URL,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    },
   });
   return {
     queue: createPgmqRepository({
       supabaseUrl: env.SUPABASE_URL,
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     }),
-    remove: (key) => storage.remove(key),
+    remove: (key, provider) => storage.remove(key, provider),
   };
 }
 
 export function parseMediaCleanupMessage(value: Json): MediaCleanupJob | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return null;
   const item = value as Record<string, Json | undefined>;
   if (
     item.version !== 1 ||
     typeof item.jobId !== "string" ||
     typeof item.idempotencyKey !== "string" ||
-    typeof item.attempt !== "number" ||
-    !Array.isArray(item.objectKeys) ||
-    item.objectKeys.some((key) => typeof key !== "string")
+    typeof item.attempt !== "number"
   ) {
     return null;
+  }
+  let objects: MediaCleanupJob["objects"];
+  if (item.objects !== undefined) {
+    if (!Array.isArray(item.objects)) return null;
+    const parsed: { objectKey: string; storageProvider: StorageProvider }[] =
+      [];
+    for (const value of item.objects) {
+      if (
+        typeof value !== "object" ||
+        value === null ||
+        Array.isArray(value) ||
+        typeof value.objectKey !== "string" ||
+        (value.storageProvider !== "r2" && value.storageProvider !== "supabase")
+      )
+        return null;
+      parsed.push({
+        objectKey: value.objectKey,
+        storageProvider: value.storageProvider,
+      });
+    }
+    objects = parsed;
+  } else {
+    if (
+      !Array.isArray(item.objectKeys) ||
+      item.objectKeys.some((key) => typeof key !== "string")
+    )
+      return null;
+    objects = (item.objectKeys as string[]).map((objectKey) => ({
+      objectKey,
+      storageProvider: "r2",
+    }));
   }
   return {
     version: 1,
     jobId: item.jobId,
     idempotencyKey: item.idempotencyKey,
     attempt: item.attempt,
-    objectKeys: item.objectKeys as string[],
+    objects,
   };
 }

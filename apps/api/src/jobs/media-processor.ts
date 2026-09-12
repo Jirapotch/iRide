@@ -1,6 +1,10 @@
 import sharp, { type Metadata } from "sharp";
 
-import { mediaVariantObjectKey, variantSpecs } from "@iride/storage";
+import {
+  mediaVariantObjectKey,
+  variantSpecs,
+  type StorageProvider,
+} from "@iride/storage";
 import type { MediaPurpose, MediaVariantKind } from "@iride/types";
 
 export interface MediaProcessingJob {
@@ -12,6 +16,7 @@ export interface MediaProcessingJob {
   readonly ownerId: string;
   readonly purpose: MediaPurpose;
   readonly objectKey: string;
+  readonly storageProvider?: StorageProvider;
 }
 
 interface ReadyVariant {
@@ -24,13 +29,22 @@ interface ReadyVariant {
 
 export interface MediaProcessingDependencies {
   readonly storage: {
-    get: (key: string) => Promise<Buffer>;
-    put: (key: string, body: Uint8Array, mimeType: string) => Promise<void>;
+    get: (key: string, provider?: StorageProvider) => Promise<Buffer>;
+    put: (
+      key: string,
+      body: Uint8Array,
+      mimeType: string,
+      provider?: StorageProvider,
+    ) => Promise<void>;
   };
   readonly repository: {
     markReady: (
       mediaId: string,
-      value: { readonly width: number; readonly height: number; readonly variants: readonly ReadyVariant[] },
+      value: {
+        readonly width: number;
+        readonly height: number;
+        readonly variants: readonly ReadyVariant[];
+      },
     ) => Promise<void>;
     markFailed: (mediaId: string, reason: string) => Promise<void>;
   };
@@ -41,7 +55,10 @@ export async function processMediaJob(
   dependencies: MediaProcessingDependencies,
 ): Promise<void> {
   try {
-    const input = await dependencies.storage.get(job.objectKey);
+    const input = await dependencies.storage.get(
+      job.objectKey,
+      job.storageProvider ?? "r2",
+    );
     let metadata: Metadata;
     try {
       metadata = await sharp(input, {
@@ -79,7 +96,12 @@ export async function processMediaJob(
         job.mediaId,
         spec.kind,
       );
-      await dependencies.storage.put(objectKey, output.data, "image/webp");
+      await dependencies.storage.put(
+        objectKey,
+        output.data,
+        "image/webp",
+        job.storageProvider ?? "r2",
+      );
       variants.push({
         kind: spec.kind,
         objectKey,

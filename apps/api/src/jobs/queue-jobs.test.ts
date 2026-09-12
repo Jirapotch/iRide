@@ -1,8 +1,16 @@
 import { QUEUE_NAMES } from "@iride/database";
 import { describe, expect, it, vi } from "vitest";
 
-import { runMediaCleanupBatch, type MediaCleanupJobDependencies } from "./media-cleanup.job";
-import { runMediaProcessingBatch, type MediaProcessingJobDependencies } from "./media-processing.job";
+import {
+  parseMediaCleanupMessage,
+  runMediaCleanupBatch,
+  type MediaCleanupJobDependencies,
+} from "./media-cleanup.job";
+import {
+  parseMediaProcessingMessage,
+  runMediaProcessingBatch,
+  type MediaProcessingJobDependencies,
+} from "./media-processing.job";
 
 const processingMessage = {
   version: 1 as const,
@@ -16,9 +24,80 @@ const processingMessage = {
 };
 
 describe("migrated pgmq jobs", () => {
+  it("defaults legacy processing payloads to R2 and preserves explicit Supabase routing", () => {
+    expect(parseMediaProcessingMessage(processingMessage)).toMatchObject({
+      storageProvider: "r2",
+    });
+    expect(
+      parseMediaProcessingMessage({
+        ...processingMessage,
+        storageProvider: "supabase",
+      }),
+    ).toMatchObject({ storageProvider: "supabase" });
+    expect(
+      parseMediaProcessingMessage({
+        ...processingMessage,
+        storageProvider: "unknown",
+      }),
+    ).toBeNull();
+  });
+
+  it("deletes mixed providers and legacy R2 payloads without guessing object ownership", async () => {
+    const envelope = {
+      version: 1,
+      jobId: "j1",
+      idempotencyKey: "delete:1",
+      attempt: 0,
+    };
+    const r2 = new Set(["old.webp", "legacy.webp"]),
+      supabase = new Set(["new.webp"]);
+    const queue = {
+      read: vi.fn().mockResolvedValue([
+        {
+          messageId: 1,
+          readCount: 1,
+          message: {
+            ...envelope,
+            objects: [
+              { objectKey: "old.webp", storageProvider: "r2" },
+              { objectKey: "new.webp", storageProvider: "supabase" },
+            ],
+          },
+        },
+        {
+          messageId: 2,
+          readCount: 1,
+          message: { ...envelope, objectKeys: ["legacy.webp"] },
+        },
+      ]),
+      archive: vi.fn().mockResolvedValue(undefined),
+    };
+    const result = await runMediaCleanupBatch(
+      {
+        queue,
+        remove: async (key, provider) => {
+          const target = provider === "supabase" ? supabase : r2;
+          if (!target.delete(key)) throw new Error("wrong provider");
+        },
+      },
+      { batchSize: 2, shouldContinue: () => true },
+    );
+    expect(result).toEqual({ processed: 2, failed: 0, archived: 2 });
+    expect([...r2, ...supabase]).toEqual([]);
+    expect(
+      parseMediaCleanupMessage({
+        ...envelope,
+        objects: [{ objectKey: "new.webp", storageProvider: "unknown" }],
+      }),
+    ).toBeNull();
+  });
   it("processes and archives a media job with the queue policy bounds", async () => {
     const queue = {
-      read: vi.fn().mockResolvedValue([{ messageId: 1, readCount: 1, message: processingMessage }]),
+      read: vi
+        .fn()
+        .mockResolvedValue([
+          { messageId: 1, readCount: 1, message: processingMessage },
+        ]),
       archive: vi.fn().mockResolvedValue(undefined),
     };
     const dependencies: MediaProcessingJobDependencies = {
@@ -31,7 +110,11 @@ describe("migrated pgmq jobs", () => {
       shouldContinue: () => true,
     });
 
-    expect(queue.read).toHaveBeenCalledWith(QUEUE_NAMES.MEDIA_PROCESSING, expect.any(Number), 2);
+    expect(queue.read).toHaveBeenCalledWith(
+      QUEUE_NAMES.MEDIA_PROCESSING,
+      expect.any(Number),
+      2,
+    );
     expect(queue.archive).toHaveBeenCalledWith(QUEUE_NAMES.MEDIA_PROCESSING, 1);
     expect(result).toEqual({ processed: 1, failed: 0, archived: 1 });
   });
@@ -62,7 +145,11 @@ describe("migrated pgmq jobs", () => {
       objectKeys: ["original.webp"],
     };
     const queue = {
-      read: vi.fn().mockResolvedValue([{ messageId: 4, readCount: 5, message: cleanupMessage }]),
+      read: vi
+        .fn()
+        .mockResolvedValue([
+          { messageId: 4, readCount: 5, message: cleanupMessage },
+        ]),
       archive: vi.fn().mockResolvedValue(undefined),
     };
     const dependencies: MediaCleanupJobDependencies = {
@@ -81,7 +168,11 @@ describe("migrated pgmq jobs", () => {
 
   it("does not start another job after the serverless deadline", async () => {
     const queue = {
-      read: vi.fn().mockResolvedValue([{ messageId: 1, readCount: 1, message: processingMessage }]),
+      read: vi
+        .fn()
+        .mockResolvedValue([
+          { messageId: 1, readCount: 1, message: processingMessage },
+        ]),
       archive: vi.fn(),
     };
     const process = vi.fn();
