@@ -7,7 +7,6 @@ import { getOwnProfile } from "@/lib/profile-api";
 import { getRequestLocale } from "@/lib/request-locale";
 
 import { StandaloneShell } from "../_components/standalone-shell";
-import { signInWithGoogle } from "../auth/actions";
 import { AuthSubmitButton } from "../auth/submit-button";
 import { LanguageSwitcher } from "../language-switcher";
 
@@ -55,8 +54,12 @@ export default async function LoginPage({
   const next = safeNextPath(query.next);
   if (session) {
     if (query.intent === "profile") {
-      const profile = await getOwnProfile(session.accessToken).catch(() => null);
-      redirect(profile?.username ? `/users/${profile.username}` : "/onboarding");
+      const profile = await getOwnProfile(session.accessToken).catch(
+        () => null,
+      );
+      redirect(
+        profile?.username ? `/users/${profile.username}` : "/onboarding",
+      );
     }
     redirect(next);
   }
@@ -103,9 +106,11 @@ export default async function LoginPage({
           </p>
         ) : null}
 
-        <form action={signInWithGoogle}>
+        <form action="/auth/google/start" method="get">
           <input name="next" type="hidden" value={next} />
-          {query.intent === "profile" ? <input name="intent" type="hidden" value="profile" /> : null}
+          {query.intent === "profile" ? (
+            <input name="intent" type="hidden" value="profile" />
+          ) : null}
           <AuthSubmitButton
             idleLabel={text.button}
             pendingLabel={text.pending}
