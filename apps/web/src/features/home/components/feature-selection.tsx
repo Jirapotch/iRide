@@ -223,7 +223,6 @@ export function FeatureSelection({
               }}
               onPointerMove={movePointer}
             >
-              <span className={styles.featureLight} aria-hidden="true" />
               <span className={styles.featureNumber}>{number}</span>
               <span className={styles.featureBody}>
                 <span className={styles.featureLabel}>{item.label}</span>

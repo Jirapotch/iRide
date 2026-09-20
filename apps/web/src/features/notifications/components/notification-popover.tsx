@@ -96,33 +96,35 @@ export function NotificationPopover({ locale }: { readonly locale: Locale }) {
             </button>
           </header>
           <div className="notification-popover-list">
-            {notifications.map((item) => {
-              const read = state.readNotificationIds.includes(item.id);
-              return (
-                <button
-                  className={`notification-row ${read ? "is-read" : ""}`}
-                  key={item.id}
-                  onClick={() =>
-                    dispatch({
-                      type: "read-notification",
-                      notificationId: item.id,
-                    })
-                  }
-                  type="button"
-                >
-                  <span className="notification-icon">
-                    <Bell size={18} />
-                  </span>
-                  <span>
-                    <strong>{item.title}</strong>
-                    <small>
-                      {item.detail} · {item.time}
-                    </small>
-                  </span>
-                  {!read ? <i /> : null}
-                </button>
-              );
-            })}
+            {notifications.length > 0
+              ? notifications.map((item) => {
+                  const read = state.readNotificationIds.includes(item.id);
+                  return (
+                    <button
+                      className={`notification-row ${read ? "is-read" : ""}`}
+                      key={item.id}
+                      onClick={() =>
+                        dispatch({
+                          type: "read-notification",
+                          notificationId: item.id,
+                        })
+                      }
+                      type="button"
+                    >
+                      <span className="notification-icon">
+                        <Bell size={18} />
+                      </span>
+                      <span>
+                        <strong>{item.title}</strong>
+                        <small>
+                          {item.detail} · {item.time}
+                        </small>
+                      </span>
+                      {!read ? <i /> : null}
+                    </button>
+                  );
+                })
+              : <span>ไม่พบการแจ้งเตือนใหม่</span>}
           </div>
           <PendingLink href="/notifications" onClick={() => setOpen(false)}>
             {locale === "th" ? "ดูหน้าแจ้งเตือน" : "Open notifications page"}

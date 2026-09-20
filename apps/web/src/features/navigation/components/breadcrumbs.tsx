@@ -2,6 +2,7 @@ import type { BreadcrumbItem } from "@/lib/app-navigation-domain";
 import type { Locale } from "@/lib/locale";
 
 import { PendingLink } from "./pending-link";
+import { Button } from "antd";
 
 export function Breadcrumbs({
   items,
@@ -28,13 +29,15 @@ export function Breadcrumbs({
         ))}
       </ol>
       {parent?.href ? (
-        <PendingLink
-          aria-label={`${locale === "th" ? "กลับไป" : "Back to"} ${parent.label}`}
-          className="breadcrumb-compact"
-          href={parent.href}
-        >
-          ← {parent.label}
-        </PendingLink>
+        <Button>
+          <PendingLink
+            aria-label={`${locale === "th" ? "กลับไป" : "Back to"} ${parent.label}`}
+            className="breadcrumb-compact"
+            href={parent.href}
+          >
+            ← {parent.label}
+          </PendingLink>
+        </Button>
       ) : null}
     </nav>
   );

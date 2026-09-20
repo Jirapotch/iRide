@@ -57,7 +57,7 @@ test("feature cards keep equal widths and the requested order on focus", async (
     exact: true,
   });
   const cards = grid.locator("[data-feature-card]");
-  await expect(page.getByText("COMMUNITY • ACTIVITIES • GAMES")).toBeVisible();
+  await expect(page.getByText("COMMUNITY • ACTIVITIES")).toBeVisible();
   await expect(cards).toHaveCount(3);
   expect(
     await cards.evaluateAll((items) =>

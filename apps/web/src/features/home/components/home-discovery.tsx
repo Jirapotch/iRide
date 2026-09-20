@@ -24,9 +24,9 @@ const RECENT_KEY = "iride.home.recent.v1";
 
 const copy = {
   th: {
-    heroKicker: "COMMUNITY • ACTIVITIES • GAMES",
+    heroKicker: "COMMUNITY • ACTIVITIES",
     heroTitle: "ทุกเส้นทาง มีเรื่องราว",
-    heroBody: "พบผู้คน เล่นสนุก และออกไปสร้างความทรงจำบนเส้นทางเดียวกัน",
+    heroBody: "พบผู้คน และออกไปสร้างความทรงจำบนเส้นทางเดียวกัน",
     hello: "สวัสดี",
     helloGuest: "ยินดีต้อนรับสู่ iRide",
     ready: "พร้อมออกไปสนุกกันหรือยัง?",
@@ -56,15 +56,15 @@ const copy = {
     groupsKicker: "COMMUNITY",
     groupsTitle: "เลือกชุมชนตามประเภทรถ",
     viewCommunity: "ดูชุมชน",
-    exploreTitle: "เรื่องราวต่อไป เริ่มจากการออกไปค้นหา",
+    exploreTitle: "ออกไปค้นหาเรื่องราว",
     exploreBody: "ดูผู้คน สถานที่ และกิจกรรมที่กำลังเกิดขึ้นรอบตัวคุณ",
     exploreAction: "เปิดแผนที่",
     footer: "สร้างขึ้นเพื่อทุกคนที่เชื่อว่าเส้นทางมีความหมายมากกว่าจุดหมาย",
   },
   en: {
-    heroKicker: "COMMUNITY • ACTIVITIES • GAMES",
+    heroKicker: "COMMUNITY • ACTIVITIES",
     heroTitle: "Every road has a story",
-    heroBody: "Meet people, play, and create new memories along the same road.",
+    heroBody: "Meet people, and create new memories along the same road.",
     hello: "Hello",
     helloGuest: "Welcome to iRide",
     ready: "Ready to enjoy the road?",
@@ -94,7 +94,7 @@ const copy = {
     groupsKicker: "COMMUNITY",
     groupsTitle: "Explore by vehicle",
     viewCommunity: "View community",
-    exploreTitle: "Your next story starts by looking around",
+    exploreTitle: "Go out and discover stories",
     exploreBody:
       "Discover the people, places, and activities happening around you.",
     exploreAction: "Open the map",

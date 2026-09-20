@@ -45,11 +45,6 @@
 .heroVeil::after {
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    circle at 84% 18%,
-    rgb(239 56 52 / 0.2),
-    transparent 28%
-  );
   content: "";
 }
 
@@ -184,14 +179,6 @@
   border-color: color-mix(in srgb, var(--signal) 38%, var(--border));
 }
 
-.featureCard:nth-child(odd) .featureLight {
-  background: radial-gradient(
-    circle at var(--mouse-x) var(--mouse-y),
-    rgb(239 56 52 / 0.2),
-    transparent 34%
-  );
-}
-
 .featureCard:active {
   transform: scale(0.992);
 }
@@ -214,18 +201,6 @@
 .featureImage {
   z-index: -3;
   opacity: 0.44;
-}
-
-.featureLight {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  background: radial-gradient(
-    circle at var(--mouse-x) var(--mouse-y),
-    rgb(185 225 200 / 0.28),
-    transparent 34%
-  );
-  pointer-events: none;
 }
 
 .featureNumber {
@@ -987,7 +962,7 @@
 
 @media (max-width: 759px) {
   .hero {
-    min-height: 590px;
+    min-height: 400px;
   }
 
   .heroImage {
@@ -1013,7 +988,7 @@
   }
 
   .featureCard {
-    min-height: 360px;
+    min-height: 230px;
   }
 
   .communityVisual,
