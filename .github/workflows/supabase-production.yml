@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: 24
       - run: corepack enable
-      - run: corepack prepare pnpm@11.19.0 --activate
+      - run: corepack prepare pnpm@12.3.4 --activate
       - run: pnpm install --frozen-lockfile
 
       - name: Confirm production target
