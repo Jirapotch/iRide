@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import type { AnchorHTMLAttributes } from "react";
 import { expect, test, vi } from "vitest";
 
@@ -28,4 +29,13 @@ test("community exposes one page heading inside the existing app main landmark",
   expect(html).toContain('data-kind="group"');
   expect(html).toContain('href="/community/motorcycle"');
   expect(html).toContain('aria-label="View Motorcycles community"');
+});
+
+test("community keeps decorative accents separate from accessible text colors", () => {
+  const css = readFileSync(
+    new URL("./community.module.css", import.meta.url),
+    "utf8",
+  );
+  expect(css).toContain("--community-accent-text:");
+  expect(css).toContain("color: var(--community-accent-text)");
 });

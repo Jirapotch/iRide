@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  createThemeConfig,
-  matchaPalette,
-  motionTokens,
-  roadPalette,
-} from "./tokens";
+import { createThemeConfig, matchaPalette, motionTokens } from "./tokens";
 
 describe("Matcha design tokens", () => {
   it("exports the approved semantic palette for product consumers", () => {
@@ -25,16 +20,6 @@ describe("Matcha design tokens", () => {
       offsetSmall: 8,
       offsetMedium: 16,
       offsetLarge: 24,
-    });
-  });
-
-  it("adds the supplied road palette without replacing the Matcha identity", () => {
-    expect(roadPalette).toEqual({
-      asphalt: "#2B2E33",
-      slate: "#617B8C",
-      alloy: "#989397",
-      mist: "#B9C7D2",
-      signal: "#E93C35",
     });
   });
 

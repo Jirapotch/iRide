@@ -112,7 +112,7 @@ export function createMediaCleanupJobDependencies(
     }),
     remove: (key, provider) => storage.remove(key, provider),
     async clearSource(mediaId, key, provider) {
-      const { error } = await admin
+      const { data, error } = await admin
         .from("media")
         .update({
           original_object_key: null,
@@ -121,8 +121,11 @@ export function createMediaCleanupJobDependencies(
         .eq("id", mediaId)
         .eq("original_object_key", key)
         .eq("storage_provider", provider)
-        .eq("status", "ready");
+        .eq("status", "ready")
+        .select("id")
+        .maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("MEDIA_SOURCE_CLEANUP_CONFLICT");
     },
   };
 }

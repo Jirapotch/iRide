@@ -52,7 +52,7 @@ it("persists confirmed cleanup only against the matching provider and source key
   vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
     query = new URL(url);
     payload = JSON.parse(init.body as string);
-    return new Response(null, { status: 204 });
+    return Response.json([{ id: "m" }]);
   });
   await createMediaCleanupJobDependencies(env).clearSource!(
     "m",
@@ -66,4 +66,16 @@ it("persists confirmed cleanup only against the matching provider and source key
     original_object_key: null,
     original_cleaned_at: expect.any(String),
   });
+});
+
+it("rejects cleanup persistence when the guarded update matches no media row", async () => {
+  vi.stubGlobal("fetch", async () => Response.json([]));
+
+  await expect(
+    createMediaCleanupJobDependencies(env).clearSource!(
+      "m",
+      "source",
+      "supabase",
+    ),
+  ).rejects.toThrow("MEDIA_SOURCE_CLEANUP_CONFLICT");
 });

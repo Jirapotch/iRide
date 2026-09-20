@@ -22,6 +22,11 @@
 
 .groupCard {
   --community-accent: var(--primary);
+  --community-accent-text: color-mix(
+    in srgb,
+    var(--community-accent) 42%,
+    var(--foreground)
+  );
   position: relative;
   display: flex;
   flex-direction: column;
@@ -66,7 +71,7 @@
 
 .groupCard > small {
   margin-top: 0.8rem;
-  color: var(--community-accent);
+  color: var(--community-accent-text);
   font-size: 0.6rem;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -97,7 +102,7 @@
   margin-top: auto;
   border: 1px solid var(--community-accent);
   border-radius: 999px;
-  color: var(--community-accent);
+  color: var(--community-accent-text);
   font-size: 0.72rem;
   font-weight: 900;
   overflow-wrap: anywhere;

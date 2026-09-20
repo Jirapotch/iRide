@@ -12,14 +12,6 @@ export const matchaPalette = {
   ink: "#27322A",
 } as const;
 
-export const roadPalette = {
-  asphalt: "#2B2E33",
-  slate: "#617B8C",
-  alloy: "#989397",
-  mist: "#B9C7D2",
-  signal: "#E93C35",
-} as const;
-
 export const motionTokens = {
   fast: 0.16,
   base: 0.28,
