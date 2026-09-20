@@ -51,9 +51,9 @@
 }
 
 .filters button[aria-pressed="true"] {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 13%, var(--surface));
-  color: var(--primary);
+  border-color: var(--signal);
+  background: color-mix(in srgb, var(--signal) 11%, var(--surface));
+  color: var(--signal-text);
 }
 
 .grid {
@@ -67,7 +67,18 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 1.2rem;
-  background: var(--surface);
+  background:
+    radial-gradient(
+      circle at 100% 0,
+      rgb(239 56 52 / 0.05),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 0 100%,
+      color-mix(in srgb, var(--primary) 7%, transparent),
+      transparent 34%
+    ),
+    var(--surface);
   box-shadow: 0 12px 32px color-mix(in srgb, var(--foreground) 7%, transparent);
   transition:
     transform 160ms ease,
@@ -79,6 +90,10 @@
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
   box-shadow: 0 16px 38px color-mix(in srgb, var(--foreground) 11%, transparent);
+}
+
+.card:nth-child(odd) {
+  border-color: color-mix(in srgb, var(--signal) 28%, var(--border));
 }
 
 .card:active {
@@ -125,7 +140,7 @@
 }
 
 .thumbnail .finishDot {
-  fill: var(--primary);
+  fill: var(--signal);
 }
 
 .thumbnail > span {

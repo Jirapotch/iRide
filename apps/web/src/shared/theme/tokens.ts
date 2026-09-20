@@ -12,6 +12,13 @@ export const matchaPalette = {
   ink: "#27322A",
 } as const;
 
+export const signalPalette = {
+  brand: "#EF3834",
+  strong: "#B42320",
+  soft: "#FDE8E7",
+  darkText: "#FF9A95",
+} as const;
+
 export const motionTokens = {
   fast: 0.16,
   base: 0.28,
@@ -27,6 +34,7 @@ const sharedTokens = {
   colorBgContainer: matchaPalette.warmWhite,
   colorTextBase: matchaPalette.ink,
   colorBorder: "#DBE2DA",
+  colorError: "#8B3158",
   borderRadius: 12,
   borderRadiusLG: 16,
   controlHeight: 44,
@@ -44,7 +52,23 @@ export function createThemeConfig(mode: "light" | "dark"): ThemeConfig {
           colorBgContainer: "#213029",
           colorTextBase: "#EDF3EA",
           colorBorder: "rgba(184, 211, 195, 0.18)",
+          colorError: "#FF9CBD",
+        },
+        components: {
+          Tabs: {
+            inkBarColor: signalPalette.brand,
+            itemSelectedColor: signalPalette.darkText,
+          },
         },
       }
-    : { algorithm: theme.defaultAlgorithm, token: sharedTokens };
+    : {
+        algorithm: theme.defaultAlgorithm,
+        token: sharedTokens,
+        components: {
+          Tabs: {
+            inkBarColor: signalPalette.brand,
+            itemSelectedColor: signalPalette.strong,
+          },
+        },
+      };
 }

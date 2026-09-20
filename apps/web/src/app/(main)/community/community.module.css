@@ -21,7 +21,7 @@
 }
 
 .groupCard {
-  --community-accent: var(--primary);
+  --community-accent: var(--signal);
   --community-accent-text: color-mix(
     in srgb,
     var(--community-accent) 42%,
@@ -54,7 +54,7 @@
 }
 
 .groupCard[data-kind="group"] {
-  --community-accent: #8b7bb5;
+  --community-accent: var(--primary);
 }
 
 .groupIcon {
@@ -111,8 +111,8 @@
 
 .groupCard > a:hover,
 .groupCard > a:focus-visible {
-  background: var(--community-accent);
-  color: #17211d;
+  background: var(--signal-strong);
+  color: #fff;
 }
 
 @media (hover: hover) and (pointer: fine) {

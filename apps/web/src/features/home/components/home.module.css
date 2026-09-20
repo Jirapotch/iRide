@@ -42,6 +42,17 @@
     linear-gradient(0deg, rgb(12 24 18 / 0.64), transparent 52%);
 }
 
+.heroVeil::after {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 84% 18%,
+    rgb(239 56 52 / 0.2),
+    transparent 28%
+  );
+  content: "";
+}
+
 .heroContent {
   position: relative;
   z-index: 1;
@@ -55,7 +66,7 @@
 .sectionHeading > p,
 .gameContent > p {
   margin: 0 0 0.8rem;
-  color: #b7e1c5;
+  color: #ff9a95;
   font-size: 0.7rem;
   font-weight: 850;
   letter-spacing: 0.19em;
@@ -84,7 +95,7 @@
   width: fit-content;
   margin-top: 2rem;
   padding-left: 1rem;
-  border-left: 2px solid #9bc8ae;
+  border-left: 2px solid var(--signal);
 }
 
 .welcomePanel span,
@@ -115,6 +126,12 @@
 
 .sectionHeading > p {
   color: var(--primary);
+}
+
+.exploreSection .sectionHeading > p,
+.trendingSection .sectionHeading > p,
+.groupsSection .sectionHeading > p {
+  color: var(--signal-text);
 }
 
 .sectionHeading h2 {
@@ -161,6 +178,18 @@
 .featureCard:focus-visible {
   border-color: color-mix(in srgb, var(--primary) 68%, var(--border));
   box-shadow: var(--shadow-raised);
+}
+
+.featureCard:nth-child(odd) {
+  border-color: color-mix(in srgb, var(--signal) 38%, var(--border));
+}
+
+.featureCard:nth-child(odd) .featureLight {
+  background: radial-gradient(
+    circle at var(--mouse-x) var(--mouse-y),
+    rgb(239 56 52 / 0.2),
+    transparent 34%
+  );
 }
 
 .featureCard:active {
@@ -414,8 +443,8 @@
 }
 
 .filters button[aria-pressed="true"] {
-  border-color: var(--primary);
-  background: var(--primary);
+  border-color: var(--signal-strong);
+  background: var(--signal-strong);
   color: var(--primary-foreground);
 }
 
@@ -565,7 +594,11 @@
   margin-top: auto;
   padding: 0 1rem;
   border-radius: 999px;
-  background: var(--primary);
+  background: linear-gradient(
+    135deg,
+    var(--signal-strong),
+    color-mix(in srgb, var(--signal-strong) 72%, var(--signal))
+  );
   color: var(--primary-foreground);
   font-size: 0.74rem;
   font-weight: 900;
