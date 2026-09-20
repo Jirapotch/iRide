@@ -49,10 +49,12 @@ export default async function CommunityPage() {
   const breadcrumbs = resolveBreadcrumbs(`/community`, { locale });
 
   return (
-    <main className="community-section-page">
+    <div className="community-section-page">
       <Breadcrumbs items={breadcrumbs} locale={locale} />
       <div className={styles.sectionHeading}>
-        <h3>{text.communityTitle}</h3>
+        <h1 data-route-heading tabIndex={-1}>
+          {text.communityTitle}
+        </h1>
       </div>
       <div className={styles.groupRail} aria-live="polite">
         {communityDestinations.map(({ kind, href, icon: Icon }) => {
@@ -62,12 +64,12 @@ export default async function CommunityPage() {
               ? `${text.viewCommunity} ${label}`
               : `View ${label} community`;
           return (
-            <article className={styles.groupCard} key={kind}>
+            <article className={styles.groupCard} data-kind={kind} key={kind}>
               <span className={styles.groupIcon}>
                 <Icon aria-hidden size={24} weight="duotone" />
               </span>
               <small>{kind}</small>
-              <h3>{label}</h3>
+              <h2>{label}</h2>
               <div style={{ marginBottom: 16 }} />
               <PendingLink aria-label={linkLabel} href={href}>
                 {linkLabel} <ArrowRightIcon aria-hidden size={17} />
@@ -76,6 +78,6 @@ export default async function CommunityPage() {
           );
         })}
       </div>
-    </main>
+    </div>
   );
 }

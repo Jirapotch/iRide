@@ -3456,6 +3456,113 @@ input[type="datetime-local"] {
   }
 }
 
+/* Matcha Road content palette. It is intentionally scoped away from app chrome. */
+.route-content,
+[data-ui="standalone-shell"] {
+  --road-asphalt: #2b2e33;
+  --road-slate: #617b8c;
+  --road-alloy: #989397;
+  --road-mist: #b9c7d2;
+  --signal-red: #e93c35;
+  --content-motion: 220ms;
+  --content-shadow: 0 14px 38px rgb(43 46 51 / 0.1);
+  --content-shadow-raised: 0 20px 52px rgb(43 46 51 / 0.14);
+}
+
+.route-content {
+  animation-duration: var(--content-motion);
+  animation-timing-function: var(--ease-emphasized);
+}
+
+.route-content
+  :where(
+    .surface-card,
+    .community-category-card,
+    .community-room-grid a,
+    .profile-activity-card,
+    .media-uploader,
+    .trip-place-card,
+    .trip-map-editor,
+    .trip-options
+  ) {
+  border-color: color-mix(in srgb, var(--road-mist) 54%, var(--border));
+  box-shadow: var(--content-shadow);
+}
+
+.route-content
+  :where(
+    .community-category-card,
+    .community-room-grid a,
+    .profile-activity-card,
+    .trip-place-card
+  ) {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface) 95%, var(--road-mist)),
+    color-mix(in srgb, var(--surface) 97%, var(--mint-pale))
+  );
+  transition:
+    transform var(--content-motion) var(--ease-emphasized),
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--content-motion) var(--ease-emphasized);
+}
+
+.route-content
+  :where(
+    .community-category-card,
+    .community-room-grid a,
+    .profile-activity-card,
+    .trip-place-card
+  ):focus-visible {
+  border-color: color-mix(in srgb, var(--road-slate) 56%, var(--primary));
+}
+
+.route-content :where(.permission-toast, .route-error) {
+  border-color: color-mix(in srgb, var(--signal-red) 42%, var(--border));
+}
+
+.route-content ::selection,
+[data-ui="standalone-shell"] ::selection {
+  background: color-mix(in srgb, var(--road-mist) 56%, var(--mint-soft));
+  color: var(--road-asphalt);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .route-content
+    :where(
+      .community-category-card,
+      .community-room-grid a,
+      .profile-activity-card,
+      .trip-place-card
+    ):hover {
+    border-color: color-mix(in srgb, var(--road-slate) 34%, var(--border));
+    box-shadow: var(--content-shadow-raised);
+    transform: translateY(-2px);
+  }
+
+  .route-content :where(.primary-link-button, .image-picker-button):hover {
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-content {
+    animation: none;
+  }
+
+  .route-content
+    :where(
+      .community-category-card,
+      .community-room-grid a,
+      .profile-activity-card,
+      .trip-place-card,
+      .primary-link-button,
+      .image-picker-button
+    ) {
+    transform: none !important;
+  }
+}
+
 /* Destination-first trip composer */
 .trip-composer {
   display: grid;

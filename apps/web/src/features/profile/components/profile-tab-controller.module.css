@@ -62,8 +62,8 @@
     transition: none;
   }
 
-  .skeleton :global(.ant-skeleton-title::after),
-  .skeleton :global(.ant-skeleton-paragraph > li::after) {
+  .skeleton :global(.ant-skeleton-title),
+  .skeleton :global(.ant-skeleton-paragraph > li) {
     animation: none !important;
   }
 }

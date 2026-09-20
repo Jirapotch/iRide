@@ -160,7 +160,7 @@ export function HomeDiscovery({ locale }: { readonly locale: Locale }) {
   }
 
   return (
-    <main className={styles.home}>
+    <div className={styles.home}>
       <Hero locale={locale} profile={profile} />
       <FeatureSelection locale={locale} onNavigate={remember} />
       <section className={styles.exploreCta}>
@@ -180,7 +180,7 @@ export function HomeDiscovery({ locale }: { readonly locale: Locale }) {
         <strong>iRide</strong>
         <p>{text.footer}</p>
       </footer>
-    </main>
+    </div>
   );
 }
 

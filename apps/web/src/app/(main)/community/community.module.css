@@ -1,4 +1,4 @@
-.sectionHeading h3 {
+.sectionHeading h1 {
   margin: 0;
   font-size: clamp(1.8rem, 3.5vw, 3.5rem);
   font-weight: 950;
@@ -15,12 +15,13 @@
 
 .groupRail {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   gap: 0.75rem;
   margin-top: 2rem;
 }
 
 .groupCard {
+  --community-accent: var(--primary);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -28,7 +29,27 @@
   padding: 1.25rem;
   border: 1px solid var(--border);
   border-radius: 1.25rem;
-  background: var(--surface);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--community-accent) 8%, var(--surface)),
+    var(--surface) 68%
+  );
+  transition:
+    transform 220ms var(--ease-emphasized),
+    border-color 160ms var(--ease-standard),
+    box-shadow 220ms var(--ease-emphasized);
+}
+
+.groupCard[data-kind="motorcycle"] {
+  --community-accent: #e8985e;
+}
+
+.groupCard[data-kind="bicycle"] {
+  --community-accent: #5ca9a3;
+}
+
+.groupCard[data-kind="group"] {
+  --community-accent: #8b7bb5;
 }
 
 .groupIcon {
@@ -38,23 +59,24 @@
   place-items: center;
   border: 0;
   border-radius: 50%;
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: var(--community-accent);
+  color: #17211d;
   z-index: 1;
 }
 
 .groupCard > small {
   margin-top: 0.8rem;
-  color: var(--primary);
+  color: var(--community-accent);
   font-size: 0.6rem;
   font-weight: 900;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.groupCard h3 {
+.groupCard h2 {
   margin: 0.35rem 0 0;
   font-size: 1.22rem;
+  overflow-wrap: anywhere;
 }
 
 .groupCard p {
@@ -66,23 +88,44 @@
 }
 
 .groupCard > a {
-  min-height: 44px;
+  min-height: 45px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
   margin-top: auto;
-  border: 1px solid var(--primary);
+  border: 1px solid var(--community-accent);
   border-radius: 999px;
-  color: var(--primary);
+  color: var(--community-accent);
   font-size: 0.72rem;
   font-weight: 900;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .groupCard > a:hover,
 .groupCard > a:focus-visible {
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: var(--community-accent);
+  color: #17211d;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .groupCard:hover {
+    border-color: color-mix(
+      in srgb,
+      var(--community-accent) 38%,
+      var(--border)
+    );
+    box-shadow: 0 18px 42px rgb(43 46 51 / 0.12);
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .groupCard {
+    transition: none;
+  }
 }
 
 .groupMeta {
