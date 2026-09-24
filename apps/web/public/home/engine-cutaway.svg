@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-label="Engine cutaway with four pistons and crankshaft">
+  <defs>
+    <radialGradient id="bg"><stop stop-color="#486454"/><stop offset="1" stop-color="#14241c"/></radialGradient>
+    <linearGradient id="steel" x2="1" y2="1"><stop stop-color="#eff3ec"/><stop offset=".24" stop-color="#8e9e96"/><stop offset=".54" stop-color="#dde6dc"/><stop offset="1" stop-color="#66776c"/></linearGradient>
+    <linearGradient id="bronze" x2="1" y2="1"><stop stop-color="#f6d6a8"/><stop offset=".5" stop-color="#a7713d"/><stop offset="1" stop-color="#e7b87b"/></linearGradient>
+    <linearGradient id="block" x2="1" y2="1"><stop stop-color="#627a69" stop-opacity=".7"/><stop offset="1" stop-color="#1f3528" stop-opacity=".8"/></linearGradient>
+    <filter id="shadow"><feGaussianBlur stdDeviation="17"/></filter>
+    <g id="cylinder">
+      <rect x="-61" y="-159" width="122" height="296" rx="48" fill="#b7cab7" fill-opacity=".13" stroke="#cbdacb" stroke-opacity=".58" stroke-width="5"/>
+      <rect x="-66" y="-169" width="132" height="36" rx="10" fill="url(#steel)" stroke="#d6e2d8" stroke-width="5"/>
+      <path d="M-49-91h98v54h-98z" fill="url(#bronze)" stroke="#e9c394" stroke-width="5"/>
+      <path d="M-46-75h92M-46-62h92" stroke="#614d3e" stroke-opacity=".7" stroke-width="5"/>
+      <circle cy="-34" r="10" fill="#34423b" stroke="#e4c497" stroke-width="5"/>
+      <path d="M0-28 16 100" fill="none" stroke="url(#steel)" stroke-width="23" stroke-linecap="round"/>
+      <circle cx="16" cy="100" r="18" fill="url(#bronze)" stroke="#f0d0a4" stroke-width="5"/>
+    </g>
+  </defs>
+  <rect width="1200" height="700" fill="url(#bg)"/>
+  <ellipse cx="775" cy="392" rx="437" ry="210" fill="#a7ca9b" fill-opacity=".26" filter="url(#shadow)"/>
+  <g transform="translate(695 390) rotate(-12)">
+    <path d="M-386-244h763l53 97v309H-425v-307z" fill="url(#block)" stroke="#b8ccb9" stroke-width="9" stroke-opacity=".7"/>
+    <path d="M-422 163h853v95h-853z" fill="url(#steel)" stroke="#d4dfd2" stroke-width="8"/>
+    <path d="M-394 176h790" stroke="#40584a" stroke-width="22"/>
+    <path d="M-340 176c65 0 65 64 130 64s65-64 130-64 65 64 130 64 65-64 130-64 65 64 130 64" fill="none" stroke="url(#bronze)" stroke-width="38"/>
+    <g stroke="#233d2d" stroke-width="9"><circle cx="-288" cy="202" r="42" fill="url(#steel)"/><circle cx="-96" cy="202" r="42" fill="url(#steel)"/><circle cx="96" cy="202" r="42" fill="url(#steel)"/><circle cx="288" cy="202" r="42" fill="url(#steel)"/></g>
+    <use href="#cylinder" x="-288" y="-2"/><use href="#cylinder" x="-96" y="31"/><use href="#cylinder" x="96" y="-18"/><use href="#cylinder" x="288" y="20"/>
+    <path d="M-390-254h775l35 48h-844z" fill="url(#steel)" stroke="#e3eae0" stroke-width="7"/>
+    <path d="M-382-215h761M-418 147h840" stroke="#dcf0d9" stroke-opacity=".35" stroke-width="4"/>
+    <circle cx="422" cy="204" r="95" fill="url(#steel)" stroke="#e6e8d6" stroke-width="12"/>
+    <circle cx="422" cy="204" r="47" fill="#283c30" stroke="url(#bronze)" stroke-width="18"/>
+  </g>
+  <path d="M0 699h1200" stroke="#ffb995" stroke-opacity=".36" stroke-width="3"/>
+</svg>

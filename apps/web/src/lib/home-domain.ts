@@ -5,7 +5,7 @@ export type HomeLoadState<T> =
   | { readonly status: "ready"; readonly data: T }
   | { readonly status: "error" };
 
-export type HomeFeatureKind = "community" | "games" | "activities";
+export type HomeFeatureKind = "community" | "activities" | "learning" | "games";
 export type RecentJourneyKind = HomeFeatureKind;
 
 export interface RecentJourneyItem {
@@ -19,6 +19,7 @@ export type TrendingFilter = "all" | Exclude<CommunityCategory, "groups">;
 const featureHrefs = {
   community: "/community",
   activities: "/activities",
+  learning: "/learning",
   games: "/games",
 } as const;
 
@@ -126,7 +127,12 @@ function isRecentJourney(value: unknown): value is RecentJourneyItem {
 }
 
 function isRecentJourneyKind(value: unknown): value is RecentJourneyKind {
-  return value === "community" || value === "activities";
+  return (
+    value === "community" ||
+    value === "activities" ||
+    value === "learning" ||
+    value === "games"
+  );
 }
 
 function compareVisitedAt(left: string, right: string): number {

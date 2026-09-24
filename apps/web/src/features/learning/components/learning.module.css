@@ -1,0 +1,639 @@
+.shell {
+  min-height: 100dvh;
+  background:
+    radial-gradient(
+      circle at 88% 5%,
+      color-mix(in srgb, var(--primary) 17%, transparent),
+      transparent 32rem
+    ),
+    var(--background);
+  color: var(--foreground);
+}
+
+.siteHeader {
+  min-height: 4.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 max(1rem, calc((100vw - 1180px) / 2));
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.brand {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+.siteHeader nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.7rem, 3vw, 2rem);
+}
+.siteHeader nav a {
+  color: var(--foreground);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.siteHeader nav a:first-child {
+  color: var(--signal-text);
+}
+.siteHeader a:hover {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+
+.page,
+.simPage {
+  width: min(calc(100% - 2rem), 1180px);
+  margin-inline: auto;
+}
+
+.eyebrow {
+  margin: 0 0 0.65rem;
+  color: var(--signal-text);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.landingIntro {
+  padding: clamp(4rem, 9vw, 8rem) 0 clamp(2rem, 5vw, 4rem);
+}
+.landingIntro h1,
+.simIntro h1 {
+  margin: 0;
+  font-size: clamp(3.3rem, 8.8vw, 7.5rem);
+  font-weight: 950;
+  letter-spacing: -0.075em;
+  line-height: 1.05;
+}
+.landingIntro > p:last-child,
+.simIntro > p:last-child {
+  max-width: 700px;
+  margin: 1.25rem 0 0;
+  color: var(--muted-foreground);
+  font-size: clamp(1rem, 2vw, 1.22rem);
+  line-height: 1.7;
+}
+
+.learningFeature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.85fr);
+  overflow: hidden;
+  margin-bottom: 6rem;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, var(--primary));
+  border-radius: clamp(1.4rem, 3vw, 2.5rem);
+  background: #12231b;
+  color: #fff;
+  box-shadow: 0 28px 80px rgb(10 24 15 / 0.2);
+}
+.featureArt {
+  position: relative;
+  min-height: 490px;
+  background: #15251c;
+}
+.featureArt img {
+  object-fit: cover;
+}
+.featureCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(2rem, 5vw, 4rem);
+}
+.available {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #b7e1c5;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.available span,
+.liveDot {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  border-radius: 50%;
+  background: #a4e9a8;
+  box-shadow: 0 0 16px #a4e9a8;
+}
+.featureCopy h2 {
+  margin: 1.2rem 0 0.8rem;
+  font-size: clamp(2.4rem, 4vw, 4rem);
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  line-height: 1.02;
+}
+.featureCopy > p {
+  margin: 0;
+  color: rgb(255 255 255 / 0.76);
+  line-height: 1.7;
+}
+.featureFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin: 1.5rem 0 2rem;
+}
+.featureFacts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgb(183 225 197 / 0.35);
+  border-radius: 99px;
+  color: #d2e4d5;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.launchLink {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.7rem 1.1rem;
+  border-radius: 12px;
+  background: var(--signal-strong);
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    transform 0.16s ease,
+    filter 0.16s ease;
+}
+.launchLink:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.12);
+}
+.featureCopy small {
+  margin-top: 1rem;
+  color: #b7c9ba;
+}
+
+.simPage {
+  padding-bottom: 5rem;
+}
+.simIntro {
+  padding: clamp(2.4rem, 5vw, 4rem) 0 2rem;
+}
+.simIntro h1 {
+  font-size: clamp(2.8rem, 6vw, 5.5rem);
+}
+.simIntro > p:last-child {
+  margin-top: 0.85rem;
+}
+.backLink {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 2rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.8rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+.backLink:hover {
+  border-color: var(--primary);
+}
+.simGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.65fr);
+  align-items: start;
+  gap: 1rem;
+}
+.stageCard {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #345446;
+  border-radius: 1.5rem;
+  background: #101b16;
+  color: #e9f4ea;
+  box-shadow: 0 25px 70px rgb(7 21 12 / 0.22);
+}
+.stageTop,
+.stageBottom {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: #bed8c1;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.stageTop {
+  justify-content: flex-start;
+  border-bottom: 1px solid rgb(194 232 198 / 0.15);
+}
+.stageTop > span:last-child {
+  margin-left: auto;
+  max-width: 50%;
+  overflow: hidden;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.engineStage {
+  position: relative;
+  height: clamp(360px, 46vw, 640px);
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 46%, #324b3b, #101b16 67%);
+}
+.engineStage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+.engineStage canvas:active {
+  cursor: grabbing;
+}
+.engineStage > p {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 2rem;
+  color: #dcebdc;
+  text-align: center;
+}
+.stageBottom {
+  border-top: 1px solid rgb(194 232 198 / 0.15);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.stageBottom button {
+  min-height: 37px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #698675;
+  border-radius: 9px;
+  background: #20382b;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+.stageBottom button:hover {
+  background: #315642;
+}
+
+.controlColumn {
+  display: grid;
+  gap: 1rem;
+}
+.panel,
+.learningPanel {
+  padding: clamp(1rem, 2.3vw, 1.55rem);
+  border: 1px solid var(--border);
+  border-radius: 1.35rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+.selectGrid {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 0.7rem;
+}
+.selectGrid label {
+  min-width: 0;
+  color: var(--muted-foreground);
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+.selectGrid select {
+  width: 100%;
+  min-height: 43px;
+  display: block;
+  margin-top: 0.4rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8rem;
+}
+.engineIdentity {
+  margin: 1.4rem 0;
+}
+.engineIdentity h2 {
+  margin: 0.3rem 0;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+}
+.engineIdentity p {
+  margin: 0.2rem 0;
+  color: var(--muted-foreground);
+  font-size: 0.73rem;
+  font-weight: 750;
+}
+.dialRow {
+  display: grid;
+  grid-template-columns: 135px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem;
+  border-radius: 1rem;
+  background: var(--muted);
+}
+.rpmDial {
+  position: relative;
+  width: 125px;
+  height: 125px;
+  display: grid;
+  place-items: center;
+  color: var(--foreground);
+}
+.rpmDial svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.rpmDial strong {
+  z-index: 1;
+  margin-top: -0.4rem;
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+}
+.rpmDial small {
+  position: absolute;
+  z-index: 1;
+  top: 73px;
+  color: var(--muted-foreground);
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+.powerColumn > span {
+  color: var(--muted-foreground);
+  font-size: 0.69rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+.powerButton {
+  min-height: 47px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  border: 0;
+  border-radius: 11px;
+  background: var(--signal-strong);
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+.powerButton[data-phase="run"] {
+  background: #375b42;
+}
+.powerButton:hover {
+  filter: brightness(1.1);
+}
+.audioStatus {
+  min-height: 1.2rem;
+  margin: 0.35rem 0 0;
+  color: var(--danger);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+.rangeLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.4rem;
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+.rangeLabel small {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted-foreground);
+  font-size: 0.69rem;
+  font-weight: 600;
+}
+.rangeLabel strong {
+  color: var(--signal-text);
+  font-variant-numeric: tabular-nums;
+}
+.throttleRange {
+  width: 100%;
+  margin: 1rem 0 0.35rem;
+  accent-color: var(--signal);
+  cursor: pointer;
+}
+.panel > h2 {
+  margin: 0 0 0.8rem;
+  font-size: 0.96rem;
+  font-weight: 900;
+}
+.exhaustGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+.exhaustGrid button,
+.optionRow button {
+  min-height: 38px;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 780;
+  cursor: pointer;
+}
+.exhaustGrid button[aria-pressed="true"],
+.optionRow button[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--surface-elevated);
+  color: var(--foreground);
+}
+.exhaustGrid button:hover,
+.optionRow button:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+.optionRow button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.85rem;
+  color: var(--muted-foreground);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+.optionRow > span,
+.optionRow > label {
+  min-width: 90px;
+}
+.optionRow input {
+  min-width: 0;
+  flex: 1;
+  accent-color: var(--primary);
+}
+.optionRow strong {
+  min-width: 2rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.learningPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.5fr);
+  align-items: center;
+  gap: 1rem 2rem;
+  margin-top: 1rem;
+}
+.learningPanel h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+.learningPanel p {
+  margin: 0.35rem 0;
+  color: var(--muted-foreground);
+  font-size: 0.76rem;
+}
+.learningPanel > p {
+  grid-column: 2;
+  margin: -0.5rem 0 0;
+}
+.angleTrack {
+  position: relative;
+  padding-top: 0.8rem;
+}
+.firingMarks {
+  position: absolute;
+  inset: 0 0.45rem auto;
+  height: 12px;
+}
+.firingMarks span {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--signal);
+}
+.angleTrack input {
+  width: 100%;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.angleEnds {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted-foreground);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+.simFooter {
+  margin: 1.5rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.76rem;
+  line-height: 1.8;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .simGrid {
+    grid-template-columns: 1fr;
+  }
+  .controlColumn {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .learningFeature {
+    grid-template-columns: 1fr;
+  }
+  .featureArt {
+    min-height: 350px;
+  }
+}
+
+@media (max-width: 640px) {
+  .siteHeader {
+    padding-inline: 1rem;
+  }
+  .siteHeader nav {
+    gap: 0.8rem;
+  }
+  .page,
+  .simPage {
+    width: min(calc(100% - 1.25rem), 1180px);
+  }
+  .landingIntro {
+    padding-top: 3rem;
+  }
+  .learningFeature {
+    margin-bottom: 3rem;
+  }
+  .featureArt {
+    min-height: 270px;
+  }
+  .featureCopy {
+    padding: 1.5rem;
+  }
+  .simIntro {
+    padding-top: 1.7rem;
+  }
+  .engineStage {
+    height: min(80vw, 440px);
+    min-height: 280px;
+  }
+  .stageTop > span:last-child {
+    max-width: 42%;
+  }
+  .controlColumn {
+    grid-template-columns: 1fr;
+  }
+  .selectGrid {
+    grid-template-columns: 1fr 1.4fr;
+  }
+  .learningPanel {
+    grid-template-columns: 1fr;
+  }
+  .learningPanel > p {
+    grid-column: 1;
+    margin-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launchLink {
+    transition: none;
+  }
+}

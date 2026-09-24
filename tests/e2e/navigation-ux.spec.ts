@@ -58,12 +58,12 @@ test("feature cards keep equal widths and the requested order on focus", async (
   });
   const cards = grid.locator("[data-feature-card]");
   await expect(page.getByText("COMMUNITY • ACTIVITIES")).toBeVisible();
-  await expect(cards).toHaveCount(3);
+  await expect(cards).toHaveCount(4);
   expect(
     await cards.evaluateAll((items) =>
       items.map((item) => item.getAttribute("data-feature-card")),
     ),
-  ).toEqual(["community", "activities", "games"]);
+  ).toEqual(["community", "activities", "learning", "games"]);
   const widthsBefore = await cards.evaluateAll((items) =>
     items.map((item) => item.getBoundingClientRect().width),
   );
@@ -76,6 +76,43 @@ test("feature cards keep equal widths and the requested order on focus", async (
     items.map((item) => item.getBoundingClientRect().width),
   );
   expect(widthsAfter).toEqual(widthsBefore);
+});
+
+test("feature cards retain order and destinations at the device width", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const cards = page.locator(
+    '[data-ui="feature-selection"] [data-feature-card]',
+  );
+  await expect(cards).toHaveCount(4);
+  expect(
+    await cards.evaluateAll((items) =>
+      items.map((item) => ({
+        kind: item.getAttribute("data-feature-card"),
+        href: item.getAttribute("href"),
+      })),
+    ),
+  ).toEqual([
+    { kind: "community", href: "/community" },
+    { kind: "activities", href: "/activities" },
+    { kind: "learning", href: "/learning" },
+    { kind: "games", href: "/games" },
+  ]);
+  const positions = await cards.evaluateAll((items) =>
+    items.map((item) => ({
+      top: item.getBoundingClientRect().top,
+      left: item.getBoundingClientRect().left,
+    })),
+  );
+  if (page.viewportSize()!.width < 700) {
+    expect(positions[0]!.top).toBeLessThan(positions[1]!.top);
+    expect(positions[1]!.top).toBeLessThan(positions[2]!.top);
+    expect(positions[2]!.top).toBeLessThan(positions[3]!.top);
+  } else {
+    expect(positions[0]!.top).toBe(positions[1]!.top);
+    expect(positions[2]!.top).toBe(positions[3]!.top);
+  }
 });
 
 test("main navigation stays available while a destination shell loads", async ({

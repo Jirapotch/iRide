@@ -35,6 +35,12 @@ const copy = {
       detail: "นัดพบ ออกทริป และสร้างประสบการณ์ร่วมกัน",
       action: "ดูกิจกรรม",
     },
+    learning: {
+      label: "Learning",
+      title: "สื่อความรู้",
+      detail: "สำรวจกลไกเครื่องยนต์ 3D ฟังเสียง และเรียนรู้จังหวะการทำงาน",
+      action: "เข้าสู่สื่อความรู้",
+    },
     loading: "กำลังโหลดข้อมูลล่าสุด",
     loadError: "โหลดข้อมูลล่าสุดไม่ได้",
     communityEmpty: "ยังไม่มีโพสต์ในชุมชนรวม",
@@ -67,6 +73,13 @@ const copy = {
       detail: "Meet, travel, and create real-world stories together.",
       action: "View activities",
     },
+    learning: {
+      label: "Learning",
+      title: "Learning",
+      detail:
+        "Explore a 3D engine, hear it run, and learn how each stroke works.",
+      action: "Explore learning",
+    },
     loading: "Loading the latest data",
     loadError: "The latest data could not load",
     communityEmpty: "There are no group posts yet",
@@ -82,7 +95,8 @@ const copy = {
 const features = [
   { kind: "community", href: "/community", number: "01" },
   { kind: "activities", href: "/activities", number: "02" },
-  { kind: "games", href: "/games", number: "03" },
+  { kind: "learning", href: "/learning", number: "03" },
+  { kind: "games", href: "/games", number: "04" },
 ] as const;
 
 export function FeatureSelection({
