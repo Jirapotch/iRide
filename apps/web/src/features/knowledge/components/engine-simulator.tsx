@@ -29,6 +29,7 @@ import { PendingLink } from "@/features/navigation/components/pending-link";
 import type { Locale } from "@/lib/locale";
 
 import styles from "./knowledge.module.css";
+import { Tachometer } from "./tachometer";
 
 const defaultEngine =
   enginePresets.find(({ id }) => id === "m2c") ?? enginePresets[0]!;
@@ -432,44 +433,113 @@ export function EngineSimulator({ locale }: { readonly locale: Locale }) {
         <p>{text.intro}</p>
       </div>
       <div className={styles.simGrid}>
-        <section className={styles.stageCard} aria-label={text.title}>
-          <div className={styles.stageTop}>
-            <span className={styles.liveDot} /> ENGINE CUTAWAY{" "}
-            <span>{engineDisplayName(engine, locale)}</span>
-          </div>
-          <div
-            className={styles.engineStage}
-            ref={stageRef}
-            data-view-status={viewStatus}
+        <div className={styles.stageColumn}>
+          <section
+            aria-label={text.title}
+            className={styles.stageCard}
+            data-ui="engine-cutaway"
           >
-            {viewStatus !== "ready" && (
-              <p role="status">
-                {viewStatus === "loading" ? text.viewLoading : text.viewError}
-              </p>
-            )}
-          </div>
-          <div className={styles.stageBottom}>
-            <button
-              aria-pressed={viewMode !== "live"}
-              onClick={cycleView}
-              type="button"
+            <div className={styles.stageTop}>
+              <span className={styles.liveDot} /> ENGINE CUTAWAY{" "}
+              <span>{engineDisplayName(engine, locale)}</span>
+            </div>
+            <div
+              className={styles.engineStage}
+              ref={stageRef}
+              data-view-status={viewStatus}
             >
-              <ArrowsClockwise aria-hidden size={17} />{" "}
-              {viewMode === "live"
-                ? text.slow
-                : viewMode === "slow"
-                  ? text.pause
-                  : text.live}
-            </button>
-            <span>
-              {viewMode === "live"
-                ? text.live
-                : viewMode === "slow"
+              {viewStatus !== "ready" && (
+                <p role="status">
+                  {viewStatus === "loading" ? text.viewLoading : text.viewError}
+                </p>
+              )}
+            </div>
+            <div className={styles.stageBottom}>
+              <button
+                aria-pressed={viewMode !== "live"}
+                onClick={cycleView}
+                type="button"
+              >
+                <ArrowsClockwise aria-hidden size={17} />{" "}
+                {viewMode === "live"
                   ? text.slow
-                  : text.pause}
-            </span>
-          </div>
-        </section>
+                  : viewMode === "slow"
+                    ? text.pause
+                    : text.live}
+              </button>
+              <span>
+                {viewMode === "live"
+                  ? text.live
+                  : viewMode === "slow"
+                    ? text.slow
+                    : text.pause}
+              </span>
+            </div>
+          </section>
+          <section
+            className={styles.knowledgePanel}
+            data-ui="four-stroke-cycle"
+          >
+            <div>
+              <p className={styles.eyebrow}>FOUR-STROKE CYCLE</p>
+              <h2>
+                {text.crank}: {viewAngle}°
+              </h2>
+              <p>{text.angleHint}</p>
+            </div>
+            <div className={styles.angleTrack}>
+              <div
+                aria-hidden="true"
+                className={styles.angleDots}
+                data-ui="angle-dots"
+              >
+                {Array.from({ length: 25 }, (_, index) => (
+                  <span key={index} />
+                ))}
+              </div>
+              <div aria-hidden="true" className={styles.firingMarks}>
+                {engine.fire.map((angle, index) => (
+                  <span
+                    key={`${angle}-${index}`}
+                    style={{ left: `${(angle / 720) * 100}%` }}
+                  />
+                ))}
+              </div>
+              <input
+                aria-label={text.crank}
+                aria-valuetext={`${viewAngle}°`}
+                min="0"
+                max="720"
+                type="range"
+                value={viewAngle}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  viewModeRef.current = "pause";
+                  viewAngleRef.current = next;
+                  setViewMode("pause");
+                  setViewAngle(next);
+                  viewerRef.current?.render(
+                    next,
+                    next,
+                    simulationRef.current.throttle,
+                    true,
+                    false,
+                  );
+                }}
+              />
+              <div className={styles.angleEnds}>
+                <span>0°</span>
+                <span>720°</span>
+              </div>
+            </div>
+            <p>
+              {text.firing}:{" "}
+              {evenFire
+                ? `${intervals[0]}° ${text.equal}`
+                : `${intervals.join("–")}°`}
+            </p>
+          </section>
+        </div>
         <aside className={styles.controlColumn}>
           <section className={styles.panel}>
             <div className={styles.selectGrid}>
@@ -531,39 +601,12 @@ export function EngineSimulator({ locale }: { readonly locale: Locale }) {
               </p>
             </div>
             <div className={styles.dialRow}>
-              <div
-                className={styles.rpmDial}
-                role="meter"
-                aria-label={text.rpm}
-                aria-valuemin={0}
-                aria-valuemax={engine.red}
-                aria-valuenow={Math.min(display.rpm, engine.red)}
-              >
-                <svg viewBox="0 0 120 120" aria-hidden="true">
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="49"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeOpacity=".12"
-                    strokeWidth="8"
-                  />
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="49"
-                    fill="none"
-                    stroke="#ef3834"
-                    strokeLinecap="round"
-                    strokeWidth="8"
-                    strokeDasharray={`${Math.min(1, display.rpm / engine.red) * 308} 308`}
-                    transform="rotate(135 60 60)"
-                  />
-                </svg>
-                <strong>{display.rpm.toLocaleString(locale)}</strong>
-                <small>{text.rpm}</small>
-              </div>
+              <Tachometer
+                label={text.rpm}
+                locale={locale}
+                redline={engine.red}
+                rpm={display.rpm}
+              />
               <div className={styles.powerColumn}>
                 <span>
                   {display.phase === "run"
@@ -665,57 +708,6 @@ export function EngineSimulator({ locale }: { readonly locale: Locale }) {
           </section>
         </aside>
       </div>
-      <section className={styles.knowledgePanel}>
-        <div>
-          <p className={styles.eyebrow}>FOUR-STROKE CYCLE</p>
-          <h2>
-            {text.crank}: {viewAngle}°
-          </h2>
-          <p>{text.angleHint}</p>
-        </div>
-        <div className={styles.angleTrack}>
-          <div aria-hidden="true" className={styles.firingMarks}>
-            {engine.fire.map((angle, index) => (
-              <span
-                key={`${angle}-${index}`}
-                style={{ left: `${(angle / 720) * 100}%` }}
-              />
-            ))}
-          </div>
-          <input
-            aria-label={text.crank}
-            aria-valuetext={`${viewAngle}°`}
-            min="0"
-            max="720"
-            type="range"
-            value={viewAngle}
-            onChange={(event) => {
-              const next = Number(event.target.value);
-              viewModeRef.current = "pause";
-              viewAngleRef.current = next;
-              setViewMode("pause");
-              setViewAngle(next);
-              viewerRef.current?.render(
-                next,
-                next,
-                simulationRef.current.throttle,
-                true,
-                false,
-              );
-            }}
-          />
-          <div className={styles.angleEnds}>
-            <span>0°</span>
-            <span>720°</span>
-          </div>
-        </div>
-        <p>
-          {text.firing}:{" "}
-          {evenFire
-            ? `${intervals[0]}° ${text.equal}`
-            : `${intervals.join("–")}°`}
-        </p>
-      </section>
       <p className={styles.simFooter}>
         {text.guide}
         <br />

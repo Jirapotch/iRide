@@ -37,6 +37,22 @@ test("knowledge routes stay local and expose the interactive engine", async ({
   await expect(
     page.locator('[data-ui="engine-simulator"] canvas'),
   ).toBeVisible();
+  const stage = page.locator('[data-ui="engine-cutaway"]');
+  const cycle = page.locator('[data-ui="four-stroke-cycle"]');
+  const controls = page.getByRole("combobox", { name: "Category" });
+  const stageBounds = await stage.boundingBox();
+  const cycleBounds = await cycle.boundingBox();
+  const controlBounds = await controls.boundingBox();
+  expect(stageBounds).not.toBeNull();
+  expect(cycleBounds).not.toBeNull();
+  expect(controlBounds).not.toBeNull();
+  expect(cycleBounds!.y).toBeGreaterThanOrEqual(
+    stageBounds!.y + stageBounds!.height,
+  );
+  if (page.viewportSize()!.width < 900) {
+    expect(cycleBounds!.y + cycleBounds!.height).toBeLessThan(controlBounds!.y);
+  }
+  await expect(cycle.locator('[data-ui="angle-dots"] span')).toHaveCount(25);
   const origin = new URL(page.url()).origin;
   expect(
     requests.filter(
@@ -106,6 +122,9 @@ test("engine audio starts from a click and follows the selected engine", async (
   await expect(page.getByRole("slider", { name: "Crank angle" })).toHaveValue(
     "720",
   );
+  await expect(
+    page.getByRole("heading", { name: "Crank angle: 720°" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Start engine" }).click();
   if (!hasAudioContext) {
     await expect(
@@ -128,6 +147,15 @@ test("engine audio starts from a click and follows the selected engine", async (
     "aria-valuenow",
     "0",
   );
+  await expect
+    .poll(async () =>
+      Number(
+        await page
+          .getByRole("meter", { name: "RPM" })
+          .getAttribute("data-needle-angle"),
+      ),
+    )
+    .toBeGreaterThan(135);
   await page.getByRole("button", { name: "Stop engine" }).click();
   await expect(page.locator('[data-ui="engine-simulator"]')).toHaveAttribute(
     "data-audio-ready",

@@ -66,8 +66,18 @@ export class EngineViewer {
       depthWrite: false,
       side: THREE.DoubleSide,
     }),
+    indicator: new THREE.MeshBasicMaterial({
+      color: 0xf0443e,
+      side: THREE.DoubleSide,
+    }),
+    indicatorHub: new THREE.MeshStandardMaterial({
+      color: 0xf0443e,
+      metalness: 0.45,
+      roughness: 0.3,
+    }),
   };
   private root: THREE.Group | null = null;
+  private flywheel: THREE.Group | null = null;
   private journals: JournalMeshes[] = [];
   private cylinders: CylinderMeshes[] = [];
   private readonly observer: ResizeObserver;
@@ -166,6 +176,7 @@ export class EngineViewer {
     });
     for (const cylinder of this.cylinders) cylinder.head.material.dispose();
     this.root = null;
+    this.flywheel = null;
     this.journals = [];
     this.cylinders = [];
   }
@@ -202,21 +213,45 @@ export class EngineViewer {
       bearing.position.z = z;
       root.add(bearing);
     }
-    const flywheel = new THREE.Mesh(
+    const flywheel = new THREE.Group();
+    flywheel.position.z = z0 + (pairs - 0.5) * spacing + 0.45;
+    root.add(flywheel);
+    this.flywheel = flywheel;
+    const flywheelDisc = new THREE.Mesh(
       new THREE.CylinderGeometry(0.64, 0.64, 0.17, 48),
       M.dark,
     );
-    flywheel.rotation.x = Math.PI / 2;
-    flywheel.position.z = z0 + (pairs - 0.5) * spacing + 0.45;
-    root.add(flywheel);
+    flywheelDisc.rotation.x = Math.PI / 2;
+    flywheel.add(flywheelDisc);
     for (const radius of [0.31, 0.47]) {
       const ring = new THREE.Mesh(
         new THREE.TorusGeometry(radius, 0.018, 8, 56),
         M.bronze,
       );
-      ring.position.z = flywheel.position.z + 0.09;
-      root.add(ring);
+      ring.position.z = 0.09;
+      flywheel.add(ring);
     }
+    const pointerShape = new THREE.Shape();
+    pointerShape.moveTo(-0.035, 0.045);
+    pointerShape.lineTo(-0.035, 0.42);
+    pointerShape.lineTo(-0.095, 0.42);
+    pointerShape.lineTo(0, 0.56);
+    pointerShape.lineTo(0.095, 0.42);
+    pointerShape.lineTo(0.035, 0.42);
+    pointerShape.lineTo(0.035, 0.045);
+    pointerShape.closePath();
+    const pointer = new THREE.Mesh(
+      new THREE.ShapeGeometry(pointerShape),
+      M.indicator,
+    );
+    pointer.position.z = 0.14;
+    flywheel.add(pointer);
+    const pointerHub = new THREE.Mesh(
+      new THREE.SphereGeometry(0.075, 16, 12),
+      M.indicatorHub,
+    );
+    pointerHub.position.z = 0.14;
+    flywheel.add(pointerHub);
 
     this.journals = layout.journals.map((journal) => {
       const left = journal.zMin - 0.23;
@@ -364,6 +399,8 @@ export class EngineViewer {
   ): void {
     if (!this.root) return;
     const turn = angle % 360;
+    if (this.flywheel)
+      this.flywheel.rotation.z = -THREE.MathUtils.degToRad(turn);
     for (const journal of this.journals) {
       const phase = ((journal.phase - turn) * Math.PI) / 180;
       const x = CRANK_RADIUS * Math.cos(phase);
