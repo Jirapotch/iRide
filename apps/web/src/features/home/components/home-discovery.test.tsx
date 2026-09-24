@@ -29,7 +29,7 @@ test("home feature cards lead to all four destinations in the requested order", 
   expect(cards.map((card) => [card[1], card[2]])).toEqual([
     ["community", "/community"],
     ["activities", "/activities"],
-    ["learning", "/learning"],
+    ["knowledge", "/knowledge"],
     ["games", "/games"],
   ]);
   expect(html).toContain("สื่อความรู้");

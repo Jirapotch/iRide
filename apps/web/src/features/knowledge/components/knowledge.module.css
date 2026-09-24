@@ -81,7 +81,7 @@
   line-height: 1.7;
 }
 
-.learningFeature {
+.knowledgeFeature {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.85fr);
   overflow: hidden;
@@ -303,7 +303,7 @@
   gap: 1rem;
 }
 .panel,
-.learningPanel {
+.knowledgePanel {
   padding: clamp(1rem, 2.3vw, 1.55rem);
   border: 1px solid var(--border);
   border-radius: 1.35rem;
@@ -510,25 +510,25 @@
   font-variant-numeric: tabular-nums;
 }
 
-.learningPanel {
+.knowledgePanel {
   display: grid;
   grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.5fr);
   align-items: center;
   gap: 1rem 2rem;
   margin-top: 1rem;
 }
-.learningPanel h2 {
+.knowledgePanel h2 {
   margin: 0;
   font-size: 1.4rem;
   font-weight: 900;
   letter-spacing: -0.04em;
 }
-.learningPanel p {
+.knowledgePanel p {
   margin: 0.35rem 0;
   color: var(--muted-foreground);
   font-size: 0.76rem;
 }
-.learningPanel > p {
+.knowledgePanel > p {
   grid-column: 2;
   margin: -0.5rem 0 0;
 }
@@ -576,7 +576,7 @@
   .controlColumn {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .learningFeature {
+  .knowledgeFeature {
     grid-template-columns: 1fr;
   }
   .featureArt {
@@ -598,7 +598,7 @@
   .landingIntro {
     padding-top: 3rem;
   }
-  .learningFeature {
+  .knowledgeFeature {
     margin-bottom: 3rem;
   }
   .featureArt {
@@ -623,10 +623,10 @@
   .selectGrid {
     grid-template-columns: 1fr 1.4fr;
   }
-  .learningPanel {
+  .knowledgePanel {
     grid-template-columns: 1fr;
   }
-  .learningPanel > p {
+  .knowledgePanel > p {
     grid-column: 1;
     margin-top: 0;
   }

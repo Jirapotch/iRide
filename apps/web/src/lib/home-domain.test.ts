@@ -26,3 +26,23 @@ it("recognizes the activities list as the Home activities destination", () => {
     },
   ]);
 });
+
+it("migrates a recent Learning visit to Knowledge", () => {
+  expect(
+    parseRecentJourneys(
+      JSON.stringify([
+        {
+          kind: "learning",
+          href: "/learning",
+          visitedAt: "2026-09-25T00:00:00.000Z",
+        },
+      ]),
+    ),
+  ).toEqual([
+    {
+      kind: "knowledge",
+      href: "/knowledge",
+      visitedAt: "2026-09-25T00:00:00.000Z",
+    },
+  ]);
+});

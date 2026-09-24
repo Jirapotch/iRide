@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { EngineSimulator } from "@/features/learning/components/engine-simulator";
-import { LearningShell } from "@/features/learning/components/learning-shell";
+import { EngineSimulator } from "@/features/knowledge/components/engine-simulator";
+import { KnowledgeShell } from "@/features/knowledge/components/knowledge-shell";
 import { getRequestLocale } from "@/lib/request-locale";
 
 export const metadata: Metadata = {
@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 export default async function EngineSimulatorPage() {
   const locale = await getRequestLocale();
   return (
-    <LearningShell locale={locale}>
+    <KnowledgeShell locale={locale}>
       <EngineSimulator locale={locale} />
-    </LearningShell>
+    </KnowledgeShell>
   );
 }

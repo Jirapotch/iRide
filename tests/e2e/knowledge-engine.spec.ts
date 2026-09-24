@@ -21,13 +21,13 @@ test.beforeEach(async ({ context }) => {
   ]);
 });
 
-test("learning routes stay local and expose the interactive engine", async ({
+test("knowledge routes stay local and expose the interactive engine", async ({
   page,
 }) => {
   const requests: string[] = [];
   page.on("request", (request) => requests.push(request.url()));
-  await page.goto("/learning");
-  await expect(page.getByRole("heading", { name: "Learning" })).toBeVisible();
+  await page.goto("/knowledge");
+  await expect(page.getByRole("heading", { name: "Knowledge" })).toBeVisible();
   await page.getByRole("link", { name: /Open Engine Simulator 3D/ }).click();
   await expect(
     page.getByRole("heading", { name: "Engine Simulator 3D" }),
@@ -45,7 +45,14 @@ test("learning routes stay local and expose the interactive engine", async ({
   ).toEqual([]);
 });
 
-test("Thai learning pages fit the viewport", async ({ page, context }) => {
+test("old Learning links redirect to Knowledge", async ({ page }) => {
+  await page.goto("/learning");
+  await expect(page).toHaveURL(/\/knowledge$/);
+  await page.goto("/learning/engine-simulator");
+  await expect(page).toHaveURL(/\/knowledge\/engine-simulator$/);
+});
+
+test("Thai knowledge pages fit the viewport", async ({ page, context }) => {
   await context.addCookies([
     {
       name: "iride-locale",
@@ -56,7 +63,7 @@ test("Thai learning pages fit the viewport", async ({ page, context }) => {
       sameSite: "Lax",
     },
   ]);
-  await page.goto("/learning");
+  await page.goto("/knowledge");
   await expect(
     page.getByRole("heading", { name: "สื่อความรู้" }),
   ).toBeVisible();
@@ -72,7 +79,7 @@ test("Thai learning pages fit the viewport", async ({ page, context }) => {
 test("engine audio starts from a click and follows the selected engine", async ({
   page,
 }) => {
-  await page.goto("/learning/engine-simulator");
+  await page.goto("/knowledge/engine-simulator");
   const hasAudioContext = await page.evaluate(() =>
     Boolean(
       window.AudioContext ||
@@ -130,7 +137,7 @@ test("engine audio starts from a click and follows the selected engine", async (
 
 test("reduced motion opens on a paused cutaway", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/learning/engine-simulator");
+  await page.goto("/knowledge/engine-simulator");
   await expect(
     page.locator('[data-ui="engine-simulator"] canvas'),
   ).toBeVisible();

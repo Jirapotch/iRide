@@ -28,7 +28,7 @@ import type { EngineViewer } from "../engine-viewer";
 import { PendingLink } from "@/features/navigation/components/pending-link";
 import type { Locale } from "@/lib/locale";
 
-import styles from "./learning.module.css";
+import styles from "./knowledge.module.css";
 
 const defaultEngine =
   enginePresets.find(({ id }) => id === "m2c") ?? enginePresets[0]!;
@@ -75,7 +75,7 @@ const copy = {
     noApi: "ข้อมูล ภาพ และเสียงทำงานในเบราว์เซอร์โดยไม่เรียก API",
   },
   en: {
-    back: "Back to learning",
+    back: "Back to knowledge",
     kicker: "INTERACTIVE ENGINE LAB",
     title: "Engine Simulator 3D",
     intro:
@@ -422,7 +422,7 @@ export function EngineSimulator({ locale }: { readonly locale: Locale }) {
       data-audio-ready={audioReady ? "true" : "false"}
     >
       <div className={styles.simIntro}>
-        <PendingLink className={styles.backLink} href="/learning">
+        <PendingLink className={styles.backLink} href="/knowledge">
           <ArrowLeft aria-hidden size={17} /> {text.back}
         </PendingLink>
         <p className={styles.eyebrow}>{text.kicker}</p>
@@ -665,7 +665,7 @@ export function EngineSimulator({ locale }: { readonly locale: Locale }) {
           </section>
         </aside>
       </div>
-      <section className={styles.learningPanel}>
+      <section className={styles.knowledgePanel}>
         <div>
           <p className={styles.eyebrow}>FOUR-STROKE CYCLE</p>
           <h2>

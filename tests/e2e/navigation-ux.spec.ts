@@ -63,7 +63,7 @@ test("feature cards keep equal widths and the requested order on focus", async (
     await cards.evaluateAll((items) =>
       items.map((item) => item.getAttribute("data-feature-card")),
     ),
-  ).toEqual(["community", "activities", "learning", "games"]);
+  ).toEqual(["community", "activities", "knowledge", "games"]);
   const widthsBefore = await cards.evaluateAll((items) =>
     items.map((item) => item.getBoundingClientRect().width),
   );
@@ -96,7 +96,7 @@ test("feature cards retain order and destinations at the device width", async ({
   ).toEqual([
     { kind: "community", href: "/community" },
     { kind: "activities", href: "/activities" },
-    { kind: "learning", href: "/learning" },
+    { kind: "knowledge", href: "/knowledge" },
     { kind: "games", href: "/games" },
   ]);
   const positions = await cards.evaluateAll((items) =>

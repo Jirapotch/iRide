@@ -115,7 +115,7 @@ export class EngineAudio {
       try {
         if (!context.audioWorklet)
           throw new Error("AudioWorklet is unavailable");
-        await context.audioWorklet.addModule("/learning/engine-processor.js");
+        await context.audioWorklet.addModule("/knowledge/engine-processor.js");
         if (this.disposed || this.context !== context) return;
         const node = new AudioWorkletNode(context, "engine-processor", {
           outputChannelCount: [2],

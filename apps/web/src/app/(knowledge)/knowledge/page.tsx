@@ -2,15 +2,15 @@ import { ArrowRight, Waveform, Wrench } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Image from "next/image";
 
-import { LearningShell } from "@/features/learning/components/learning-shell";
+import { KnowledgeShell } from "@/features/knowledge/components/knowledge-shell";
 import { PendingLink } from "@/features/navigation/components/pending-link";
 import { getRequestLocale } from "@/lib/request-locale";
 
-import styles from "@/features/learning/components/learning.module.css";
+import styles from "@/features/knowledge/components/knowledge.module.css";
 
 const copy = {
   th: {
-    eyebrow: "iRide Learning Lab",
+    eyebrow: "iRide Knowledge Lab",
     title: "สื่อความรู้",
     intro:
       "เรียนรู้สิ่งที่ทำให้ทุกการเดินทางเคลื่อนไหว ผ่านการทดลองที่จับต้องได้",
@@ -23,8 +23,8 @@ const copy = {
     note: "ทำงานในเบราว์เซอร์โดยไม่เรียก API",
   },
   en: {
-    eyebrow: "iRide Learning Lab",
-    title: "Learning",
+    eyebrow: "iRide Knowledge Lab",
+    title: "Knowledge",
     intro:
       "Explore the mechanics behind every journey through hands-on experiments.",
     available: "Ready to explore",
@@ -45,25 +45,25 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function LearningPage() {
+export default async function KnowledgePage() {
   const locale = await getRequestLocale();
   const text = copy[locale];
   return (
-    <LearningShell locale={locale}>
+    <KnowledgeShell locale={locale}>
       <div className={styles.page}>
         <section
-          aria-labelledby="learning-title"
+          aria-labelledby="knowledge-title"
           className={styles.landingIntro}
         >
           <p className={styles.eyebrow}>{text.eyebrow}</p>
-          <h1 data-route-heading id="learning-title" tabIndex={-1}>
+          <h1 data-route-heading id="knowledge-title" tabIndex={-1}>
             {text.title}
           </h1>
           <p>{text.intro}</p>
         </section>
         <section
           aria-label="Engine Simulator 3D"
-          className={styles.learningFeature}
+          className={styles.knowledgeFeature}
         >
           <div className={styles.featureArt}>
             <Image
@@ -95,7 +95,7 @@ export default async function LearningPage() {
             </div>
             <PendingLink
               className={styles.launchLink}
-              href="/learning/engine-simulator"
+              href="/knowledge/engine-simulator"
               prefetch={false}
             >
               {text.launch} <ArrowRight aria-hidden size={19} />
@@ -104,6 +104,6 @@ export default async function LearningPage() {
           </div>
         </section>
       </div>
-    </LearningShell>
+    </KnowledgeShell>
   );
 }

@@ -9,12 +9,12 @@ vi.mock("@/features/navigation/components/pending-link", () => ({
   ),
 }));
 
-import LearningPage from "./page";
+import KnowledgePage from "./page";
 
-it("introduces Engine Simulator as learning content without requiring login", async () => {
-  const html = renderToStaticMarkup(await LearningPage());
+it("introduces Engine Simulator as knowledge content without requiring login", async () => {
+  const html = renderToStaticMarkup(await KnowledgePage());
   expect(html).toContain("สื่อความรู้");
   expect(html).toContain("Engine Simulator 3D");
-  expect(html).toContain('href="/learning/engine-simulator"');
+  expect(html).toContain('href="/knowledge/engine-simulator"');
   expect(html).not.toContain("เข้าสู่ระบบ");
 });

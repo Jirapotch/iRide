@@ -13,7 +13,7 @@ interface ProcessorInstance {
 
 it("produces finite, non-silent engine audio from the local worklet", () => {
   const source = readFileSync(
-    resolve(process.cwd(), "public/learning/engine-processor.js"),
+    resolve(process.cwd(), "public/knowledge/engine-processor.js"),
     "utf8",
   );
   let Processor: (new () => ProcessorInstance) | null = null;

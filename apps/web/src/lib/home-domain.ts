@@ -5,7 +5,8 @@ export type HomeLoadState<T> =
   | { readonly status: "ready"; readonly data: T }
   | { readonly status: "error" };
 
-export type HomeFeatureKind = "community" | "activities" | "learning" | "games";
+export type HomeFeatureKind =
+  "community" | "activities" | "knowledge" | "games";
 export type RecentJourneyKind = HomeFeatureKind;
 
 export interface RecentJourneyItem {
@@ -19,7 +20,7 @@ export type TrendingFilter = "all" | Exclude<CommunityCategory, "groups">;
 const featureHrefs = {
   community: "/community",
   activities: "/activities",
-  learning: "/learning",
+  knowledge: "/knowledge",
   games: "/games",
 } as const;
 
@@ -70,7 +71,10 @@ export function parseRecentJourneys(value: string | null): RecentJourneyItem[] {
   try {
     const candidate: unknown = JSON.parse(value);
     if (!Array.isArray(candidate)) return [];
-    return candidate.filter(isRecentJourney).slice(0, 3);
+    return candidate
+      .map(normalizeRecentJourney)
+      .filter(isRecentJourney)
+      .slice(0, 3);
   } catch {
     return [];
   }
@@ -126,11 +130,18 @@ function isRecentJourney(value: unknown): value is RecentJourneyItem {
   );
 }
 
+function normalizeRecentJourney(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const item = value as Record<string, unknown>;
+  if (item.kind !== "learning" || item.href !== "/learning") return value;
+  return { ...item, kind: "knowledge", href: "/knowledge" };
+}
+
 function isRecentJourneyKind(value: unknown): value is RecentJourneyKind {
   return (
     value === "community" ||
     value === "activities" ||
-    value === "learning" ||
+    value === "knowledge" ||
     value === "games"
   );
 }

@@ -7,6 +7,9 @@ import { updateSession } from "@/lib/supabase/proxy";
 import { proxy } from "./proxy";
 
 it.each([
+  "/knowledge",
+  "/knowledge/engine-simulator",
+  "/knowledge/engine-processor.js",
   "/learning",
   "/learning/engine-simulator",
   "/learning/engine-processor.js",

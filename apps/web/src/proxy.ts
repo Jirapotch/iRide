@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
 
 export function proxy(request: NextRequest) {
-  if (/^\/learning(?:\/|$)/.test(request.nextUrl.pathname)) {
+  if (/^\/(?:knowledge|learning)(?:\/|$)/.test(request.nextUrl.pathname)) {
     return NextResponse.next({ request });
   }
   return updateSession(request);

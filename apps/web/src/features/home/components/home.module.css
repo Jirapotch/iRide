@@ -198,7 +198,7 @@
     color-mix(in srgb, var(--surface-elevated) 78%, var(--surface));
 }
 
-.featureCard.learning {
+.featureCard.knowledge {
   background:
     linear-gradient(90deg, rgb(15 30 23 / 0.94), rgb(15 30 23 / 0.5)),
     url("/home/engine-cutaway.svg") center / cover,
@@ -206,7 +206,7 @@
   color: #fff;
 }
 
-.learning .featureLabel {
+.knowledge .featureLabel {
   color: #b7e1c5;
 }
 
