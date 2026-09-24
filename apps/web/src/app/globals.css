@@ -355,7 +355,9 @@ a {
 .nav-item.is-active {
   color: var(--signal-text);
   background: color-mix(in srgb, var(--signal) 1%, transparent);
-  box-shadow: 0 5px 15px color-mix(in srgb, var(--signal) 24%, transparent), 0 0 0 2px color-mix(in srgb, var(--primary) 10%, transparent);
+  box-shadow:
+    0 5px 15px color-mix(in srgb, var(--signal) 24%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 .create-nav {
   color: #fff;
@@ -1986,7 +1988,8 @@ body:has(.discover-map) {
   z-index: 5;
   top: 0.5rem;
   left: 0.75rem;
-  padding: 0 0.75rem;
+  max-width: min(720px, calc(100% - 1.5rem));
+  padding: 0.65rem 0.85rem;
   border: 1px solid var(--map-rule);
   border-radius: 0.7rem;
   background: color-mix(in srgb, var(--map-control-surface) 94%, transparent);
@@ -1996,8 +1999,11 @@ body:has(.discover-map) {
   width: auto;
   margin: 0;
 }
+.map-breadcrumbs .breadcrumb-full {
+  row-gap: 0.2rem;
+}
 .map-breadcrumbs + .map-canvas + .map-result-status {
-  top: 3.65rem;
+  top: 4rem;
 }
 .map-result-status {
   position: absolute;
@@ -2499,8 +2505,23 @@ button:disabled {
 }
 .breadcrumb-compact {
   display: none;
+  width: fit-content;
   min-height: 44px;
   align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--foreground) 7%, transparent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.breadcrumb-compact:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
 }
 @media (max-width: 640px) {
   .breadcrumb-full {
@@ -3190,6 +3211,59 @@ input[type="datetime-local"] {
   .discover-map[data-sheet-open="true"] .map-filter-menu {
     top: auto;
     bottom: 8.8rem;
+  }
+}
+@media (max-width: 640px) {
+  .map-breadcrumbs {
+    top: 0.75rem;
+    max-width: calc(100% - 5.5rem);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .map-breadcrumbs .breadcrumb-compact {
+    max-width: 100%;
+    padding-inline: 0.75rem;
+    border-color: var(--map-rule);
+    background: var(--map-control-surface);
+    box-shadow: 0 8px 22px var(--map-shadow);
+    color: var(--map-control-ink);
+  }
+  .map-breadcrumbs .breadcrumb-compact span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .map-breadcrumbs + .map-canvas + .map-result-status {
+    top: 4.5rem;
+  }
+  .discover-map[data-sheet-open="true"] .maplibregl-ctrl-top-right {
+    display: none;
+  }
+  .discover-map[data-sheet-open="true"] .map-actions-stack {
+    top: 0.75rem;
+    right: 0.75rem;
+    bottom: auto;
+    gap: 0.5rem;
+  }
+  .discover-map[data-sheet-open="true"] .map-actions-stack button {
+    width: 46px;
+    height: 46px;
+  }
+  .discover-map[data-sheet-open="true"] .map-filter-menu {
+    top: 7.5rem;
+    right: 0.75rem;
+    bottom: auto;
+    left: auto;
+  }
+  .discover-map[data-sheet-open="true"] .map-error-banner {
+    top: 8rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    flex-wrap: wrap;
+    transform: none;
+    border-radius: 0.9rem;
   }
 }
 .user-location-marker {

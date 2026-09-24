@@ -2,6 +2,7 @@ import {
   ArrowRight,
   CalendarBlank,
   MapTrifold,
+  UserCircle,
 } from "@phosphor-icons/react/dist/ssr";
 import { notFound } from "next/navigation";
 
@@ -76,15 +77,34 @@ export default async function ActivityDetailPage({
             {event.description ? <p>{event.description}</p> : null}
           </header>
           <div className={styles.detailMeta}>
-            <span>
-              <CalendarBlank aria-hidden size={17} />{" "}
-              {formatActivityDate(event, locale)}
-            </span>
-            <PendingLink
-              href={`/users/${encodeURIComponent(event.organizer.username)}`}
-            >
-              {event.organizer.displayName}
-            </PendingLink>
+            <div className={styles.detailMetaItem}>
+              <span className={styles.detailMetaIcon}>
+                <CalendarBlank aria-hidden size={20} />
+              </span>
+              <div>
+                <span className={styles.detailMetaLabel}>
+                  {locale === "th" ? "วันและเวลา" : "Date and time"}
+                </span>
+                <time dateTime={event.startsAt ?? undefined}>
+                  {formatActivityDate(event, locale)}
+                </time>
+              </div>
+            </div>
+            <div className={styles.detailMetaItem}>
+              <span className={styles.detailMetaIcon}>
+                <UserCircle aria-hidden size={20} />
+              </span>
+              <div>
+                <span className={styles.detailMetaLabel}>
+                  {locale === "th" ? "ผู้จัด" : "Organized by"}
+                </span>
+                <PendingLink
+                  href={`/users/${encodeURIComponent(event.organizer.username)}`}
+                >
+                  {event.organizer.displayName}
+                </PendingLink>
+              </div>
+            </div>
           </div>
           <section className={styles.detailSection}>
             <h2>

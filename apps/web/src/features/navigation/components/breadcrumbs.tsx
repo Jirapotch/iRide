@@ -2,7 +2,7 @@ import type { BreadcrumbItem } from "@/lib/app-navigation-domain";
 import type { Locale } from "@/lib/locale";
 
 import { PendingLink } from "./pending-link";
-import { Button } from "antd";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 
 export function Breadcrumbs({
   items,
@@ -29,15 +29,14 @@ export function Breadcrumbs({
         ))}
       </ol>
       {parent?.href ? (
-        <Button>
-          <PendingLink
-            aria-label={`${locale === "th" ? "กลับไป" : "Back to"} ${parent.label}`}
-            className="breadcrumb-compact"
-            href={parent.href}
-          >
-            ← {parent.label}
-          </PendingLink>
-        </Button>
+        <PendingLink
+          aria-label={`${locale === "th" ? "กลับไป" : "Back to"} ${parent.label}`}
+          className="breadcrumb-compact"
+          href={parent.href}
+        >
+          <ArrowLeft aria-hidden size={17} weight="bold" />
+          <span>{parent.label}</span>
+        </PendingLink>
       ) : null}
     </nav>
   );
