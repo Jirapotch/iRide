@@ -1,3 +1,4 @@
+import { ArrowLeftIcon } from "@phosphor-icons/react/dist/ssr";
 import type { ReactNode } from "react";
 
 import { BrandMark } from "@/app/_components/brand-mark";
@@ -9,10 +10,21 @@ import styles from "./knowledge.module.css";
 export function KnowledgeShell({
   children,
   locale,
+  section = "index",
 }: {
   readonly children: ReactNode;
   readonly locale: Locale;
+  readonly section?: "index" | "simulator";
 }) {
+  const backHref = section === "simulator" ? "/knowledge" : "/";
+  const backLabel =
+    section === "simulator"
+      ? locale === "th"
+        ? "กลับสู่สื่อความรู้ทั้งหมด"
+        : "Back to all knowledge"
+      : locale === "th"
+        ? "กลับหน้าหลัก"
+        : "Back home";
   return (
     <div className={styles.shell} data-ui="knowledge-shell">
       <a className="skip-link" href="#knowledge-content">
@@ -22,14 +34,9 @@ export function KnowledgeShell({
         <PendingLink aria-label="iRide home" className={styles.brand} href="/">
           <BrandMark />
         </PendingLink>
-        <nav aria-label={locale === "th" ? "สื่อความรู้" : "Knowledge"}>
-          <PendingLink href="/knowledge">
-            {locale === "th" ? "สื่อความรู้" : "Knowledge"}
-          </PendingLink>
-          <PendingLink href="/">
-            {locale === "th" ? "หน้าหลัก" : "Home"}
-          </PendingLink>
-        </nav>
+        <PendingLink className={styles.headerBack} href={backHref}>
+          <ArrowLeftIcon aria-hidden size={18} /> {backLabel}
+        </PendingLink>
       </header>
       <main id="knowledge-content">{children}</main>
     </div>

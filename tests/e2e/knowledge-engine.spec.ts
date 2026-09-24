@@ -28,12 +28,22 @@ test("knowledge routes stay local and expose the interactive engine", async ({
   page.on("request", (request) => requests.push(request.url()));
   await page.goto("/knowledge");
   await expect(page.getByRole("heading", { name: "Knowledge" })).toBeVisible();
+  await expect(
+    page.locator('[data-ui="knowledge-shell"] header').getByRole("link", {
+      name: "Back home",
+    }),
+  ).toHaveAttribute("href", "/");
   await page.getByRole("link", { name: /Open Engine Simulator 3D/ }).click();
   await expect(
     page.getByRole("heading", { name: "Engine Simulator 3D" }),
   ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Category" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Engine" })).toBeVisible();
+  await expect(
+    page.locator('[data-ui="knowledge-shell"] header').getByRole("link", {
+      name: "Back to all knowledge",
+    }),
+  ).toHaveAttribute("href", "/knowledge");
   await expect(
     page.locator('[data-ui="engine-simulator"] canvas'),
   ).toBeVisible();
@@ -83,8 +93,18 @@ test("Thai knowledge pages fit the viewport", async ({ page, context }) => {
   await expect(
     page.getByRole("heading", { name: "สื่อความรู้" }),
   ).toBeVisible();
+  await expect(
+    page.locator('[data-ui="knowledge-shell"] header').getByRole("link", {
+      name: "กลับหน้าหลัก",
+    }),
+  ).toBeVisible();
   await page.getByRole("link", { name: /เปิด Engine Simulator 3D/ }).click();
   await expect(page.getByRole("combobox", { name: "ประเภท" })).toBeVisible();
+  await expect(
+    page.locator('[data-ui="knowledge-shell"] header').getByRole("link", {
+      name: "กลับสู่สื่อความรู้ทั้งหมด",
+    }),
+  ).toHaveAttribute("href", "/knowledge");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth + 1,
@@ -111,6 +131,10 @@ test("engine audio starts from a click and follows the selected engine", async (
   await expect(
     page.getByRole("heading", { name: "V8 90° crossplane" }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stock" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await page.getByRole("button", { name: "Track" }).click();
   await expect(page.getByRole("button", { name: "Track" })).toHaveAttribute(
     "aria-pressed",

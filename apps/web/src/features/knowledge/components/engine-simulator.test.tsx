@@ -19,5 +19,6 @@ it("exposes the engine, throttle, audio, and crank controls in English", () => {
   expect(html).toContain("Crank angle");
   expect(html).toContain("V car engines");
   expect(html).toContain("2-cylinder inline 270°");
+  expect(html).toMatch(/aria-pressed="true"[^>]*>Stock<\/button>/);
   expect(html).not.toContain("unpkg.com");
 });

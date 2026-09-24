@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default async function EngineSimulatorPage() {
   const locale = await getRequestLocale();
   return (
-    <KnowledgeShell locale={locale}>
+    <KnowledgeShell locale={locale} section="simulator">
       <EngineSimulator locale={locale} />
     </KnowledgeShell>
   );

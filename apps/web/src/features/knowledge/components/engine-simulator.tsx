@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowLeft,
   ArrowsClockwise,
   Power,
   SpeakerHigh,
@@ -25,7 +24,6 @@ import {
   type EnginePhase,
 } from "../engine-simulation";
 import type { EngineViewer } from "../engine-viewer";
-import { PendingLink } from "@/features/navigation/components/pending-link";
 import type { Locale } from "@/lib/locale";
 
 import styles from "./knowledge.module.css";
@@ -37,7 +35,6 @@ type ViewMode = "live" | "slow" | "pause";
 
 const copy = {
   th: {
-    back: "กลับสู่สื่อความรู้",
     kicker: "INTERACTIVE ENGINE LAB",
     title: "Engine Simulator 3D",
     intro:
@@ -76,7 +73,6 @@ const copy = {
     noApi: "ข้อมูล ภาพ และเสียงทำงานในเบราว์เซอร์โดยไม่เรียก API",
   },
   en: {
-    back: "Back to knowledge",
     kicker: "INTERACTIVE ENGINE LAB",
     title: "Engine Simulator 3D",
     intro:
@@ -122,7 +118,7 @@ export function EngineSimulator({ locale }: { readonly locale: Locale }) {
   const [category, setCategory] =
     useState<(typeof engineGroups)[number]["id"]>("motorcycle");
   const [engineId, setEngineId] = useState(defaultEngine.id);
-  const [exhaust, setExhaust] = useState(1);
+  const [exhaust, setExhaust] = useState(0);
   const [forced, setForced] = useState(true);
   const [volume, setVolume] = useState(0.6);
   const [previousVolume, setPreviousVolume] = useState(0.6);
@@ -423,9 +419,6 @@ export function EngineSimulator({ locale }: { readonly locale: Locale }) {
       data-audio-ready={audioReady ? "true" : "false"}
     >
       <div className={styles.simIntro}>
-        <PendingLink className={styles.backLink} href="/knowledge">
-          <ArrowLeft aria-hidden size={17} /> {text.back}
-        </PendingLink>
         <p className={styles.eyebrow}>{text.kicker}</p>
         <h1 data-route-heading tabIndex={-1}>
           {text.title}

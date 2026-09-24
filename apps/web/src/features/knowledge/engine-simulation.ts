@@ -42,7 +42,7 @@ export function createEngineState(): EngineState {
     crankTime: 0,
     cutTime: 0,
     forcedInduction: true,
-    exhaust: 1,
+    exhaust: 0,
   };
 }
 

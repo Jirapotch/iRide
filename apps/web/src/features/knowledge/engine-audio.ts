@@ -64,7 +64,7 @@ export function buildAudioConfig(
   forcedInduction: boolean,
   volume: number,
 ) {
-  const pipe = exhaustProfiles[exhaust] ?? exhaustProfiles[1];
+  const pipe = exhaustProfiles[exhaust] ?? exhaustProfiles[0];
   const sound = engine.snd;
   return {
     n: engine.n,
