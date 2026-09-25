@@ -1872,9 +1872,10 @@ a {
   color: var(--muted-foreground);
   min-height: 3rem;
 }
-.ride-group-hero {
+.community-section-page > .ride-group-hero {
   display: grid;
   justify-items: start;
+  align-content: start;
   gap: 0.5rem;
   padding: clamp(1.25rem, 3vw, 2rem);
   border: 1px solid var(--border);
@@ -1901,6 +1902,10 @@ a {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  align-items: start;
+}
+.ride-group-panel .ant-empty {
+  margin-block: 0.75rem;
 }
 .ride-group-member-list,
 .ride-group-trip-list {
@@ -1911,9 +1916,15 @@ a {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  color: var(--foreground);
 }
 .ride-group-trip-list a {
   display: block;
+  color: var(--foreground);
+}
+.ride-group-member-list a:hover,
+.ride-group-trip-list a:hover {
+  color: var(--primary);
 }
 .ride-group-feed > h2 {
   margin-bottom: 1rem;

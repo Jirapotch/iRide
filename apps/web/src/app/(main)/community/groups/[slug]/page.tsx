@@ -93,7 +93,7 @@ export default async function RideGroupPage({
         </h1>
         <p>{group.description}</p>
         <Tag color="green">
-          {group.memberCount} {locale === "th" ? "สมาชิก" : "members"}
+          {group.memberCount} {locale === "th" ? "สมาชิก" : group.memberCount === 1 ? "member" : "members"}
         </Tag>
       </header>
       <div className="ride-group-membership">

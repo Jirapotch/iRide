@@ -64,7 +64,7 @@ export default async function GroupsPage({
               <PendingLink href={`/community/groups/${encodeURIComponent(group.slug)}`} key={group.id}>
                 <Card hoverable className="ride-group-card" title={group.name}>
                   <p>{group.description}</p>
-                  <Tag color="green">{group.memberCount} {locale === "th" ? "สมาชิก" : "members"}</Tag>
+                  <Tag color="green">{group.memberCount} {locale === "th" ? "สมาชิก" : group.memberCount === 1 ? "member" : "members"}</Tag>
                 </Card>
               </PendingLink>
             ))}
