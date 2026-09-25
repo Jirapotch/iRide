@@ -21,6 +21,33 @@ describe("destination-first trips", () => {
   it("accepts a destination without an origin or schedule", () => {
     expect(createEventSchema.safeParse(trip).success).toBe(true);
   });
+  it("accepts no vehicle restriction for a trip but still requires it for meetings", () => {
+    expect(
+      createEventSchema.safeParse({ ...trip, vehicleKinds: [] }).success,
+    ).toBe(true);
+    expect(
+      createEventSchema.safeParse({
+        ...trip,
+        kind: "meeting",
+        vehicleKinds: [],
+      }).success,
+    ).toBe(false);
+  });
+  it("accepts a separately planned return leg and rejects stops without its destination", () => {
+    const returnDestination = {
+      name: "บ้าน",
+      latitude: 13.7,
+      longitude: 100.5,
+    };
+    const returnStops = [{ name: "พักรถ", latitude: 16, longitude: 101 }];
+    expect(
+      createEventSchema.safeParse({ ...trip, returnDestination, returnStops })
+        .success,
+    ).toBe(true);
+    expect(createEventSchema.safeParse({ ...trip, returnStops }).success).toBe(
+      false,
+    );
+  });
   it("still requires an activity location and start time", () => {
     expect(
       createEventSchema.safeParse({ ...trip, kind: "meeting" }).success,

@@ -22,6 +22,23 @@ import {
   handleSearch,
 } from "../../lib/content";
 import {
+  handleGroupCollection,
+  handleGroupItem,
+  handleGroupMembership,
+  handleGroupsOptions,
+} from "../../lib/groups";
+import {
+  handleTripAnnouncement,
+  handleTripCompletion,
+  handleTripEngagement,
+  handleTripOptions,
+  handleTripParticipation,
+  handleTripRecap,
+  handleTripRecapEntries,
+  handleTripRecapEntry,
+  handleTripRecapPublish,
+} from "../../lib/trip-engagement";
+import {
   handleMediaComplete,
   handleMediaReauthorize,
   handleMediaOptions,
@@ -94,6 +111,11 @@ async function dispatch(request: Request, path: string): Promise<Response> {
       ? handleContentOptions(request)
       : handleContentCollection(request, "events");
   }
+  if (path === "/api/v1/groups") {
+    return options
+      ? handleGroupsOptions(request)
+      : handleGroupCollection(request);
+  }
   if (path === "/api/v1/explore") {
     return options ? handleContentOptions(request) : handleExplore(request);
   }
@@ -139,6 +161,18 @@ async function dispatch(request: Request, path: string): Promise<Response> {
       ? handleSocialOptions(request)
       : handleCommentsCollection(request, postComments);
   }
+  const groupMembership = match(path, /^\/api\/v1\/groups\/([^/]+)\/members$/);
+  if (groupMembership) {
+    return options
+      ? handleGroupsOptions(request)
+      : handleGroupMembership(request, groupMembership);
+  }
+  const group = match(path, /^\/api\/v1\/groups\/([^/]+)$/);
+  if (group) {
+    return options
+      ? handleGroupsOptions(request)
+      : handleGroupItem(request, group);
+  }
   const post = match(path, /^\/api\/v1\/posts\/([^/]+)$/);
   if (post) {
     return options
@@ -146,6 +180,62 @@ async function dispatch(request: Request, path: string): Promise<Response> {
       : handleContentItem(request, "posts", post);
   }
   const event = match(path, /^\/api\/v1\/events\/([^/]+)$/);
+  const tripEngagement = match(
+    path,
+    /^\/api\/v1\/events\/([^/]+)\/engagement$/,
+  );
+  if (tripEngagement)
+    return options
+      ? handleTripOptions(request)
+      : handleTripEngagement(request, tripEngagement);
+  const tripParticipation = match(
+    path,
+    /^\/api\/v1\/events\/([^/]+)\/participation$/,
+  );
+  if (tripParticipation)
+    return options
+      ? handleTripOptions(request)
+      : handleTripParticipation(request, tripParticipation);
+  const tripAnnouncement = match(
+    path,
+    /^\/api\/v1\/events\/([^/]+)\/announcements$/,
+  );
+  if (tripAnnouncement)
+    return options
+      ? handleTripOptions(request)
+      : handleTripAnnouncement(request, tripAnnouncement);
+  const tripCompletion = match(path, /^\/api\/v1\/events\/([^/]+)\/complete$/);
+  if (tripCompletion)
+    return options
+      ? handleTripOptions(request)
+      : handleTripCompletion(request, tripCompletion);
+  const tripRecap = match(path, /^\/api\/v1\/events\/([^/]+)\/recap$/);
+  if (tripRecap)
+    return options
+      ? handleTripOptions(request)
+      : handleTripRecap(request, tripRecap);
+  const tripRecapPublish = match(
+    path,
+    /^\/api\/v1\/events\/([^/]+)\/recap\/publish$/,
+  );
+  if (tripRecapPublish)
+    return options
+      ? handleTripOptions(request)
+      : handleTripRecapPublish(request, tripRecapPublish);
+  const tripRecapEntries = match(
+    path,
+    /^\/api\/v1\/events\/([^/]+)\/recap\/entries$/,
+  );
+  if (tripRecapEntries)
+    return options
+      ? handleTripOptions(request)
+      : handleTripRecapEntries(request, tripRecapEntries);
+  const tripRecapEntry =
+    /^\/api\/v1\/events\/([^/]+)\/recap\/entries\/([^/]+)$/.exec(path);
+  if (tripRecapEntry)
+    return options
+      ? handleTripOptions(request)
+      : handleTripRecapEntry(request, tripRecapEntry[1]!, tripRecapEntry[2]!);
   if (event) {
     return options
       ? handleContentOptions(request)

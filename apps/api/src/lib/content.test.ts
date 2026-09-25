@@ -18,7 +18,11 @@ import {
 } from "./content";
 
 const userId = "11111111-1111-4111-8111-111111111111";
-const author = { id: userId, username: "road_rider", displayName: "Road Rider" };
+const author = {
+  id: userId,
+  username: "road_rider",
+  displayName: "Road Rider",
+};
 const post: PostDto = {
   id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   body: "Sunday meetup",
@@ -80,18 +84,20 @@ describe("content API handlers", () => {
           authorization: "Bearer signed.jwt",
           "content-type": "application/json",
         },
-        body: JSON.stringify({ body: "  Sunday meetup  ", communityCategory: "motorcycle" }),
+        body: JSON.stringify({
+          body: "  Sunday meetup  ",
+          communityCategory: "motorcycle",
+        }),
       }),
       "posts",
       dependencies,
     );
 
     expect(response.status).toBe(201);
-    expect(repository.createPost).toHaveBeenCalledWith(
-      userId,
-      "signed.jwt",
-      { body: "Sunday meetup", communityCategory: "motorcycle" },
-    );
+    expect(repository.createPost).toHaveBeenCalledWith(userId, "signed.jwt", {
+      body: "Sunday meetup",
+      communityCategory: "motorcycle",
+    });
   });
 
   it("rejects malformed create input before calling the repository", async () => {
@@ -161,12 +167,28 @@ describe("content API handlers", () => {
     const id = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
     const responses = await Promise.all(
       (["posts", "events"] as const).map((domain) =>
-        handleContentItem(new Request(`http://localhost:3001/api/v1/${domain}/${id}`, { method: "DELETE", headers: { authorization: "Bearer signed.jwt" } }), domain, id, dependencies),
+        handleContentItem(
+          new Request(`http://localhost:3001/api/v1/${domain}/${id}`, {
+            method: "DELETE",
+            headers: { authorization: "Bearer signed.jwt" },
+          }),
+          domain,
+          id,
+          dependencies,
+        ),
       ),
     );
     expect(responses.map((response) => response.status)).toEqual([204, 204]);
-    expect(repository.deletePost).toHaveBeenCalledWith(userId, "signed.jwt", id);
-    expect(repository.deleteEvent).toHaveBeenCalledWith(userId, "signed.jwt", id);
+    expect(repository.deletePost).toHaveBeenCalledWith(
+      userId,
+      "signed.jwt",
+      id,
+    );
+    expect(repository.deleteEvent).toHaveBeenCalledWith(
+      userId,
+      "signed.jwt",
+      id,
+    );
   });
 
   it("maps missing and forbidden records to stable errors", async () => {
@@ -252,7 +274,7 @@ describe("content API handlers", () => {
       dependencies,
     );
     expect(response.status).toBe(200);
-    expect(repository.listPosts).toHaveBeenCalledWith(null, "car");
+    expect(repository.listPosts).toHaveBeenCalledWith(null, "car", undefined);
   });
 
   it("rejects an invalid community category", async () => {

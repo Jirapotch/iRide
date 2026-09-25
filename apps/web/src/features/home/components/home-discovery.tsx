@@ -27,6 +27,8 @@ const copy = {
     heroKicker: "COMMUNITY • ACTIVITIES",
     heroTitle: "ทุกเส้นทาง มีเรื่องราว",
     heroBody: "พบผู้คน และออกไปสร้างความทรงจำบนเส้นทางเดียวกัน",
+    heroCommunity: "สำรวจชุมชน",
+    heroActivities: "ดูกิจกรรม",
     hello: "สวัสดี",
     helloGuest: "ยินดีต้อนรับสู่ iRide",
     ready: "พร้อมออกไปสนุกกันหรือยัง?",
@@ -65,6 +67,8 @@ const copy = {
     heroKicker: "COMMUNITY • ACTIVITIES",
     heroTitle: "Every road has a story",
     heroBody: "Meet people, and create new memories along the same road.",
+    heroCommunity: "Explore community",
+    heroActivities: "View activities",
     hello: "Hello",
     helloGuest: "Welcome to iRide",
     ready: "Ready to enjoy the road?",
@@ -215,6 +219,10 @@ function Hero({
           {text.heroTitle}
         </h1>
         <p className={styles.heroBody}>{text.heroBody}</p>
+        <div className={styles.heroActions}>
+          <PendingLink href="/community">{text.heroCommunity}</PendingLink>
+          <PendingLink href="/activities">{text.heroActivities}</PendingLink>
+        </div>
         <div className={styles.welcomePanel}>
           <span>{name ? `${text.hello}, ${name}` : text.helloGuest}</span>
           <strong>{text.ready}</strong>

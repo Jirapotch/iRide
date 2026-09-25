@@ -7,6 +7,7 @@ import { ActivityHub } from "@/features/activities/components/activity-hub";
 import { captureData } from "@/lib/data-result";
 import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
 import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
+import { redirect } from "next/navigation";
 
 export default async function MapsPage({
   searchParams,
@@ -22,6 +23,9 @@ export default async function MapsPage({
     searchParams,
     getVerifiedWebSession().catch(() => null),
   ]);
+  if (params.marker && params.modal === "edit") {
+    redirect(`/activities/${encodeURIComponent(params.marker)}?modal=edit`);
+  }
   const accessToken = session?.accessToken;
   const selectedResult = params.marker
     ? await captureData(() => getEvent(params.marker as string, accessToken))

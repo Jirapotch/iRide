@@ -3,6 +3,7 @@ import type {
   CreateCommentInput,
   CreatePostInput,
   CreateVehicleInput,
+  CreateRideGroupInput,
   CommentDto,
   EventDto,
   ExploreFeatureDto,
@@ -15,6 +16,9 @@ import type {
   UpdateCommentInput,
   UpdateVehicleInput,
   VehicleDto,
+  RideGroupDto,
+  TripEngagementDto,
+  TripRecapDto,
 } from "@iride/types";
 
 export class ContentApiError extends Error {
@@ -30,15 +34,64 @@ export class ContentApiError extends Error {
 export function getPosts(
   accessToken?: string,
   communityCategory?: import("@iride/types").CommunityCategory,
+  groupId?: string,
 ) {
-  const query = communityCategory
-    ? `?communityCategory=${encodeURIComponent(communityCategory)}`
-    : "";
+  const params = new URLSearchParams();
+  if (communityCategory) params.set("communityCategory", communityCategory);
+  if (groupId) params.set("groupId", groupId);
+  const query = params.size ? `?${params.toString()}` : "";
   return contentGet<PostDto[]>(`/api/v1/posts${query}`, accessToken);
 }
 
 export function getEvents(accessToken?: string) {
   return contentGet<EventDto[]>("/api/v1/events", accessToken);
+}
+
+export function getRideGroups(accessToken?: string) {
+  return contentGet<RideGroupDto[]>("/api/v1/groups", accessToken);
+}
+export function getTripEngagement(id: string, accessToken?: string) {
+  return contentGet<TripEngagementDto>(
+    `/api/v1/events/${encodeURIComponent(id)}/engagement`,
+    accessToken,
+  );
+}
+export function getTripRecap(id: string, accessToken?: string) {
+  return contentGet<TripRecapDto>(
+    `/api/v1/events/${encodeURIComponent(id)}/recap`,
+    accessToken,
+  );
+}
+export function getRideGroup(slug: string, accessToken?: string) {
+  return contentGet<RideGroupDto>(
+    `/api/v1/groups/${encodeURIComponent(slug)}`,
+    accessToken,
+  );
+}
+export function createRideGroup(
+  accessToken: string,
+  input: CreateRideGroupInput,
+) {
+  return contentMutation<RideGroupDto>(
+    "/api/v1/groups",
+    accessToken,
+    "POST",
+    input,
+  );
+}
+export function joinRideGroup(accessToken: string, slug: string) {
+  return contentMutation<RideGroupDto>(
+    `/api/v1/groups/${encodeURIComponent(slug)}/members`,
+    accessToken,
+    "POST",
+    {},
+  );
+}
+export function leaveRideGroup(accessToken: string, slug: string) {
+  return contentDelete(
+    `/api/v1/groups/${encodeURIComponent(slug)}/members`,
+    accessToken,
+  );
 }
 
 export function getComments(postId: string, accessToken?: string) {

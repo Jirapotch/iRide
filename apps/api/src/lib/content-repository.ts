@@ -38,7 +38,7 @@ export function createContentRepository(
     });
 
   return {
-    async listPosts(viewerId, category) {
+    async listPosts(viewerId, category, groupId) {
       const viewer = await viewerCapabilities(admin, viewerId);
       let query = admin
         .from("posts")
@@ -46,6 +46,7 @@ export function createContentRepository(
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (category) query = query.eq("community_category", category);
+      if (groupId) query = query.eq("group_id", groupId);
       const { data, error } = await query.limit(50);
       ensureQuery(error);
       return postDtos(admin, data ?? [], viewer);
@@ -69,6 +70,7 @@ export function createContentRepository(
           post_body: input.body,
           marker_tags: (input.markerTags ?? []) as unknown as Json,
           post_community_category: input.communityCategory,
+          post_group_id: input.groupId ?? null,
         },
       );
       ensureWrite(error, id);
@@ -89,6 +91,7 @@ export function createContentRepository(
           post_body: input.body,
           marker_tags: (input.markerTags ?? []) as unknown as Json,
           post_community_category: input.communityCategory,
+          post_group_id: input.groupId ?? null,
         },
       );
       ensureWrite(error, savedId);
@@ -304,6 +307,18 @@ async function postDtos(
   );
   const postIds = rows.map((row) => row.id);
   const tags = await postMarkerTags(admin, postIds, viewer);
+  const groupIds = [
+    ...new Set(
+      rows.map((row) => row.group_id).filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const { data: groups, error: groupsError } = groupIds.length
+    ? await admin.from("ride_groups").select("id,slug").in("id", groupIds)
+    : { data: [], error: null };
+  ensureQuery(groupsError);
+  const groupSlugs = new Map(
+    (groups ?? []).map((group) => [group.id, group.slug]),
+  );
   const counts = new Map<string, number>();
   if (postIds.length) {
     const { data, error } = await admin
@@ -340,6 +355,10 @@ async function postDtos(
             id: row.id,
             body: row.body,
             communityCategory: row.community_category,
+            groupId: row.group_id,
+            groupSlug: row.group_id
+              ? (groupSlugs.get(row.group_id) ?? null)
+              : null,
             author,
             canEdit:
               viewer.canManage ||
@@ -438,6 +457,10 @@ async function eventDtos(
           {
             id: row.id,
             kind: row.kind,
+            tripStatus:
+              row.trip_status === "completed" ? "completed" : "planned",
+            completedAt: row.completed_at,
+            groupId: row.group_id,
             title: row.title,
             description: row.description,
             locationLabel: row.location_label,
@@ -450,6 +473,12 @@ async function eventDtos(
             endsAt: row.ends_at,
             stops: (row.stops ?? []) as unknown as NonNullable<
               EventDto["stops"]
+            >,
+            returnDestination: row.return_destination as unknown as NonNullable<
+              EventDto["returnDestination"]
+            > | null,
+            returnStops: (row.return_stops ?? []) as unknown as NonNullable<
+              EventDto["returnStops"]
             >,
             timezone: row.timezone,
             vehicleKinds: row.vehicle_kinds,
@@ -472,6 +501,7 @@ function eventWrite(
   return {
     ...extra,
     kind: input.kind,
+    group_id: input.groupId ?? null,
     title: input.title,
     description: input.description,
     location_label: input.locationLabel,
@@ -481,6 +511,10 @@ function eventWrite(
     destination_latitude: input.destinationLatitude ?? null,
     destination_longitude: input.destinationLongitude ?? null,
     stops: (input.stops ?? []).map((stop) => ({ ...stop })),
+    return_destination: input.returnDestination
+      ? { ...input.returnDestination }
+      : null,
+    return_stops: (input.returnStops ?? []).map((stop) => ({ ...stop })),
     starts_at: input.startsAt,
     ends_at: input.endsAt ?? null,
     timezone: input.timezone,
@@ -495,6 +529,7 @@ function mergeEvent(
 ): CreateEventInput {
   return {
     kind: input.kind ?? row.kind,
+    groupId: input.groupId === undefined ? row.group_id : input.groupId,
     title: input.title ?? row.title,
     description:
       input.description === undefined ? row.description : input.description,
@@ -520,6 +555,17 @@ function mergeEvent(
     stops:
       input.stops ??
       ((row.stops ?? []) as unknown as NonNullable<CreateEventInput["stops"]>),
+    returnDestination:
+      input.returnDestination === undefined
+        ? (row.return_destination as unknown as NonNullable<
+            CreateEventInput["returnDestination"]
+          > | null)
+        : input.returnDestination,
+    returnStops:
+      input.returnStops ??
+      ((row.return_stops ?? []) as unknown as NonNullable<
+        CreateEventInput["returnStops"]
+      >),
     endsAt: input.endsAt === undefined ? row.ends_at : input.endsAt,
     timezone: input.timezone ?? row.timezone,
     vehicleKinds: input.vehicleKinds ?? row.vehicle_kinds,
@@ -620,11 +666,25 @@ async function searchContent(
   if (types.includes("posts")) {
     const { data, error } = await admin
       .from("posts")
-      .select("id,body,author_id,community_category")
+      .select("id,body,author_id,community_category,group_id")
       .is("deleted_at", null)
       .ilike("body", pattern)
       .limit(8);
     ensureQuery(error);
+    const groupIds = [
+      ...new Set(
+        (data ?? [])
+          .map((row) => row.group_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const { data: groups, error: groupError } = groupIds.length
+      ? await admin.from("ride_groups").select("id,slug").in("id", groupIds)
+      : { data: [], error: null };
+    ensureQuery(groupError);
+    const groupSlugs = new Map(
+      (groups ?? []).map((group) => [group.id, group.slug]),
+    );
     const people = await authors(
       admin,
       (data ?? []).map((row) => row.author_id),
@@ -640,6 +700,9 @@ async function searchContent(
           subtitle: author.displayName,
           username: author.username,
           communityCategory: row.community_category,
+          groupSlug: row.group_id
+            ? (groupSlugs.get(row.group_id) ?? null)
+            : null,
         });
     }
   }

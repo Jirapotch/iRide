@@ -11,7 +11,13 @@ export interface ActivityFilters {
 }
 
 export interface ActivityRoutePoint {
-  readonly role: "location" | "start" | "stop" | "destination";
+  readonly role:
+    | "location"
+    | "start"
+    | "stop"
+    | "destination"
+    | "return-stop"
+    | "return-destination";
   readonly name: string;
   readonly latitude: number | null;
   readonly longitude: number | null;
@@ -105,6 +111,22 @@ export function routePointsForEvent(event: EventDto): ActivityRoutePoint[] {
       longitude: event.destinationLongitude,
     });
   }
+  if (event.returnDestination) {
+    points.push(
+      ...(event.returnStops ?? []).map((stop) => ({
+        role: "return-stop" as const,
+        name: stop.name,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
+      })),
+      {
+        role: "return-destination",
+        name: event.returnDestination.name,
+        latitude: event.returnDestination.latitude,
+        longitude: event.returnDestination.longitude,
+      },
+    );
+  }
   return points;
 }
 
@@ -113,9 +135,8 @@ export function coordinateRoutePointsForEvent(
 ): CoordinateActivityRoutePoint[] {
   return routePointsForEvent(event)
     .map((point, index) => ({ point, index }))
-    .filter(
-      (entry): entry is CoordinateActivityRoutePoint =>
-        hasCoordinates(entry.point.latitude, entry.point.longitude),
+    .filter((entry): entry is CoordinateActivityRoutePoint =>
+      hasCoordinates(entry.point.latitude, entry.point.longitude),
     );
 }
 

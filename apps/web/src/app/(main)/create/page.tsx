@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
-import { getEvents } from "@/lib/content-api";
+import { getEvents, getRideGroups } from "@/lib/content-api";
 import { getOwnProfile } from "@/lib/profile-api";
 import { communityCategories, type CommunityCategory } from "@iride/types";
 import {
@@ -42,7 +42,9 @@ export default async function CreatePage({
     ? (params.type as CreateContentType)
     : "post";
   if (!session)
-    redirect(`/login?next=${encodeURIComponent(`/create?type=${type}`)}`);
+    redirect(
+      `/login?next=${encodeURIComponent(`/create?type=${type}${params.category ? `&category=${encodeURIComponent(params.category)}` : ""}`)}`,
+    );
   if (params.edit) redirect(legacyEditRedirect(type, params.edit));
   const profile = await getOwnProfile(session.accessToken).catch(() => null);
   if (!profile?.canWrite) {
@@ -72,10 +74,12 @@ export default async function CreatePage({
   )
     ? (params.category as CommunityCategory)
     : "groups";
+  const groupOptions = await getRideGroups(session.accessToken).catch(() => []);
   return (
     <CreateMarkerOptionsProvider>
       <CreateContentScreen
         defaultCommunityCategory={category}
+        groupOptions={groupOptions.filter((group) => group.isMember)}
         initial={null}
         locale={locale}
         type={type}

@@ -4,7 +4,37 @@ import {
   isActivityMapOriginActive,
   mapStateHref,
   resolveBreadcrumbs,
+  searchResultHref,
+  communityComposeHref,
+  primaryNavigation,
 } from "./app-navigation-domain";
+
+it("opens activity search results on the detail page", () => {
+  expect(
+    searchResultHref({
+      id: "trip-1",
+      kind: "event",
+      title: "Mountain trip",
+      subtitle: "",
+      username: null,
+    }),
+  ).toBe("/activities/trip-1");
+});
+
+it("links a signed-in rider to the cached own-profile route", () => {
+  expect(
+    primaryNavigation("rider").find((item) => item.key === "profile")?.href,
+  ).toBe("/profile");
+});
+
+it("returns an unauthenticated writer to the same community with a composer", () => {
+  expect(communityComposeHref("motorcycle", false)).toBe(
+    "/login?next=%2Fcommunity%2Fmotorcycle%2Ftalk%3Fcompose%3D1",
+  );
+  expect(communityComposeHref("motorcycle", true)).toBe(
+    "/community/motorcycle/talk?compose=1",
+  );
+});
 
 describe("activity breadcrumbs", () => {
   it("describes list and detail routes", () => {

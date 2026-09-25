@@ -15,6 +15,7 @@ import type {
   MarkerTagInput,
   PostDto,
   VehicleKind,
+  RideGroupDto,
 } from "@iride/types";
 import * as maplibregl from "maplibre-gl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -52,12 +53,16 @@ export function BackendForm({
   initial,
   markerOptions = [],
   defaultCommunityCategory = "groups",
+  defaultGroupId = null,
+  groupOptions = [],
 }: {
   readonly locale: Locale;
   readonly type: CreateType;
   readonly initial: InitialContent;
   readonly markerOptions?: readonly MarkerOption[];
   readonly defaultCommunityCategory?: CommunityCategory;
+  readonly defaultGroupId?: string | null;
+  readonly groupOptions?: readonly RideGroupDto[];
 }) {
   const event = initial && "organizer" in initial ? initial : null;
   const post = initial && "body" in initial ? initial : null;
@@ -80,6 +85,7 @@ export function BackendForm({
           locale={locale}
           markerOptions={markerOptions}
           defaultCommunityCategory={defaultCommunityCategory}
+          defaultGroupId={defaultGroupId}
         />
       ) : null}
       {type === "activity" ? (
@@ -141,6 +147,26 @@ export function BackendForm({
         </>
       ) : null}
       {isTrip ? <TripFields event={event} locale={locale} /> : null}
+      {isTrip ? (
+        <Field
+          label={
+            locale === "th"
+              ? "กลุ่มที่จัดทริป (ไม่บังคับ)"
+              : "Group for this trip (optional)"
+          }
+        >
+          <select defaultValue={event?.groupId ?? ""} name="groupId">
+            <option value="">
+              {locale === "th" ? "ไม่ผูกกับกลุ่ม" : "No group"}
+            </option>
+            {groupOptions.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      ) : null}
       {type === "activity" || type === "trip" ? (
         <fieldset>
           <legend>
@@ -182,11 +208,13 @@ function PostFields({
   locale,
   markerOptions,
   defaultCommunityCategory,
+  defaultGroupId,
 }: {
   readonly initial: PostDto | null;
   readonly locale: Locale;
   readonly markerOptions: readonly MarkerOption[];
   readonly defaultCommunityCategory: CommunityCategory;
+  readonly defaultGroupId: string | null;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [body, setBody] = useState(initial?.body ?? "");
@@ -248,22 +276,37 @@ function PostFields({
   }
   return (
     <>
-      <Field label={locale === "th" ? "เลือกชุมชน" : "Community category"}>
-        <select
-          defaultValue={initial?.communityCategory ?? defaultCommunityCategory}
-          name="communityCategory"
-          required
-        >
-          <option value="car">{locale === "th" ? "รถยนต์" : "Cars"}</option>
-          <option value="motorcycle">
-            {locale === "th" ? "มอเตอร์ไซค์" : "Motorcycles"}
-          </option>
-          <option value="bicycle">
-            {locale === "th" ? "จักรยาน" : "Bicycles"}
-          </option>
-          <option value="groups">{locale === "th" ? "กลุ่ม" : "Groups"}</option>
-        </select>
-      </Field>
+      {defaultGroupId || initial?.groupId ? (
+        <>
+          <input name="communityCategory" type="hidden" value="groups" />
+          <input
+            name="groupId"
+            type="hidden"
+            value={initial?.groupId ?? defaultGroupId ?? ""}
+          />
+        </>
+      ) : (
+        <Field label={locale === "th" ? "เลือกชุมชน" : "Community category"}>
+          <select
+            defaultValue={
+              initial?.communityCategory ?? defaultCommunityCategory
+            }
+            name="communityCategory"
+            required
+          >
+            <option value="car">{locale === "th" ? "รถยนต์" : "Cars"}</option>
+            <option value="motorcycle">
+              {locale === "th" ? "มอเตอร์ไซค์" : "Motorcycles"}
+            </option>
+            <option value="bicycle">
+              {locale === "th" ? "จักรยาน" : "Bicycles"}
+            </option>
+            <option value="groups">
+              {locale === "th" ? "กลุ่ม" : "Groups"}
+            </option>
+          </select>
+        </Field>
+      )}
       <Field label={locale === "th" ? "ข้อความ" : "Post text"}>
         <div className="marker-mention-composer">
           <textarea

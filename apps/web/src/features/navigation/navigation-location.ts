@@ -38,6 +38,6 @@ export function isNavigationHrefActive(
   profile = false,
 ): boolean {
   if (href === "/") return pathname === "/";
-  if (profile) return pathname.startsWith("/users/");
+  if (profile) return pathname === "/profile" || pathname.startsWith("/users/");
   return pathname === href || pathname.startsWith(`${href}/`);
 }

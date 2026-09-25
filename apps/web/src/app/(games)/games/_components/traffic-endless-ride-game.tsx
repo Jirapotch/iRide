@@ -33,7 +33,7 @@ const copy = {
     controls:
       "A / D หรือ ← → เพื่อเลี้ยว • S / ↓ เพื่อเบรก • ลากซ้ายขวาบนหน้าจอสัมผัส",
     strategy:
-      "ยิ่งพาหนะช้า ยิ่งได้ตัวคูณคะแนนสูง — มอเตอร์ไซค์และจักรยานมุดระหว่างรถได้",
+      "ตัวคูณคะแนน: รถยนต์ ×1.0 รถสปอร์ต ×1.3 มอเตอร์ไซค์ ×1.6 จักรยาน ×0.8 — มอเตอร์ไซค์และจักรยานมุดระหว่างรถได้",
     score: "คะแนน",
     speed: "กม./ชม.",
     gameOver: "Game Over",
@@ -91,7 +91,7 @@ const copy = {
     controls:
       "Steer with A / D or ← → • Brake with S / ↓ • Drag left and right on touch screens",
     strategy:
-      "Slower rides earn a higher score multiplier — motorcycles and bicycles can split traffic.",
+      "Score multipliers: sedan ×1.0, sport car ×1.3, motorcycle ×1.6, bicycle ×0.8. Motorcycles and bicycles can split traffic.",
     score: "Score",
     speed: "KM/H",
     gameOver: "Game Over",

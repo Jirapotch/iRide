@@ -29,10 +29,7 @@ import { createContentRepository } from "./content-repository";
 
 export type ContentDomain = "posts" | "events";
 export type ExploreLayer = "events" | "trips";
-export type SearchType =
-  | "profiles"
-  | "posts"
-  | "events";
+export type SearchType = "profiles" | "posts" | "events";
 export interface ExploreBounds {
   readonly west: number;
   readonly south: number;
@@ -41,22 +38,68 @@ export interface ExploreBounds {
 }
 
 export interface ContentRepository {
-  readonly listPosts: (viewerId: string | null, category?: CommunityCategory) => Promise<PostDto[]>;
-  readonly getPost: (id: string, viewerId: string | null) => Promise<PostDto | null>;
-  readonly createPost: (userId: string, accessToken: string, input: CreatePostInput) => Promise<PostDto>;
-  readonly updatePost: (userId: string, accessToken: string, id: string, input: UpdatePostInput) => Promise<PostDto>;
-  readonly deletePost: (userId: string, accessToken: string, id: string) => Promise<void>;
+  readonly listPosts: (
+    viewerId: string | null,
+    category?: CommunityCategory,
+    groupId?: string,
+  ) => Promise<PostDto[]>;
+  readonly getPost: (
+    id: string,
+    viewerId: string | null,
+  ) => Promise<PostDto | null>;
+  readonly createPost: (
+    userId: string,
+    accessToken: string,
+    input: CreatePostInput,
+  ) => Promise<PostDto>;
+  readonly updatePost: (
+    userId: string,
+    accessToken: string,
+    id: string,
+    input: UpdatePostInput,
+  ) => Promise<PostDto>;
+  readonly deletePost: (
+    userId: string,
+    accessToken: string,
+    id: string,
+  ) => Promise<void>;
   readonly listEvents: (viewerId: string | null) => Promise<EventDto[]>;
-  readonly getEvent: (id: string, viewerId: string | null) => Promise<EventDto | null>;
-  readonly createEvent: (userId: string, accessToken: string, input: CreateEventInput) => Promise<EventDto>;
-  readonly updateEvent: (userId: string, accessToken: string, id: string, input: UpdateEventInput) => Promise<EventDto>;
-  readonly deleteEvent: (userId: string, accessToken: string, id: string) => Promise<void>;
-  readonly explore: (bounds: ExploreBounds, layers: ExploreLayer[], viewerId: string | null) => Promise<ExploreFeatureDto[]>;
-  readonly search: (query: string, types: SearchType[], viewerId: string | null) => Promise<SearchResultDto[]>;
+  readonly getEvent: (
+    id: string,
+    viewerId: string | null,
+  ) => Promise<EventDto | null>;
+  readonly createEvent: (
+    userId: string,
+    accessToken: string,
+    input: CreateEventInput,
+  ) => Promise<EventDto>;
+  readonly updateEvent: (
+    userId: string,
+    accessToken: string,
+    id: string,
+    input: UpdateEventInput,
+  ) => Promise<EventDto>;
+  readonly deleteEvent: (
+    userId: string,
+    accessToken: string,
+    id: string,
+  ) => Promise<void>;
+  readonly explore: (
+    bounds: ExploreBounds,
+    layers: ExploreLayer[],
+    viewerId: string | null,
+  ) => Promise<ExploreFeatureDto[]>;
+  readonly search: (
+    query: string,
+    types: SearchType[],
+    viewerId: string | null,
+  ) => Promise<SearchResultDto[]>;
 }
 
 export interface ContentDependencies {
-  readonly authenticate: (request: Pick<Request, "headers">) => Promise<AuthContext>;
+  readonly authenticate: (
+    request: Pick<Request, "headers">,
+  ) => Promise<AuthContext>;
   readonly repository: ContentRepository;
   readonly allowedOrigins?: string;
 }
@@ -87,15 +130,29 @@ export async function handleContentCollection(
   return withCors(request, dependencies, async () => {
     if (request.method === "GET") {
       const viewerId = await optionalViewer(request, dependencies);
-      const requestedCategory = new URL(request.url).searchParams.get("communityCategory");
-      if (domain === "posts" && requestedCategory && !communityCategories.includes(requestedCategory as CommunityCategory)) {
+      const requestedCategory = new URL(request.url).searchParams.get(
+        "communityCategory",
+      );
+      const requestedGroupId = new URL(request.url).searchParams.get("groupId");
+      if (requestedGroupId && !isUuid(requestedGroupId))
+        throw new ContentRequestError("CONTENT_VALIDATION_FAILED", 400);
+      if (
+        domain === "posts" &&
+        requestedCategory &&
+        !communityCategories.includes(requestedCategory as CommunityCategory)
+      ) {
         throw new ContentRequestError("CONTENT_VALIDATION_FAILED", 400);
       }
-      const data = domain === "posts"
-        ? requestedCategory
-          ? await dependencies.repository.listPosts(viewerId, requestedCategory as CommunityCategory)
-          : await dependencies.repository.listPosts(viewerId)
-        : await dependencies.repository.listEvents(viewerId);
+      const data =
+        domain === "posts"
+          ? requestedCategory
+            ? await dependencies.repository.listPosts(
+                viewerId,
+                requestedCategory as CommunityCategory,
+                requestedGroupId ?? undefined,
+              )
+            : await dependencies.repository.listPosts(viewerId)
+          : await dependencies.repository.listEvents(viewerId);
       return json({ data });
     }
     if (request.method !== "POST") return methodNotAllowed();
@@ -106,14 +163,26 @@ export async function handleContentCollection(
     if (domain === "posts") {
       const input = parseInput<CreatePostInput>(createPostSchema, body);
       return json(
-        { data: await dependencies.repository.createPost(userId, accessToken, input) },
+        {
+          data: await dependencies.repository.createPost(
+            userId,
+            accessToken,
+            input,
+          ),
+        },
         201,
       );
     }
     if (domain === "events") {
       const input = parseInput<CreateEventInput>(createEventSchema, body);
       return json(
-        { data: await dependencies.repository.createEvent(userId, accessToken, input) },
+        {
+          data: await dependencies.repository.createEvent(
+            userId,
+            accessToken,
+            input,
+          ),
+        },
         201,
       );
     }
@@ -131,9 +200,10 @@ export async function handleContentItem(
     if (!isUuid(id)) throw new ContentRequestError("CONTENT_NOT_FOUND", 404);
     if (request.method === "GET") {
       const viewerId = await optionalViewer(request, dependencies);
-      const data = domain === "posts"
-        ? await dependencies.repository.getPost(id, viewerId)
-        : await dependencies.repository.getEvent(id, viewerId);
+      const data =
+        domain === "posts"
+          ? await dependencies.repository.getPost(id, viewerId)
+          : await dependencies.repository.getEvent(id, viewerId);
       if (!data) throw new ContentRequestError("CONTENT_NOT_FOUND", 404);
       return json({ data });
     }
@@ -144,16 +214,29 @@ export async function handleContentItem(
     const { userId } = await dependencies.authenticate(request);
     const accessToken = parseBearerToken(request.headers.get("authorization"));
     if (request.method === "DELETE") {
-      if (domain === "posts") await dependencies.repository.deletePost(userId, accessToken, id);
-      else if (domain === "events") await dependencies.repository.deleteEvent(userId, accessToken, id);
+      if (domain === "posts")
+        await dependencies.repository.deletePost(userId, accessToken, id);
+      else if (domain === "events")
+        await dependencies.repository.deleteEvent(userId, accessToken, id);
       else await dependencies.repository.deleteEvent(userId, accessToken, id);
       return new Response(null, { status: 204 });
     }
 
     const body = await readJson(request);
-    const data = domain === "posts"
-      ? await dependencies.repository.updatePost(userId, accessToken, id, parseInput<UpdatePostInput>(updatePostSchema, body))
-      : await dependencies.repository.updateEvent(userId, accessToken, id, parseInput<UpdateEventInput>(updateEventSchema, body));
+    const data =
+      domain === "posts"
+        ? await dependencies.repository.updatePost(
+            userId,
+            accessToken,
+            id,
+            parseInput<UpdatePostInput>(updatePostSchema, body),
+          )
+        : await dependencies.repository.updateEvent(
+            userId,
+            accessToken,
+            id,
+            parseInput<UpdateEventInput>(updateEventSchema, body),
+          );
     return json({ data });
   });
 }
@@ -171,7 +254,9 @@ export async function handleExplore(
       ["events", "trips"],
     );
     const viewerId = await optionalViewer(request, dependencies);
-    return json({ data: await dependencies.repository.explore(bounds, layers, viewerId) });
+    return json({
+      data: await dependencies.repository.explore(bounds, layers, viewerId),
+    });
   });
 }
 
@@ -191,7 +276,9 @@ export async function handleSearch(
       ["profiles", "posts", "events"],
     );
     const viewerId = await optionalViewer(request, dependencies);
-    return json({ data: await dependencies.repository.search(query, types, viewerId) });
+    return json({
+      data: await dependencies.repository.search(query, types, viewerId),
+    });
   });
 }
 
@@ -205,7 +292,10 @@ export function handleContentOptions(
     "GET, POST, PATCH, DELETE, OPTIONS",
   );
   cors.headers.set("Cache-Control", "private, no-store");
-  return new Response(null, { status: cors.allowed ? 204 : 403, headers: cors.headers });
+  return new Response(null, {
+    status: cors.allowed ? 204 : 403,
+    headers: cors.headers,
+  });
 }
 
 async function withCors(
@@ -219,14 +309,21 @@ async function withCors(
     "GET, POST, PATCH, DELETE, OPTIONS",
   );
   cors.headers.set("Cache-Control", "private, no-store");
-  if (!cors.allowed) return errorResponse(new ContentRequestError("CONTENT_FORBIDDEN", 403), cors.headers);
+  if (!cors.allowed)
+    return errorResponse(
+      new ContentRequestError("CONTENT_FORBIDDEN", 403),
+      cors.headers,
+    );
   try {
     const response = await operation();
     cors.headers.forEach((value, key) => response.headers.set(key, value));
     return response;
   } catch (error) {
     if (error instanceof AuthenticationError) {
-      return Response.json(toAuthErrorBody(error), { status: error.status, headers: cors.headers });
+      return Response.json(toAuthErrorBody(error), {
+        status: error.status,
+        headers: cors.headers,
+      });
     }
     const normalized =
       error instanceof ContentRequestError
@@ -237,7 +334,9 @@ async function withCors(
               error.status as 400 | 403 | 404 | 503,
               { cause: error },
             )
-        : new ContentRequestError("CONTENT_UPDATE_FAILED", 503, { cause: error });
+          : new ContentRequestError("CONTENT_UPDATE_FAILED", 503, {
+              cause: error,
+            });
     return errorResponse(normalized, cors.headers);
   }
 }
@@ -258,10 +357,19 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
-function parseInput<T>(schema: { safeParse: (value: unknown) => { success: true; data: unknown } | { success: false } }, value: unknown): T {
+function parseInput<T>(
+  schema: {
+    safeParse: (
+      value: unknown,
+    ) => { success: true; data: unknown } | { success: false };
+  },
+  value: unknown,
+): T {
   const parsed = schema.safeParse(value);
-  if (!parsed.success) throw new ContentRequestError("CONTENT_VALIDATION_FAILED", 400);
-  if (typeof parsed.data !== "object" || parsed.data === null) return parsed.data as T;
+  if (!parsed.success)
+    throw new ContentRequestError("CONTENT_VALIDATION_FAILED", 400);
+  if (typeof parsed.data !== "object" || parsed.data === null)
+    return parsed.data as T;
   return Object.fromEntries(
     Object.entries(parsed.data).filter(([, item]) => item !== undefined),
   ) as T;
@@ -272,12 +380,21 @@ function parseBounds(value: string | null): ExploreBounds {
   if (
     values.length !== 4 ||
     values.some((item) => !Number.isFinite(item)) ||
-    values[0]! < -180 || values[2]! > 180 || values[1]! < -90 || values[3]! > 90 ||
-    values[0]! >= values[2]! || values[1]! >= values[3]!
+    values[0]! < -180 ||
+    values[2]! > 180 ||
+    values[1]! < -90 ||
+    values[3]! > 90 ||
+    values[0]! >= values[2]! ||
+    values[1]! >= values[3]!
   ) {
     throw new ContentRequestError("CONTENT_VALIDATION_FAILED", 400);
   }
-  return { west: values[0]!, south: values[1]!, east: values[2]!, north: values[3]! };
+  return {
+    west: values[0]!,
+    south: values[1]!,
+    east: values[2]!,
+    north: values[3]!,
+  };
 }
 
 function parseValues<T extends string>(
@@ -299,7 +416,9 @@ function json(body: unknown, status = 200): Response {
 
 function methodNotAllowed(): Response {
   return Response.json(
-    { error: { code: "METHOD_NOT_ALLOWED", message: "Method is not allowed." } },
+    {
+      error: { code: "METHOD_NOT_ALLOWED", message: "Method is not allowed." },
+    },
     { status: 405 },
   );
 }
@@ -312,7 +431,9 @@ function errorResponse(error: ContentRequestError, headers: Headers): Response {
 }
 
 function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }
 
 function isRepositoryError(
@@ -333,7 +454,9 @@ function productionDependencies(): ContentDependencies {
   const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   const configured = Boolean(supabaseUrl && publishableKey && serviceRoleKey);
-  const unavailable = async () => { throw new ContentRequestError("CONTENT_UNAVAILABLE", 503); };
+  const unavailable = async () => {
+    throw new ContentRequestError("CONTENT_UNAVAILABLE", 503);
+  };
   const repository = configured
     ? createContentRepository({
         url: supabaseUrl!,
@@ -343,10 +466,13 @@ function productionDependencies(): ContentDependencies {
     : (new Proxy({}, { get: () => unavailable }) as ContentRepository);
   return {
     authenticate(request) {
-      if (!supabaseUrl || !publishableKey) throw new AuthenticationError("AUTH_PROVIDER_ERROR");
+      if (!supabaseUrl || !publishableKey)
+        throw new AuthenticationError("AUTH_PROVIDER_ERROR");
       return authenticateRequest(request, { supabaseUrl, publishableKey });
     },
     repository,
-    ...(process.env.CORS_ALLOWED_ORIGINS ? { allowedOrigins: process.env.CORS_ALLOWED_ORIGINS } : {}),
+    ...(process.env.CORS_ALLOWED_ORIGINS
+      ? { allowedOrigins: process.env.CORS_ALLOWED_ORIGINS }
+      : {}),
   };
 }

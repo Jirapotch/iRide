@@ -1,6 +1,6 @@
 "use client";
 
-import type { CommunityCategory } from "@iride/types";
+import type { CommunityCategory, RideGroupDto } from "@iride/types";
 
 import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
 import { PendingLink } from "@/features/navigation/components/pending-link";
@@ -20,11 +20,13 @@ export function CreateContentScreen({
   type,
   initial,
   defaultCommunityCategory = "groups",
+  groupOptions = [],
 }: {
   readonly locale: Locale;
   readonly type: CreateType;
   readonly initial: InitialContent;
   readonly defaultCommunityCategory?: CommunityCategory;
+  readonly groupOptions?: readonly RideGroupDto[];
 }) {
   const { markerOptions, markerOptionsUnavailable } = useCreateMarkerOptions();
   const options: { type: CreateType; label: string }[] = [
@@ -77,6 +79,7 @@ export function CreateContentScreen({
         ) : null}
         <BackendForm
           defaultCommunityCategory={defaultCommunityCategory}
+          groupOptions={groupOptions}
           initial={initial}
           locale={locale}
           markerOptions={markerOptions}

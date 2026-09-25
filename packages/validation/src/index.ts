@@ -135,10 +135,18 @@ const markerTagSchema = z
   })
   .strict();
 
+export const createRideGroupSchema = z
+  .object({
+    name: requiredText(80).min(2),
+    description: z.string().trim().max(500),
+  })
+  .strict();
+
 export const createPostSchema = z
   .object({
     body: requiredText(2_000),
     communityCategory: z.enum(communityCategories),
+    groupId: z.uuid().nullable().optional(),
     markerTags: z.array(markerTagSchema).max(5).optional(),
   })
   .strict()
@@ -215,21 +223,58 @@ export const tripStopSchema = z
   .object({ name: requiredText(160), latitude, longitude })
   .strict();
 
+export const tripParticipationSchema = z
+  .object({
+    status: z.enum(["interested", "going"]),
+    vehicleId: z.uuid().nullable(),
+    ridingArea: nullableText(120),
+  })
+  .strict();
+
+export const tripAnnouncementSchema = z
+  .object({ body: requiredText(1_000) })
+  .strict();
+
+export const tripRecapSchema = z
+  .object({
+    summary: z.string().trim().max(4_000),
+    routePoints: z.array(tripStopSchema).max(20),
+  })
+  .strict();
+
+export const tripRecapEntrySchema = z
+  .object({
+    stopName: nullableText(160),
+    review: z.string().trim().max(2_000),
+    mediaIds: z
+      .array(z.uuid())
+      .max(8)
+      .refine((ids) => new Set(ids).size === ids.length),
+  })
+  .strict()
+  .refine(
+    (value) => Boolean(value.review || value.mediaIds.length),
+    "recap_entry_empty",
+  );
+
 const eventFields = {
   kind: z.enum(eventKinds),
+  groupId: z.uuid().nullable().optional(),
   title: requiredText(120),
   description: nullableText(2_000),
   locationLabel: requiredText(160).nullable(),
   latitude: latitude.nullable(),
   longitude: longitude.nullable(),
   stops: z.array(tripStopSchema).max(20).optional(),
+  returnDestination: tripStopSchema.nullable().optional(),
+  returnStops: z.array(tripStopSchema).max(20).optional(),
   destinationLabel: nullableText(160).optional(),
   destinationLatitude: latitude.nullable().optional(),
   destinationLongitude: longitude.nullable().optional(),
   startsAt: dateTime.nullable(),
   endsAt: dateTime.nullable().optional(),
   timezone,
-  vehicleKinds: z.array(z.enum(vehicleKinds)).min(1).max(vehicleKinds.length),
+  vehicleKinds: z.array(z.enum(vehicleKinds)).max(vehicleKinds.length),
 } as const;
 
 export const createEventSchema = z
@@ -260,6 +305,13 @@ function validateEvent(
 ) {
   validatePartialCoordinates(value, context);
   validateTimeRange(value, context);
+  if (value.kind !== "trip" && value.vehicleKinds.length === 0) {
+    context.addIssue({
+      code: "custom",
+      message: "activity_vehicle_required",
+      path: ["vehicleKinds"],
+    });
+  }
   if (
     value.kind !== "trip" &&
     (!value.locationLabel ||
@@ -289,6 +341,23 @@ function validateEvent(
       code: "custom",
       message: "stops_trip_only",
       path: ["stops"],
+    });
+  }
+  if (
+    value.kind !== "trip" &&
+    (value.returnDestination || value.returnStops?.length)
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "return_trip_only",
+      path: ["returnDestination"],
+    });
+  }
+  if (value.returnStops?.length && !value.returnDestination) {
+    context.addIssue({
+      code: "custom",
+      message: "return_destination_required",
+      path: ["returnDestination"],
     });
   }
   if (

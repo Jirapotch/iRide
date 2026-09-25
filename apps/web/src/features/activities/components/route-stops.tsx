@@ -40,9 +40,10 @@ export function RouteStops({
     <ol className={styles.routeStops}>
       {points.map((point, index) => {
         const stopNumber =
-          point.role === "stop"
-            ? points.slice(0, index + 1).filter(({ role }) => role === "stop")
-                .length
+          point.role === "stop" || point.role === "return-stop"
+            ? points
+                .slice(0, index + 1)
+                .filter(({ role }) => role === point.role).length
             : null;
         const href = googleMapsLocationUrl(point);
         const label =
@@ -54,33 +55,43 @@ export function RouteStops({
               ? locale === "th"
                 ? "จุดหมาย"
                 : "Destination"
-              : point.role === "location"
+              : point.role === "return-destination"
                 ? locale === "th"
-                  ? "สถานที่"
-                  : "Location"
-                : locale === "th"
-                  ? `จุดแวะ ${stopNumber}`
-                  : `Stop ${stopNumber}`;
+                  ? "จุดสิ้นสุดขากลับ"
+                  : "Return destination"
+                : point.role === "return-stop"
+                  ? locale === "th"
+                    ? `จุดแวะขากลับ ${stopNumber}`
+                    : `Return stop ${stopNumber}`
+                  : point.role === "location"
+                    ? locale === "th"
+                      ? "สถานที่"
+                      : "Location"
+                    : locale === "th"
+                      ? `จุดแวะ ${stopNumber}`
+                      : `Stop ${stopNumber}`;
         const Icon =
           point.role === "start"
             ? Play
-            : point.role === "destination"
+            : point.role === "destination" ||
+                point.role === "return-destination"
               ? FlagCheckered
               : MapPin;
         const markerContent =
-          point.role === "stop" ? (
+          point.role === "stop" || point.role === "return-stop" ? (
             stopNumber
           ) : (
             <Icon aria-hidden size={16} weight="fill" />
           );
         const canSelect =
-          onSelectPoint &&
-          point.latitude != null &&
-          point.longitude != null;
+          onSelectPoint && point.latitude != null && point.longitude != null;
         return (
           <li
             className={
-              point.role === "destination" ? "trip-destination" : undefined
+              point.role === "destination" ||
+              point.role === "return-destination"
+                ? "trip-destination"
+                : undefined
             }
             data-route-stop
             key={`${point.role}-${index}-${point.name}`}

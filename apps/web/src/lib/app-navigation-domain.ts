@@ -226,9 +226,7 @@ export function primaryNavigation(username: string | null) {
     { href: "/create", key: "create" as const },
     { href: "/search", key: "search" as const },
     {
-      href: username
-        ? `/users/${encodeURIComponent(username)}`
-        : "/login?intent=profile",
+      href: username ? "/profile" : "/login?intent=profile",
       key: "profile" as const,
     },
   ];
@@ -244,6 +242,16 @@ export function communityTalkHref(category: CommunityCategory): string {
     category === "bicycle"
     ? `/community/${category}/talk`
     : communityCategoryHref(category);
+}
+
+export function communityComposeHref(
+  category: CommunityCategory,
+  authenticated: boolean,
+): string {
+  const destination = `${communityTalkHref(category)}?compose=1`;
+  return authenticated
+    ? destination
+    : `/login?next=${encodeURIComponent(destination)}`;
 }
 
 export function legacyCommunityHref(
@@ -364,9 +372,13 @@ export function searchResultHref(result: SearchResultDto): string {
     return `/users/${encodeURIComponent(result.username)}`;
   }
   if (result.kind === "post") {
-    return `${communityTalkHref(result.communityCategory ?? "groups")}?post=${encodeURIComponent(result.id)}`;
+    const href =
+      result.communityCategory === "groups" && result.groupSlug
+        ? `/community/groups/${encodeURIComponent(result.groupSlug)}`
+        : communityTalkHref(result.communityCategory ?? "groups");
+    return `${href}?post=${encodeURIComponent(result.id)}`;
   }
-  return `/maps?marker=${encodeURIComponent(result.id)}`;
+  return `/activities/${encodeURIComponent(result.id)}`;
 }
 
 export function resolveTheme(

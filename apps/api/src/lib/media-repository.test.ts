@@ -18,7 +18,9 @@ function query(data: unknown) {
     eq: () => result,
     is: () => result,
     in: () => result,
+    contains: () => result,
     or: () => result,
+    not: () => result,
     limit: () => result,
     maybeSingle: () => result,
   });

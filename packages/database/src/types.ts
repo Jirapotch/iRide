@@ -157,7 +157,12 @@ export type Database = {
       };
       events: {
         Row: {
+          trip_status: string;
+          completed_at: string | null;
+          group_id: string | null;
           stops: Json;
+          return_destination: Json | null;
+          return_stops: Json;
           created_at: string;
           deleted_at: string | null;
           description: string | null;
@@ -180,7 +185,12 @@ export type Database = {
           vehicle_kinds: Database["public"]["Enums"]["vehicle_kind"][];
         };
         Insert: {
+          trip_status?: string;
+          completed_at?: string | null;
+          group_id?: string | null;
           stops?: Json;
+          return_destination?: Json | null;
+          return_stops?: Json;
           created_at?: string;
           deleted_at?: string | null;
           description?: string | null;
@@ -203,7 +213,12 @@ export type Database = {
           vehicle_kinds: Database["public"]["Enums"]["vehicle_kind"][];
         };
         Update: {
+          trip_status?: string;
+          completed_at?: string | null;
+          group_id?: string | null;
           stops?: Json;
+          return_destination?: Json | null;
+          return_stops?: Json;
           created_at?: string;
           deleted_at?: string | null;
           description?: string | null;
@@ -380,8 +395,239 @@ export type Database = {
           },
         ];
       };
+      ride_groups: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          description: string;
+          creator_id: string | null;
+          is_system: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          description?: string;
+          creator_id?: string | null;
+          is_system?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          name?: string;
+          description?: string;
+          creator_id?: string | null;
+          is_system?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ride_groups_creator_id_fkey";
+            columns: ["creator_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ride_group_members: {
+        Row: { group_id: string; user_id: string; joined_at: string };
+        Insert: { group_id: string; user_id: string; joined_at?: string };
+        Update: { group_id?: string; user_id?: string; joined_at?: string };
+        Relationships: [
+          {
+            foreignKeyName: "ride_group_members_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "ride_groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ride_group_members_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      trip_participations: {
+        Row: {
+          event_id: string;
+          user_id: string;
+          status: string;
+          vehicle_id: string | null;
+          riding_area: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          event_id: string;
+          user_id: string;
+          status: string;
+          vehicle_id?: string | null;
+          riding_area?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          event_id?: string;
+          user_id?: string;
+          status?: string;
+          vehicle_id?: string | null;
+          riding_area?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "trip_participations_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "trip_participations_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "trip_participations_vehicle_id_fkey";
+            columns: ["vehicle_id"];
+            isOneToOne: false;
+            referencedRelation: "vehicles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      trip_announcements: {
+        Row: {
+          id: string;
+          event_id: string;
+          author_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          author_id: string;
+          body: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          author_id?: string;
+          body?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "trip_announcements_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "trip_announcements_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      trip_recaps: {
+        Row: {
+          event_id: string;
+          summary: string;
+          route_points: Json;
+          published_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          event_id: string;
+          summary?: string;
+          route_points?: Json;
+          published_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          event_id?: string;
+          summary?: string;
+          route_points?: Json;
+          published_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "trip_recaps_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: true;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      trip_recap_entries: {
+        Row: {
+          id: string;
+          event_id: string;
+          author_id: string;
+          stop_name: string | null;
+          review: string;
+          media_ids: string[];
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          author_id: string;
+          stop_name?: string | null;
+          review?: string;
+          media_ids?: string[];
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          author_id?: string;
+          stop_name?: string | null;
+          review?: string;
+          media_ids?: string[];
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "trip_recap_entries_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "trip_recap_entries_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       posts: {
         Row: {
+          group_id: string | null;
           author_id: string;
           body: string;
           community_category: Database["public"]["Enums"]["community_category"];
@@ -391,6 +637,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          group_id?: string | null;
           author_id: string;
           body: string;
           community_category: Database["public"]["Enums"]["community_category"];
@@ -400,6 +647,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          group_id?: string | null;
           author_id?: string;
           body?: string;
           community_category?: Database["public"]["Enums"]["community_category"];
@@ -715,6 +963,7 @@ export type Database = {
           marker_tags: Json;
           post_body: string;
           post_community_category: Database["public"]["Enums"]["community_category"];
+          post_group_id: string | null;
           target_post_id: string;
         };
         Returns: string;
@@ -733,7 +982,7 @@ export type Database = {
       account_status: "locked" | "active" | "suspended";
       community_category: "car" | "motorcycle" | "bicycle" | "groups";
       event_kind: "meeting" | "event" | "trip";
-      media_purpose: "avatar" | "cover" | "vehicle";
+      media_purpose: "avatar" | "cover" | "vehicle" | "trip_recap";
       media_status: "uploading" | "processing" | "ready" | "failed" | "deleted";
       media_variant_kind: "thumbnail" | "preview";
       profile_visibility: "public" | "followers" | "private";
@@ -870,7 +1119,7 @@ export const Constants = {
       account_status: ["locked", "active", "suspended"],
       community_category: ["car", "motorcycle", "bicycle", "groups"],
       event_kind: ["meeting", "event", "trip"],
-      media_purpose: ["avatar", "cover", "vehicle"],
+      media_purpose: ["avatar", "cover", "vehicle", "trip_recap"],
       media_status: ["uploading", "processing", "ready", "failed", "deleted"],
       media_variant_kind: ["thumbnail", "preview"],
       profile_visibility: ["public", "followers", "private"],

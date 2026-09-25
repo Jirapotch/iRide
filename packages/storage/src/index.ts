@@ -42,6 +42,10 @@ export const variantSpecs: Readonly<
     { kind: "thumbnail", width: 480, height: 320, fit: "cover" },
     { kind: "preview", width: 1280, height: 960, fit: "inside" },
   ],
+  trip_recap: [
+    { kind: "thumbnail", width: 480, height: 320, fit: "cover" },
+    { kind: "preview", width: 1280, height: 960, fit: "inside" },
+  ],
 };
 
 export function mediaObjectKey(

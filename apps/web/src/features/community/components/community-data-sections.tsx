@@ -75,7 +75,11 @@ export async function CommunityEditRegion({
   category,
   locale,
   postId,
-}: Omit<CommunitySectionProps, "room"> & { readonly postId: string }) {
+  returnHref,
+}: Omit<CommunitySectionProps, "room"> & {
+  readonly postId: string;
+  readonly returnHref?: string;
+}) {
   const result = await captureData(() =>
     Promise.all([getPost(postId, accessToken), getEvents(accessToken)]),
   );
@@ -108,7 +112,7 @@ export async function CommunityEditRegion({
 
   return (
     <EditModal
-      closeUrl={`${communityTalkHref(category)}?post=${post.id}`}
+      closeUrl={`${returnHref ?? communityTalkHref(category)}?post=${post.id}`}
       title={locale === "th" ? "แก้ไขโพสต์" : "Edit post"}
     >
       <BackendForm

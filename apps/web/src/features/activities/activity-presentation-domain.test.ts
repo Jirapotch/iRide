@@ -117,6 +117,25 @@ it("orders trip route points from start through stops to destination", () => {
   ]);
 });
 
+it("appends a separately planned return leg after the outbound destination", () => {
+  const points = routePointsForEvent(
+    event({
+      kind: "trip",
+      destinationLabel: "Mountain",
+      destinationLatitude: 18,
+      destinationLongitude: 99,
+      returnStops: [{ name: "Cafe", latitude: 17, longitude: 100 }],
+      returnDestination: { name: "Home", latitude: 13, longitude: 100 },
+    }),
+  );
+  expect(points.map(({ name }) => name)).toEqual([
+    "Bangkok",
+    "Mountain",
+    "Cafe",
+    "Home",
+  ]);
+});
+
 it("projects a vertical route north-up without inventing horizontal spread", () => {
   expect(
     projectRoutePoints([

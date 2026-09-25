@@ -15,6 +15,8 @@ import type { Locale } from "@/lib/locale";
 
 import { MediaUploader } from "./media-uploader";
 import { ProfileTabController } from "./profile-tab-controller";
+import { invalidateOwnProfile } from "../profile-cache.slice";
+import { useAppDispatch } from "@/store/hooks";
 
 interface Props {
   readonly initialTab?: string;
@@ -32,6 +34,7 @@ export function UserProfileScreen({
   tabContent,
 }: Props) {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [editing, setEditing] = useState(false);
   const initials = profile.displayName.slice(0, 2).toUpperCase();
   const text =
@@ -61,6 +64,7 @@ export function UserProfileScreen({
 
   async function attach(kind: "avatar" | "cover", id: string) {
     await attachProfileMediaAction(kind, id);
+    dispatch(invalidateOwnProfile());
     router.refresh();
   }
 
@@ -100,7 +104,10 @@ export function UserProfileScreen({
           )}
         </div>
         {editing && ownerProfile ? (
-          <section className="profile-inline-editor">
+          <section
+            className="profile-inline-editor"
+            onSubmitCapture={() => dispatch(invalidateOwnProfile())}
+          >
             <div className="section-heading">
               <div>
                 <p className="premium-kicker">{text.profile}</p>

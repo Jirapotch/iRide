@@ -97,6 +97,23 @@ export const communityCategories = [
 ] as const;
 export type CommunityCategory = (typeof communityCategories)[number];
 
+export interface RideGroupDto {
+  readonly id: string;
+  readonly slug: string;
+  readonly name: string;
+  readonly description: string;
+  readonly creatorId: string | null;
+  readonly memberCount: number;
+  readonly isMember: boolean;
+  readonly members: readonly ContentAuthorDto[];
+  readonly createdAt: string;
+}
+
+export interface CreateRideGroupInput {
+  readonly name: string;
+  readonly description: string;
+}
+
 export interface ContentAuthorDto {
   readonly id: string;
   readonly username: string;
@@ -107,6 +124,8 @@ export interface PostDto {
   readonly id: string;
   readonly body: string;
   readonly communityCategory: CommunityCategory;
+  readonly groupId?: string | null;
+  readonly groupSlug?: string | null;
   readonly author: ContentAuthorDto;
   readonly canEdit: boolean;
   readonly commentCount: number;
@@ -118,6 +137,7 @@ export interface PostDto {
 export interface CreatePostInput {
   readonly body: string;
   readonly communityCategory: CommunityCategory;
+  readonly groupId?: string | null;
   readonly markerTags?: readonly MarkerTagInput[];
 }
 
@@ -167,6 +187,7 @@ export interface TripStop {
 export interface EventDto {
   readonly id: string;
   readonly kind: EventKind;
+  readonly groupId?: string | null;
   readonly title: string;
   readonly description: string | null;
   readonly locationLabel: string | null;
@@ -184,10 +205,57 @@ export interface EventDto {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly stops?: readonly TripStop[];
+  readonly returnDestination?: TripStop | null;
+  readonly returnStops?: readonly TripStop[];
+  readonly tripStatus?: "planned" | "completed";
+  readonly completedAt?: string | null;
+}
+
+export type TripParticipationStatus = "interested" | "going";
+export interface TripParticipationDto {
+  readonly user: ContentAuthorDto;
+  readonly status: TripParticipationStatus;
+  readonly vehicle: {
+    readonly id: string;
+    readonly label: string;
+    readonly kind: VehicleKind;
+  } | null;
+  readonly ridingArea: string | null;
+}
+export interface TripAnnouncementDto {
+  readonly id: string;
+  readonly body: string;
+  readonly createdAt: string;
+}
+export interface TripRecapEntryDto {
+  readonly id: string;
+  readonly author: ContentAuthorDto;
+  readonly stopName: string | null;
+  readonly review: string;
+  readonly mediaIds: readonly string[];
+  readonly createdAt: string;
+}
+export interface TripRecapDto {
+  readonly summary: string;
+  readonly routePoints: readonly TripStop[];
+  readonly publishedAt: string | null;
+  readonly entries: readonly TripRecapEntryDto[];
+}
+export interface TripEngagementDto {
+  readonly eventId: string;
+  readonly status: "planned" | "completed";
+  readonly completedAt: string | null;
+  readonly canOrganize: boolean;
+  readonly canContribute: boolean;
+  readonly viewerStatus: TripParticipationStatus | null;
+  readonly participants: readonly TripParticipationDto[];
+  readonly announcements: readonly TripAnnouncementDto[];
+  readonly recap: TripRecapDto | null;
 }
 
 export interface CreateEventInput {
   readonly kind: EventKind;
+  readonly groupId?: string | null;
   readonly title: string;
   readonly description: string | null;
   readonly locationLabel: string | null;
@@ -201,6 +269,8 @@ export interface CreateEventInput {
   readonly timezone: string;
   readonly vehicleKinds: readonly VehicleKind[];
   readonly stops?: readonly TripStop[];
+  readonly returnDestination?: TripStop | null;
+  readonly returnStops?: readonly TripStop[];
 }
 
 export type UpdateEventInput = Partial<CreateEventInput>;
@@ -239,7 +309,12 @@ export interface CreateVehicleInput {
 
 export type UpdateVehicleInput = Partial<CreateVehicleInput>;
 
-export const mediaPurposes = ["avatar", "cover", "vehicle"] as const;
+export const mediaPurposes = [
+  "avatar",
+  "cover",
+  "vehicle",
+  "trip_recap",
+] as const;
 export type MediaPurpose = (typeof mediaPurposes)[number];
 export const mediaStatuses = [
   "uploading",
@@ -300,4 +375,5 @@ export interface SearchResultDto {
   readonly subtitle: string;
   readonly username: string | null;
   readonly communityCategory?: CommunityCategory;
+  readonly groupSlug?: string | null;
 }

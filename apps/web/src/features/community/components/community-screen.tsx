@@ -9,7 +9,10 @@ import type {
 
 import { removeContent } from "@/app/(main)/create/actions";
 import type { CommunityRoomId } from "@/lib/app-navigation-domain";
-import { communityTalkHref } from "@/lib/app-navigation-domain";
+import {
+  communityComposeHref,
+  communityTalkHref,
+} from "@/lib/app-navigation-domain";
 import type { Locale } from "@/lib/locale";
 
 import { CommentThread } from "./comment-thread";
@@ -24,6 +27,9 @@ interface Props {
   readonly room: CommunityRoomId;
   readonly viewer: ContentAuthorDto | null;
   readonly category: CommunityCategory;
+  readonly groupId?: string;
+  readonly groupSlug?: string;
+  readonly isMember?: boolean;
 }
 
 export function CommunityScreen({
@@ -34,8 +40,13 @@ export function CommunityScreen({
   room,
   viewer,
   category,
+  groupId,
+  groupSlug,
+  isMember = true,
 }: Props) {
-  const talkHref = communityTalkHref(category);
+  const talkHref = groupSlug
+    ? `/community/groups/${encodeURIComponent(groupSlug)}`
+    : communityTalkHref(category);
   return room === "talk" || room === "groups" ? (
     <TalkRoom
       authenticated={authenticated}
@@ -44,6 +55,8 @@ export function CommunityScreen({
       locale={locale}
       posts={posts}
       talkHref={talkHref}
+      {...(groupId ? { groupId } : {})}
+      isMember={isMember}
       viewer={viewer}
     />
   ) : null;
@@ -56,6 +69,8 @@ function TalkRoom({
   locale,
   posts,
   talkHref,
+  groupId,
+  isMember,
   viewer,
 }: {
   readonly authenticated: boolean;
@@ -64,14 +79,20 @@ function TalkRoom({
   readonly locale: Locale;
   readonly posts: readonly PostDto[];
   readonly talkHref: string;
+  readonly groupId?: string;
+  readonly isMember: boolean;
   readonly viewer: ContentAuthorDto | null;
 }) {
   return (
     <section className="community-feed">
-      {canWrite ? (
+      {canWrite && isMember ? (
         <PendingLink
           className="community-create-link"
-          href={`/create?type=post&category=${category}`}
+          href={
+            groupId
+              ? `${talkHref}?compose=1`
+              : `/create?type=post&category=${category}`
+          }
         >
           + {locale === "th" ? "เขียนโพสต์" : "Write a post"}
         </PendingLink>
@@ -105,6 +126,7 @@ function TalkRoom({
                     domain: "posts",
                     id: post.id,
                     communityCategory: post.communityCategory,
+                    groupSlug: post.groupSlug ?? "",
                   }}
                   locale={locale}
                 />
@@ -159,6 +181,27 @@ function TalkRoom({
               ? "ยังไม่มีโพสต์ เริ่มบทสนทนาแรกได้เลย"
               : "No posts yet. Start the first conversation."}
           </strong>
+          {(!authenticated || canWrite) && (isMember || !authenticated) ? (
+            <PendingLink
+              className="community-create-link"
+              href={
+                groupId
+                  ? authenticated
+                    ? `${talkHref}?compose=1`
+                    : `/login?next=${encodeURIComponent(`${talkHref}?compose=1`)}`
+                  : communityComposeHref(category, authenticated)
+              }
+            >
+              {locale === "th" ? "เขียนโพสต์แรก" : "Write the first post"}
+            </PendingLink>
+          ) : null}
+          {authenticated && !isMember ? (
+            <p>
+              {locale === "th"
+                ? "เข้าร่วมกลุ่มเพื่อเริ่มโพสต์"
+                : "Join this group to start posting."}
+            </p>
+          ) : null}
         </div>
       )}
     </section>

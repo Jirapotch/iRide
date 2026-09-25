@@ -272,6 +272,7 @@ export function TripFields({
           })),
         )}
       />
+      <ReturnRouteFields event={event} locale={locale} />
       <details
         className="trip-options"
         open={Boolean(event?.description || event?.startsAt || event?.endsAt)}
@@ -307,6 +308,181 @@ export function TripFields({
         </label>
       </details>
     </div>
+  );
+}
+
+function ReturnRouteFields({
+  event,
+  locale,
+}: {
+  event: EventDto | null;
+  locale: Locale;
+}) {
+  const th = locale === "th";
+  const [destination, setDestination] = useState<Point | null>(() =>
+    event?.returnDestination
+      ? { ...event.returnDestination, id: "return-destination" }
+      : null,
+  );
+  const [stops, setStops] = useState<Point[]>(() =>
+    (event?.returnStops ?? []).map((stop, index) => ({
+      ...stop,
+      id: `return-stop-${index}`,
+    })),
+  );
+  const nextId = useRef(stops.length);
+  const [activeId, setActiveId] = useState("return-destination");
+  const active =
+    [destination, ...stops].find((point) => point?.id === activeId) ??
+    destination;
+  function update(id: string, changes: Partial<Point>) {
+    if (id === "return-destination") {
+      setDestination((point) => (point ? { ...point, ...changes } : null));
+    } else {
+      setStops((points) =>
+        points.map((point) =>
+          point.id === id ? { ...point, ...changes } : point,
+        ),
+      );
+    }
+  }
+  return (
+    <section
+      className="trip-options"
+      aria-label={th ? "เส้นทางกลับ" : "Return route"}
+    >
+      <div className="trip-section-heading">
+        <h2>{th ? "เส้นทางกลับ (ไม่บังคับ)" : "Return route (optional)"}</h2>
+        <p>
+          {th
+            ? "กำหนดจุดแวะและจุดสิ้นสุดของขากลับได้เอง"
+            : "Choose separate stops and a final point for the way back."}
+        </p>
+      </div>
+      {!destination ? (
+        <button
+          className="secondary-action"
+          type="button"
+          onClick={() => setDestination(emptyPoint("return-destination"))}
+        >
+          + {th ? "เพิ่มเส้นทางกลับ" : "Add return route"}
+        </button>
+      ) : (
+        <>
+          <button
+            className="secondary-action"
+            type="button"
+            onClick={() => {
+              setDestination(null);
+              setStops([]);
+            }}
+          >
+            {th ? "นำเส้นทางกลับออก" : "Remove return route"}
+          </button>
+          {[...stops, destination].map((point, index) => (
+            <div
+              className={`trip-place-card ${active?.id === point.id ? "is-active" : ""}`}
+              key={point.id}
+            >
+              <div className="trip-place-heading">
+                <strong>
+                  {point.id === "return-destination"
+                    ? th
+                      ? "จุดสิ้นสุดขากลับ *"
+                      : "Return destination *"
+                    : th
+                      ? `จุดแวะขากลับ ${index + 1}`
+                      : `Return stop ${index + 1}`}
+                </strong>
+                {point.id !== "return-destination" ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setStops((items) =>
+                        items.filter((item) => item.id !== point.id),
+                      )
+                    }
+                  >
+                    {th ? "นำออก" : "Remove"}
+                  </button>
+                ) : null}
+              </div>
+              <PointName
+                point={point}
+                locale={locale}
+                label={th ? "ชื่อสถานที่ขากลับ" : "Return place name"}
+                onChange={(name) => update(point.id, { name })}
+                onInvalid={() => setActiveId(point.id)}
+              />
+              <button
+                type="button"
+                className="trip-select-place"
+                aria-pressed={active?.id === point.id}
+                onClick={() => setActiveId(point.id)}
+              >
+                {complete(point)
+                  ? th
+                    ? "✓ เลือกพิกัดแล้ว · ปรับบนแผนที่"
+                    : "✓ Location selected · Adjust on map"
+                  : th
+                    ? "เลือกบนแผนที่"
+                    : "Choose on map"}
+              </button>
+            </div>
+          ))}
+          <button
+            className="secondary-action"
+            disabled={stops.length >= 20}
+            type="button"
+            onClick={() => {
+              const point = emptyPoint(`return-stop-${nextId.current++}`);
+              setStops((items) => [...items, point]);
+              setActiveId(point.id);
+            }}
+          >
+            + {th ? "เพิ่มจุดแวะขากลับ" : "Add return stop"} ({stops.length}/20)
+          </button>
+          {active ? (
+            <div className="trip-map-editor">
+              <CoordinatePicker
+                locale={locale}
+                selected={complete(active)}
+                coordinates={{
+                  latitude: active.latitude ?? 13.7563,
+                  longitude: active.longitude ?? 100.5018,
+                }}
+                onChange={(point) => update(active.id, point)}
+                onImportName={(name) => update(active.id, { name })}
+              />
+            </div>
+          ) : null}
+        </>
+      )}
+      <input
+        type="hidden"
+        name="returnDestination"
+        value={
+          destination && complete(destination)
+            ? JSON.stringify({
+                name: destination.name,
+                latitude: destination.latitude,
+                longitude: destination.longitude,
+              })
+            : ""
+        }
+      />
+      <input
+        type="hidden"
+        name="returnStops"
+        value={JSON.stringify(
+          stops.map(({ name, latitude, longitude }) => ({
+            name,
+            latitude,
+            longitude,
+          })),
+        )}
+      />
+    </section>
   );
 }
 

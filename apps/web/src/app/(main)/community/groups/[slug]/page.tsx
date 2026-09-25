@@ -1,0 +1,208 @@
+import { notFound } from "next/navigation";
+import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
+import { PendingLink } from "@/features/navigation/components/pending-link";
+import { CommunityScreen } from "@/features/community/components/community-screen";
+import { CommunityEditRegion } from "@/features/community/components/community-data-sections";
+import { BackendForm } from "@/features/content/components/content-editor-form";
+import { EditModal } from "@/features/content/components/edit-modal";
+import { SectionError } from "@/features/errors/components/section-error";
+import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
+import { getVerifiedWebSession } from "@/lib/auth-session";
+import { getEvents, getPosts, getRideGroup } from "@/lib/content-api";
+import { captureData } from "@/lib/data-result";
+import { getOwnProfile } from "@/lib/profile-api";
+import { getRequestLocale } from "@/lib/request-locale";
+import { joinGroupAction, leaveGroupAction } from "../actions";
+
+export default async function RideGroupPage({
+  params,
+  searchParams,
+}: {
+  readonly params: Promise<{ slug: string }>;
+  readonly searchParams: Promise<{
+    compose?: string;
+    post?: string;
+    modal?: string;
+  }>;
+}) {
+  const [{ slug }, query, locale, session] = await Promise.all([
+    params,
+    searchParams,
+    getRequestLocale(),
+    getVerifiedWebSession().catch(() => null),
+  ]);
+  const groupResult = await captureData(() =>
+    getRideGroup(slug, session?.accessToken),
+  );
+  if (
+    groupResult.status === "error" &&
+    groupResult.error.category === "not-found"
+  )
+    notFound();
+  if (groupResult.status === "error")
+    return (
+      <main className="community-section-page">
+        <SectionError
+          category={groupResult.error.category}
+          message={
+            locale === "th" ? "โหลดกลุ่มไม่ได้" : "Could not load this group."
+          }
+          retryLabel={locale === "th" ? "ลองอีกครั้ง" : "Retry"}
+          title={locale === "th" ? "กลุ่มไม่พร้อมใช้งาน" : "Group unavailable"}
+        />
+      </main>
+    );
+  const group = groupResult.data;
+  const href = `/community/groups/${encodeURIComponent(group.slug)}`;
+  const [feedResult, activitiesResult, profile] = await Promise.all([
+    captureData(() => getPosts(session?.accessToken, "groups", group.id)),
+    captureData(() => getEvents(session?.accessToken)),
+    session ? getOwnProfile(session.accessToken).catch(() => null) : null,
+  ]);
+  const viewer =
+    profile?.id && profile.username && profile.displayName
+      ? {
+          id: profile.id,
+          username: profile.username,
+          displayName: profile.displayName,
+        }
+      : null;
+  const trips =
+    activitiesResult.status === "success"
+      ? activitiesResult.data.filter(
+          (event) => event.kind === "trip" && event.groupId === group.id,
+        )
+      : [];
+  return (
+    <main className="community-section-page">
+      <Breadcrumbs
+        items={[
+          ...resolveBreadcrumbs("/community/groups", { locale }).map((item) =>
+            item.key === "groups"
+              ? { ...item, href: "/community/groups" }
+              : item,
+          ),
+          { key: "group", label: group.name },
+        ]}
+        locale={locale}
+      />
+      <header>
+        <h1 data-route-heading tabIndex={-1}>
+          {group.name}
+        </h1>
+        <p>{group.description}</p>
+        <small>
+          {group.memberCount} {locale === "th" ? "สมาชิก" : "members"}
+        </small>
+      </header>
+      <div className="ride-group-membership">
+        {!session ? (
+          <PendingLink
+            className="community-create-link"
+            href={`/login?next=${encodeURIComponent(`${href}?compose=1`)}`}
+          >
+            {locale === "th" ? "เข้าสู่ระบบเพื่อเข้าร่วม" : "Sign in to join"}
+          </PendingLink>
+        ) : group.isMember && group.creatorId !== profile?.id ? (
+          <form action={leaveGroupAction}>
+            <input type="hidden" name="slug" value={slug} />
+            <button type="submit">
+              {locale === "th" ? "ออกจากกลุ่ม" : "Leave group"}
+            </button>
+          </form>
+        ) : !group.isMember && profile?.canWrite ? (
+          <form action={joinGroupAction}>
+            <input type="hidden" name="slug" value={slug} />
+            {query.compose === "1" ? (
+              <input type="hidden" name="compose" value="1" />
+            ) : null}
+            <button type="submit">
+              {locale === "th" ? "เข้าร่วมกลุ่ม" : "Join group"}
+            </button>
+          </form>
+        ) : null}
+      </div>
+      <section className="ride-group-members">
+        <h2>{locale === "th" ? "สมาชิก" : "Members"}</h2>
+        <div>
+          {group.members.map((member) => (
+            <PendingLink
+              href={`/users/${encodeURIComponent(member.username)}`}
+              key={member.id}
+            >
+              {member.displayName}
+            </PendingLink>
+          ))}
+        </div>
+      </section>
+      <section className="ride-group-trips">
+        <h2>{locale === "th" ? "ทริปของกลุ่ม" : "Group trips"}</h2>
+        {trips.length ? (
+          <div>
+            {trips.map((event) => (
+              <PendingLink
+                href={`/activities/${encodeURIComponent(event.id)}`}
+                key={event.id}
+              >
+                {event.title}
+              </PendingLink>
+            ))}
+          </div>
+        ) : (
+          <p>
+            {locale === "th" ? "ยังไม่มีทริปของกลุ่ม" : "No group trips yet."}
+          </p>
+        )}
+      </section>
+      <section>
+        <h2>{locale === "th" ? "โพสต์ในกลุ่ม" : "Group posts"}</h2>
+        {feedResult.status === "success" ? (
+          <CommunityScreen
+            authenticated={Boolean(session)}
+            canWrite={profile?.canWrite ?? false}
+            category="groups"
+            groupId={group.id}
+            groupSlug={group.slug}
+            isMember={group.isMember}
+            locale={locale}
+            posts={feedResult.data}
+            room="groups"
+            viewer={viewer}
+          />
+        ) : (
+          <SectionError
+            category={feedResult.error.category}
+            message={
+              locale === "th" ? "โหลดโพสต์ไม่ได้" : "Posts could not load."
+            }
+            retryLabel={locale === "th" ? "ลองอีกครั้ง" : "Retry"}
+            title={locale === "th" ? "ฟีดไม่พร้อมใช้งาน" : "Feed unavailable"}
+          />
+        )}
+      </section>
+      {query.compose === "1" && group.isMember && profile?.canWrite ? (
+        <EditModal
+          closeUrl={href}
+          title={locale === "th" ? "เขียนโพสต์แรก" : "Write a post"}
+        >
+          <BackendForm
+            defaultCommunityCategory="groups"
+            defaultGroupId={group.id}
+            initial={null}
+            locale={locale}
+            type="post"
+          />
+        </EditModal>
+      ) : null}
+      {query.modal === "edit" && query.post ? (
+        <CommunityEditRegion
+          accessToken={session?.accessToken}
+          category="groups"
+          locale={locale}
+          postId={query.post}
+          returnHref={href}
+        />
+      ) : null}
+    </main>
+  );
+}

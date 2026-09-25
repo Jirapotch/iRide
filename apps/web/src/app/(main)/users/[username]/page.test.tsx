@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test, vi } from "vitest";
+import { StoreProvider } from "@/store/provider";
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({
@@ -43,7 +44,7 @@ test("the committed profile shell keeps its header and a busy target fallback wh
     searchParams: Promise.resolve({ tab: "garage" }),
   });
 
-  const markup = renderToStaticMarkup(page);
+  const markup = renderToStaticMarkup(<StoreProvider>{page}</StoreProvider>);
 
   expect(markup.match(/<h1[^>]*>River Rider<\/h1>/g)).toHaveLength(1);
   expect(markup).toContain('aria-busy="true"');

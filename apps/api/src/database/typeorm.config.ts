@@ -1,6 +1,10 @@
 import { DestinationFirstTrips20260908120000 } from "./migrations/20260908120000-destination-first-trips";
 import { SupabaseMediaStorage20260912155026 } from "./migrations/20260912155026-supabase-media-storage";
 import { MediaSourceRetention20260912162442 } from "./migrations/20260912162442-media-source-retention";
+import { TripReturnRoutes20260926100000 } from "./migrations/20260926100000-trip-return-routes";
+import { RideGroups20260926101000 } from "./migrations/20260926101000-ride-groups";
+import { RecapMediaPurpose20260926102000 } from "./migrations/20260926102000-recap-media-purpose";
+import { TripEngagement20260926103000 } from "./migrations/20260926103000-trip-engagement";
 import type { DataSourceOptions } from "typeorm";
 
 import { BaselineCurrentSchema20260906000000 } from "./migrations/20260906000000-baseline-current-schema";
@@ -41,7 +45,12 @@ export function createMigrationDataSourceOptions(input: {
       DestinationFirstTrips20260908120000,
       SupabaseMediaStorage20260912155026,
       MediaSourceRetention20260912162442,
+      TripReturnRoutes20260926100000,
+      RideGroups20260926101000,
+      RecapMediaPurpose20260926102000,
+      TripEngagement20260926103000,
     ],
+    migrationsTransactionMode: "each",
     extra: { max: 1 },
     ssl: sslOptions(input.migrationDatabaseUrl),
   };

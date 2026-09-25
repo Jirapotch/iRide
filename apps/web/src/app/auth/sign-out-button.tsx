@@ -1,8 +1,13 @@
+"use client";
+
+import { invalidateOwnProfile } from "@/features/profile/profile-cache.slice";
+import { useAppDispatch } from "@/store/hooks";
 import { signOut } from "./actions";
 
 export function SignOutButton({ label }: Readonly<{ label: string }>) {
+  const dispatch = useAppDispatch();
   return (
-    <form action={signOut}>
+    <form action={signOut} onSubmit={() => dispatch(invalidateOwnProfile())}>
       <button
         className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground/75 transition hover:border-primary/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         type="submit"

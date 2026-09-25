@@ -130,7 +130,7 @@ async function publiclyReferenced(
   admin: ReturnType<typeof createAdminDatabaseClient>,
   id: string,
 ) {
-  const [profiles, links] = await Promise.all([
+  const [profiles, links, recapLinks] = await Promise.all([
     admin
       .from("profiles")
       .select("id")
@@ -142,9 +142,15 @@ async function publiclyReferenced(
       .select("vehicle_id")
       .eq("media_id", id)
       .limit(20),
+    admin
+      .from("trip_recap_entries")
+      .select("event_id,author_id")
+      .contains("media_ids", [id])
+      .limit(20),
   ]);
   ensure(profiles.error);
   ensure(links.error);
+  ensure(recapLinks.error);
   const vehicleIds = (links.data ?? []).map((row) => row.vehicle_id);
   const { data: vehicles, error } = vehicleIds.length
     ? await admin
@@ -156,9 +162,33 @@ async function publiclyReferenced(
         .limit(1)
     : { data: [], error: null };
   ensure(error);
+  const recapEventIds = [
+    ...new Set((recapLinks.data ?? []).map((row) => row.event_id)),
+  ];
+  const { data: recaps, error: recapError } = recapEventIds.length
+    ? await admin
+        .from("trip_recaps")
+        .select("event_id")
+        .in("event_id", recapEventIds)
+        .not("published_at", "is", null)
+    : { data: [], error: null };
+  ensure(recapError);
+  const publishedIds = new Set((recaps ?? []).map((row) => row.event_id));
+  const { data: events, error: eventError } = publishedIds.size
+    ? await admin
+        .from("events")
+        .select("id")
+        .in("id", [...publishedIds])
+        .is("deleted_at", null)
+    : { data: [], error: null };
+  ensure(eventError);
+  const visibleEventIds = new Set((events ?? []).map((row) => row.id));
   const ownerIds = [
     ...(profiles.data ?? []).map((row) => row.id),
     ...(vehicles ?? []).map((row) => row.owner_id),
+    ...(recapLinks.data ?? [])
+      .filter((row) => visibleEventIds.has(row.event_id))
+      .map((row) => row.author_id),
   ];
   return hasVisibleOwner(admin, ownerIds);
 }

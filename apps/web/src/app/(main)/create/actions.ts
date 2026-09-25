@@ -46,6 +46,7 @@ export async function saveContent(formData: FormData) {
     const raw = {
       body: String(formData.get("body") ?? ""),
       communityCategory: String(formData.get("communityCategory") ?? "groups"),
+      groupId: optional(formData, "groupId"),
       ...(tags.length ? { markerTags: tags } : {}),
     };
     const result = editId
@@ -58,13 +59,16 @@ export async function saveContent(formData: FormData) {
           session.accessToken,
           createPostSchema.parse(raw) as CreatePostInput,
         );
-    redirect(postDestination(result.communityCategory, result.id));
+    redirect(
+      postDestination(result.communityCategory, result.id, result.groupSlug),
+    );
   }
 
   const kind =
     type === "trip" ? "trip" : String(formData.get("kind") ?? "meeting");
   const raw = {
     kind,
+    groupId: optional(formData, "groupId"),
     title: String(formData.get("title") ?? ""),
     description: nullable(formData, "description"),
     locationLabel: nullable(formData, "locationLabel"),
@@ -78,6 +82,14 @@ export async function saveContent(formData: FormData) {
       : null,
     stops:
       type === "trip" ? JSON.parse(String(formData.get("stops") ?? "[]")) : [],
+    returnDestination:
+      type === "trip" && optional(formData, "returnDestination")
+        ? JSON.parse(String(formData.get("returnDestination")))
+        : null,
+    returnStops:
+      type === "trip"
+        ? JSON.parse(String(formData.get("returnStops") ?? "[]"))
+        : [],
     endsAt: optional(formData, "endsAt")
       ? iso(formData, "endsAt", type === "trip")
       : null,
@@ -88,7 +100,7 @@ export async function saveContent(formData: FormData) {
   const result = editId
     ? await updateEvent(session.accessToken, editId, input)
     : await createEvent(session.accessToken, input);
-  redirect(`/maps?marker=${result.id}`);
+  redirect(`/activities/${result.id}`);
 }
 
 export async function saveVehicleAction(formData: FormData) {
@@ -130,18 +142,20 @@ export async function removeContent(formData: FormData) {
   if (!id || !["posts", "events"].includes(domain))
     throw new Error("INVALID_DELETE");
   await deleteContent(session.accessToken, domain, id);
-  revalidatePath(domain === "posts" ? "/community" : "/maps");
+  revalidatePath(domain === "posts" ? "/community" : "/activities");
   if (domain === "posts") {
     const parsed = createPostSchema.shape.communityCategory.safeParse(
       String(formData.get("communityCategory") ?? "groups"),
     );
     redirect(
-      postDestination(parsed.success ? parsed.data : "groups", id).split(
-        "?",
-      )[0]!,
+      postDestination(
+        parsed.success ? parsed.data : "groups",
+        id,
+        optional(formData, "groupSlug") ?? undefined,
+      ).split("?")[0]!,
     );
   }
-  redirect("/maps");
+  redirect("/activities");
 }
 
 export async function resolveGoogleMapsLocation(input: string) {

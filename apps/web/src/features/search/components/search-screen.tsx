@@ -155,7 +155,34 @@ export function SearchScreen({
             ))
           : null}
         {query.trim() && !loading && !failed && !visibleResults.length ? (
-          <p>{locale === "th" ? "ไม่พบผลลัพธ์" : "No results found."}</p>
+          <div className="search-empty-state">
+            <strong>
+              {locale === "th" ? "ไม่พบผลลัพธ์" : "No results found."}
+            </strong>
+            <p>
+              {locale === "th"
+                ? "ลองคำค้นอื่น หรือไปดูเรื่องราวที่ชุมชนและกิจกรรม"
+                : "Try another term, or explore community stories and activities."}
+            </p>
+            <div className="search-empty-suggestions">
+              {(locale === "th"
+                ? ["ทริป", "มอเตอร์ไซค์", "จักรยาน"]
+                : ["trip", "motorcycle", "bicycle"]
+              ).map((term) => (
+                <button key={term} onClick={() => setQuery(term)} type="button">
+                  {term}
+                </button>
+              ))}
+            </div>
+            <div className="search-empty-links">
+              <PendingLink href="/community">
+                {locale === "th" ? "ไปชุมชน" : "Explore community"}
+              </PendingLink>
+              <PendingLink href="/activities">
+                {locale === "th" ? "ดูกิจกรรม" : "View activities"}
+              </PendingLink>
+            </div>
+          </div>
         ) : null}
       </div>
     </main>

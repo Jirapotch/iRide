@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowSquareOut, Trash, X } from "@phosphor-icons/react";
+import { ArrowSquareOut, X } from "@phosphor-icons/react";
 import type { EventDto, ExploreFeatureDto } from "@iride/types";
 import { createPortal } from "react-dom";
 import {
@@ -11,8 +11,6 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { removeContent } from "@/app/(main)/create/actions";
-import { ActionSubmitButton } from "@/features/content/components/action-submit-button";
 import { PendingLink } from "@/features/navigation/components/pending-link";
 import { googleMapsSearchUrl } from "@/lib/google-maps-domain";
 import type { Locale } from "@/lib/locale";
@@ -51,7 +49,6 @@ export function ActivityFeatureSheet({
     () => true,
     () => false,
   );
-  const domain = "events";
   const sheetRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [desktop, setDesktop] = useState(false);
@@ -218,25 +215,6 @@ export function ActivityFeatureSheet({
                 ? "นำทางด้วย Google Maps"
                 : "Open in Google Maps"}
             </a>
-          ) : null}
-          {feature.canEdit ? (
-            <div className="owner-actions">
-              <PendingLink href={`/maps?marker=${feature.id}&modal=edit`}>
-                {locale === "th" ? "แก้ไข" : "Edit"}
-              </PendingLink>
-              <form action={removeContent}>
-                <input name="domain" type="hidden" value={domain} />
-                <input name="id" type="hidden" value={feature.id} />
-                <ActionSubmitButton
-                  ariaLabel={locale === "th" ? "ลบ" : "Delete"}
-                  className=""
-                  pendingLabel={locale === "th" ? "กำลังลบ…" : "Deleting…"}
-                >
-                  <Trash size={16} />
-                  {locale === "th" ? "ลบ" : "Delete"}
-                </ActionSubmitButton>
-              </form>
-            </div>
           ) : null}
         </div>
       </aside>
