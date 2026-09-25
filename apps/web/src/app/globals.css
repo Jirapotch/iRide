@@ -1907,6 +1907,9 @@ a {
 .ride-group-panel .ant-empty {
   margin-block: 0.75rem;
 }
+.ride-group-panel .ant-empty-image {
+  height: 64px;
+}
 .ride-group-member-list,
 .ride-group-trip-list {
   display: grid;
@@ -1931,6 +1934,16 @@ a {
   font-size: clamp(1.3rem, 2vw, 1.65rem);
 }
 @media (max-width: 640px) {
+  .ride-group-detail {
+    display: flex;
+    flex-direction: column;
+  }
+  .ride-group-detail > .ride-group-feed {
+    order: 1;
+  }
+  .ride-group-detail > .ride-group-overview {
+    order: 2;
+  }
   .ride-group-overview {
     grid-template-columns: 1fr;
   }

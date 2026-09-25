@@ -75,7 +75,7 @@ export default async function RideGroupPage({
         )
       : [];
   return (
-    <main className="community-section-page">
+    <main className="community-section-page ride-group-detail">
       <Breadcrumbs
         items={[
           ...resolveBreadcrumbs("/community/groups", { locale }).map((item) =>
