@@ -24,6 +24,37 @@ it("resolves a mobile share link with its place name", async () => {
   });
 });
 
+it("keeps a mobile app place share as an area to pin when its redirect has no coordinates", async () => {
+  const place = "เซนส์ บางนา-สุวรรณภูมิ";
+  const result = await resolveGoogleMapsCoordinates(
+    "https://maps.app.goo.gl/fYDpXY8gkipkgDw4A?g_st=ic",
+    async (input) => {
+      const url = new URL(input);
+      if (url.hostname === "maps.app.goo.gl") {
+        return new Response(null, {
+          status: 302,
+          headers: {
+            location: `https://maps.google.com?q=${encodeURIComponent(place)}&ftid=0x123:0x456`,
+          },
+        });
+      }
+      return new Response(
+        '<meta content="https://maps.google.com/maps/api/staticmap?center=13.6052736%2C100.8238592&amp;zoom=10" property="og:image">',
+        { status: 200, headers: { "content-type": "text/html" } },
+      );
+    },
+  );
+  expect(result).toEqual({
+    ok: true,
+    needsPin: true,
+    location: {
+      name: place,
+      latitude: 13.6052736,
+      longitude: 100.8238592,
+    },
+  });
+});
+
 it("extracts coordinates from a canonical Google Maps URL in HTML", async () => {
   const result = await resolveGoogleMapsCoordinates(
     "https://maps.app.goo.gl/place",

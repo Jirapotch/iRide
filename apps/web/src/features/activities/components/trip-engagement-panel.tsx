@@ -8,6 +8,7 @@ import type {
   VehicleDto,
 } from "@iride/types";
 import { useState } from "react";
+import { Alert, Button, Empty, Input, InputNumber, Select } from "antd";
 import Image from "next/image";
 import { MediaUploader } from "@/features/profile/components/media-uploader";
 import { PendingLink } from "@/features/navigation/components/pending-link";
@@ -92,11 +93,7 @@ export function TripEngagementPanel({
   }
   if (!data)
     return (
-      <section className="trip-engagement" role="alert">
-        {th
-          ? "โหลดข้อมูลการเข้าร่วมไม่ได้"
-          : "Participation details could not load."}
-      </section>
+      <Alert type="error" showIcon message={th ? "โหลดข้อมูลการเข้าร่วมไม่ได้" : "Participation details could not load."} />
     );
   const interested = data.participants.filter(
     (item) => item.status === "interested",
@@ -113,25 +110,19 @@ export function TripEngagementPanel({
               <div className="trip-rider-fields">
                 <label>
                   {th ? "รถที่ใช้ (ไม่บังคับ)" : "Your vehicle (optional)"}
-                  <select
+                  <Select
                     value={vehicleId}
-                    onChange={(event) => setVehicleId(event.target.value)}
-                  >
-                    <option value="">{th ? "ไม่ระบุ" : "Not specified"}</option>
-                    {vehicles
+                    onChange={setVehicleId}
+                    options={[{value: "", label: th ? "ไม่ระบุ" : "Not specified"}, ...vehicles
                       .filter((vehicle) => vehicle.visibility === "public")
-                      .map((vehicle) => (
-                        <option key={vehicle.id} value={vehicle.id}>
-                          {vehicle.brand} {vehicle.model}
-                        </option>
-                      ))}
-                  </select>
+                      .map((vehicle) => ({value: vehicle.id, label: `${vehicle.brand} ${vehicle.model}`}))]}
+                  />
                 </label>
                 <label>
                   {th
                     ? "พื้นที่ที่สะดวก (ไม่บังคับ)"
                     : "Convenient riding area (optional)"}
-                  <input
+                  <Input
                     maxLength={120}
                     value={ridingArea}
                     onChange={(event) => setRidingArea(event.target.value)}
@@ -149,7 +140,8 @@ export function TripEngagementPanel({
               <div className="trip-choice-actions">
                 {(["interested", "going"] as TripParticipationStatus[]).map(
                   (status) => (
-                    <button
+                    <Button
+                      type={data.viewerStatus === status ? "primary" : "default"}
                       aria-pressed={data.viewerStatus === status}
                       disabled={busy}
                       key={status}
@@ -160,7 +152,6 @@ export function TripEngagementPanel({
                           ridingArea: ridingArea.trim() || null,
                         })
                       }
-                      type="button"
                     >
                       {status === "interested"
                         ? th
@@ -169,17 +160,16 @@ export function TripEngagementPanel({
                         : th
                           ? "เข้าร่วม"
                           : "Going"}
-                    </button>
+                    </Button>
                   ),
                 )}
                 {data.viewerStatus ? (
-                  <button
+                  <Button
                     disabled={busy}
                     onClick={() => void mutate("/participation", "DELETE")}
-                    type="button"
                   >
                     {th ? "ยกเลิกการตอบรับ" : "Remove response"}
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             </>
@@ -229,7 +219,7 @@ export function TripEngagementPanel({
             ))}
           </ol>
         ) : (
-          <p>{th ? "ยังไม่มีประกาศ" : "No updates yet."}</p>
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={th ? "ยังไม่มีประกาศ" : "No updates yet"} />
         )}
         {data.canOrganize ? (
           <form
@@ -244,22 +234,22 @@ export function TripEngagementPanel({
           >
             <label>
               {th ? "แจ้งการเปลี่ยนแปลง" : "Post an update"}
-              <textarea
+              <Input.TextArea
                 maxLength={1000}
                 required
                 value={announcement}
                 onChange={(event) => setAnnouncement(event.target.value)}
               />
             </label>
-            <button disabled={busy} type="submit">
+            <Button disabled={busy} htmlType="submit" type="primary">
               {th ? "ประกาศ" : "Post update"}
-            </button>
+            </Button>
           </form>
         ) : null}
       </section>
       {data.canOrganize && canEditPlan ? (
         <section className="trip-completion">
-          <button
+          <Button
             disabled={busy}
             onClick={() => {
               if (
@@ -271,10 +261,9 @@ export function TripEngagementPanel({
               )
                 void mutate("/complete", "POST", {});
             }}
-            type="button"
           >
             {th ? "ยืนยันว่าทริปจบแล้ว" : "Mark trip complete"}
-          </button>
+          </Button>
         </section>
       ) : null}
       {data.status === "completed" ? (
@@ -307,21 +296,15 @@ export function TripEngagementPanel({
               </h3>
               <label>
                 {th ? "จุดแวะ (ไม่บังคับ)" : "Stop (optional)"}
-                <select
+                <Select
                   value={stopName}
-                  onChange={(event) => setStopName(event.target.value)}
-                >
-                  <option value="">{th ? "ทั้งทริป" : "Whole trip"}</option>
-                  {routePointsForEvent(event).map((point, index) => (
-                    <option key={index} value={point.name}>
-                      {point.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setStopName}
+                  options={[{value: "", label: th ? "ทั้งทริป" : "Whole trip"}, ...routePointsForEvent(event).map((point) => ({value: point.name, label: point.name}))]}
+                />
               </label>
               <label>
                 {th ? "รีวิว" : "Review"}
-                <textarea
+                <Input.TextArea
                   maxLength={2000}
                   value={review}
                   onChange={(event) => setReview(event.target.value)}
@@ -344,8 +327,8 @@ export function TripEngagementPanel({
                       height={135}
                       unoptimized
                     />
-                    <button
-                      type="button"
+                    <Button
+                      type="text"
                       onClick={() =>
                         setMediaIds((items) =>
                           items.filter((item) => item !== id),
@@ -353,16 +336,17 @@ export function TripEngagementPanel({
                       }
                     >
                       {th ? "นำออก" : "Remove"}
-                    </button>
+                    </Button>
                   </span>
                 ))}
               </div>
-              <button
+              <Button
                 disabled={busy || (!review.trim() && !mediaIds.length)}
-                type="submit"
+                htmlType="submit"
+                type="primary"
               >
                 {th ? "เพิ่มเรื่องราว" : "Add story"}
-              </button>
+              </Button>
             </form>
           ) : null}
           {data.recap?.entries.length ? (
@@ -389,8 +373,8 @@ export function TripEngagementPanel({
                     ))}
                   </div>
                   {data.canOrganize || entry.author.id === viewerId ? (
-                    <button
-                      type="button"
+                    <Button
+                      type="text"
                       disabled={busy}
                       onClick={() => {
                         if (
@@ -402,7 +386,7 @@ export function TripEngagementPanel({
                       }}
                     >
                       {th ? "นำออก" : "Remove"}
-                    </button>
+                    </Button>
                   ) : null}
                 </article>
               ))}
@@ -413,7 +397,7 @@ export function TripEngagementPanel({
               <h3>{th ? "สรุปอย่างเป็นทางการ" : "Official recap"}</h3>
               <label>
                 {th ? "บันทึกทริป" : "Trip summary"}
-                <textarea
+                <Input.TextArea
                   maxLength={4000}
                   value={summary}
                   onChange={(event) => setSummary(event.target.value)}
@@ -426,7 +410,7 @@ export function TripEngagementPanel({
               </p>
               {routePoints.map((point, index) => (
                 <div className="trip-recap-route-point" key={index}>
-                  <input
+                  <Input
                     aria-label={
                       th ? `ชื่อจุด ${index + 1}` : `Point ${index + 1} name`
                     }
@@ -441,42 +425,40 @@ export function TripEngagementPanel({
                       )
                     }
                   />
-                  <input
+                  <InputNumber
                     aria-label={th ? "ละติจูด" : "Latitude"}
-                    type="number"
                     step="any"
                     min={-90}
                     max={90}
                     value={point.latitude}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setRoutePoints((items) =>
                         items.map((item, at) =>
                           at === index
-                            ? { ...item, latitude: Number(event.target.value) }
+                            ? { ...item, latitude: value ?? 0 }
                             : item,
                         ),
                       )
                     }
                   />
-                  <input
+                  <InputNumber
                     aria-label={th ? "ลองจิจูด" : "Longitude"}
-                    type="number"
                     step="any"
                     min={-180}
                     max={180}
                     value={point.longitude}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setRoutePoints((items) =>
                         items.map((item, at) =>
                           at === index
-                            ? { ...item, longitude: Number(event.target.value) }
+                            ? { ...item, longitude: value ?? 0 }
                             : item,
                         ),
                       )
                     }
                   />
-                  <button
-                    type="button"
+                  <Button
+                    type="text"
                     onClick={() =>
                       setRoutePoints((items) =>
                         items.filter((_, at) => at !== index),
@@ -484,11 +466,10 @@ export function TripEngagementPanel({
                     }
                   >
                     {th ? "ลบจุด" : "Remove point"}
-                  </button>
+                  </Button>
                 </div>
               ))}
-              <button
-                type="button"
+              <Button
                 disabled={routePoints.length >= 20}
                 onClick={() =>
                   setRoutePoints((items) => [
@@ -498,19 +479,18 @@ export function TripEngagementPanel({
                 }
               >
                 {th ? "เพิ่มหมุด" : "Add point"}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 disabled={busy}
                 onClick={() =>
                   void mutate("/recap", "POST", { summary, routePoints })
                 }
               >
                 {th ? "บันทึกสรุป" : "Save recap"}
-              </button>
+              </Button>
               {!data.recap?.publishedAt ? (
-                <button
-                  type="button"
+                <Button
+                  type="primary"
                   disabled={busy || !data.recap}
                   onClick={() => {
                     if (
@@ -524,17 +504,13 @@ export function TripEngagementPanel({
                   }}
                 >
                   {th ? "เผยแพร่สรุป" : "Publish recap"}
-                </button>
+                </Button>
               ) : null}
             </div>
           ) : null}
         </section>
       ) : null}
-      {error ? (
-        <p role="alert" className="form-error">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Alert type="error" showIcon message={error} /> : null}
     </div>
   );
 }
@@ -573,7 +549,7 @@ function ParticipantList({
           ))}
         </ul>
       ) : (
-        <p>{locale === "th" ? "ยังไม่มีคน" : "No riders yet."}</p>
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={locale === "th" ? "ยังไม่มีคน" : "No riders yet"} />
       )}
     </section>
   );

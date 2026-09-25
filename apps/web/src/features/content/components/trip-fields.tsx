@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Button, Input } from "antd";
+import type { InputRef } from "antd";
 import type { EventDto } from "@iride/types";
 import type { Locale } from "@/lib/locale";
 import { CoordinatePicker } from "./content-editor-form";
@@ -101,8 +103,8 @@ export function TripFields({
         onChange={(name) => update(point.id, { name })}
         onInvalid={() => setActiveId(point.id)}
       />
-      <button
-        type="button"
+      <Button
+        type={active.id === point.id ? "primary" : "default"}
         className="trip-select-place"
         aria-pressed={active.id === point.id}
         onClick={() => setActiveId(point.id)}
@@ -114,14 +116,14 @@ export function TripFields({
           : th
             ? "เลือกบนแผนที่ / นำเข้า Google Maps"
             : "Choose on map / Import Google Maps"}
-      </button>
+      </Button>
     </div>
   );
   return (
     <div className="trip-composer">
       <label className="form-field">
         <span>{th ? "ชื่อทริป" : "Trip name"} *</span>
-        <input
+        <Input
           name="title"
           required
           maxLength={120}
@@ -143,51 +145,49 @@ export function TripFields({
         card(
           origin,
           th ? "1 จุดเริ่มต้น" : "1 Start",
-          <button
-            type="button"
+          <Button
+            type="text"
             onClick={() => {
               setOrigin(null);
               setActiveId("destination");
             }}
           >
             {th ? "นำออก" : "Remove"}
-          </button>,
+          </Button>,
         )
       ) : (
-        <button
-          className="secondary-action"
-          type="button"
+        <Button
           onClick={() => {
             setOrigin(emptyPoint("origin"));
             setActiveId("origin");
           }}
         >
           + {th ? "เพิ่มจุดเริ่มต้น" : "Add a start"}
-        </button>
+        </Button>
       )}
       {stops.map((point, index) =>
         card(
           point,
           `${index + (origin ? 2 : 1)} ${th ? "จุดแวะ" : "Stop"}`,
           <div className="trip-stop-actions">
-            <button
-              type="button"
+            <Button
+              type="text"
               aria-label={th ? "เลื่อนขึ้น" : "Move up"}
               disabled={index === 0}
               onClick={() => move(index, -1)}
             >
               ↑
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              type="text"
               aria-label={th ? "เลื่อนลง" : "Move down"}
               disabled={index === stops.length - 1}
               onClick={() => move(index, 1)}
             >
               ↓
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              type="text"
               onClick={() => {
                 setStops((points) =>
                   points.filter((item) => item.id !== point.id),
@@ -196,13 +196,11 @@ export function TripFields({
               }}
             >
               {th ? "นำออก" : "Remove"}
-            </button>
+            </Button>
           </div>,
         ),
       )}
-      <button
-        className="secondary-action"
-        type="button"
+      <Button
         disabled={stops.length >= 20}
         onClick={() => {
           const point = emptyPoint(`stop-${nextId.current++}`);
@@ -211,7 +209,7 @@ export function TripFields({
         }}
       >
         + {th ? "เพิ่มจุดแวะ" : "Add a stop"} ({stops.length}/20)
-      </button>
+      </Button>
       <section
         className="trip-map-editor"
         aria-label={th ? "เลือกสถานที่" : "Choose a place"}
@@ -284,7 +282,7 @@ export function TripFields({
         </summary>
         <label className="form-field">
           <span>{th ? "รายละเอียด" : "Description"}</span>
-          <textarea
+          <Input.TextArea
             name="description"
             defaultValue={event?.description ?? ""}
             maxLength={2000}
@@ -292,7 +290,7 @@ export function TripFields({
         </label>
         <label className="form-field">
           <span>{th ? "เริ่ม" : "Starts"}</span>
-          <input
+          <Input
             type="datetime-local"
             name="startsAt"
             defaultValue={localDate(event?.startsAt)}
@@ -300,7 +298,7 @@ export function TripFields({
         </label>
         <label className="form-field">
           <span>{th ? "สิ้นสุด" : "Ends"}</span>
-          <input
+          <Input
             type="datetime-local"
             name="endsAt"
             defaultValue={localDate(event?.endsAt)}
@@ -360,25 +358,21 @@ function ReturnRouteFields({
         </p>
       </div>
       {!destination ? (
-        <button
-          className="secondary-action"
-          type="button"
+        <Button
           onClick={() => setDestination(emptyPoint("return-destination"))}
         >
           + {th ? "เพิ่มเส้นทางกลับ" : "Add return route"}
-        </button>
+        </Button>
       ) : (
         <>
-          <button
-            className="secondary-action"
-            type="button"
+          <Button
             onClick={() => {
               setDestination(null);
               setStops([]);
             }}
           >
             {th ? "นำเส้นทางกลับออก" : "Remove return route"}
-          </button>
+          </Button>
           {[...stops, destination].map((point, index) => (
             <div
               className={`trip-place-card ${active?.id === point.id ? "is-active" : ""}`}
@@ -395,8 +389,8 @@ function ReturnRouteFields({
                       : `Return stop ${index + 1}`}
                 </strong>
                 {point.id !== "return-destination" ? (
-                  <button
-                    type="button"
+                  <Button
+                    type="text"
                     onClick={() =>
                       setStops((items) =>
                         items.filter((item) => item.id !== point.id),
@@ -404,7 +398,7 @@ function ReturnRouteFields({
                     }
                   >
                     {th ? "นำออก" : "Remove"}
-                  </button>
+                  </Button>
                 ) : null}
               </div>
               <PointName
@@ -414,8 +408,8 @@ function ReturnRouteFields({
                 onChange={(name) => update(point.id, { name })}
                 onInvalid={() => setActiveId(point.id)}
               />
-              <button
-                type="button"
+              <Button
+                type={active?.id === point.id ? "primary" : "default"}
                 className="trip-select-place"
                 aria-pressed={active?.id === point.id}
                 onClick={() => setActiveId(point.id)}
@@ -427,13 +421,11 @@ function ReturnRouteFields({
                   : th
                     ? "เลือกบนแผนที่"
                     : "Choose on map"}
-              </button>
+              </Button>
             </div>
           ))}
-          <button
-            className="secondary-action"
+          <Button
             disabled={stops.length >= 20}
-            type="button"
             onClick={() => {
               const point = emptyPoint(`return-stop-${nextId.current++}`);
               setStops((items) => [...items, point]);
@@ -441,7 +433,7 @@ function ReturnRouteFields({
             }}
           >
             + {th ? "เพิ่มจุดแวะขากลับ" : "Add return stop"} ({stops.length}/20)
-          </button>
+          </Button>
           {active ? (
             <div className="trip-map-editor">
               <CoordinatePicker
@@ -499,9 +491,9 @@ function PointName({
   onChange: (name: string) => void;
   onInvalid: () => void;
 }) {
-  const ref = useRef<HTMLInputElement>(null);
+  const ref = useRef<InputRef>(null);
   useEffect(() => {
-    ref.current?.setCustomValidity(
+    ref.current?.input?.setCustomValidity(
       complete(point)
         ? ""
         : locale === "th"
@@ -510,7 +502,7 @@ function PointName({
     );
   }, [point, locale]);
   return (
-    <input
+    <Input
       ref={ref}
       aria-label={label}
       required

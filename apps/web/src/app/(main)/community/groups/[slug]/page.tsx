@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Avatar, Button, Card, Empty, Tag } from "antd";
 import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
 import { PendingLink } from "@/features/navigation/components/pending-link";
 import { CommunityScreen } from "@/features/community/components/community-screen";
@@ -86,14 +87,14 @@ export default async function RideGroupPage({
         ]}
         locale={locale}
       />
-      <header>
+      <header className="ride-group-hero">
         <h1 data-route-heading tabIndex={-1}>
           {group.name}
         </h1>
         <p>{group.description}</p>
-        <small>
+        <Tag color="green">
           {group.memberCount} {locale === "th" ? "สมาชิก" : "members"}
-        </small>
+        </Tag>
       </header>
       <div className="ride-group-membership">
         {!session ? (
@@ -106,9 +107,9 @@ export default async function RideGroupPage({
         ) : group.isMember && group.creatorId !== profile?.id ? (
           <form action={leaveGroupAction}>
             <input type="hidden" name="slug" value={slug} />
-            <button type="submit">
+            <Button htmlType="submit" danger>
               {locale === "th" ? "ออกจากกลุ่ม" : "Leave group"}
-            </button>
+            </Button>
           </form>
         ) : !group.isMember && profile?.canWrite ? (
           <form action={joinGroupAction}>
@@ -116,45 +117,38 @@ export default async function RideGroupPage({
             {query.compose === "1" ? (
               <input type="hidden" name="compose" value="1" />
             ) : null}
-            <button type="submit">
+            <Button htmlType="submit" type="primary">
               {locale === "th" ? "เข้าร่วมกลุ่ม" : "Join group"}
-            </button>
+            </Button>
           </form>
         ) : null}
       </div>
-      <section className="ride-group-members">
-        <h2>{locale === "th" ? "สมาชิก" : "Members"}</h2>
-        <div>
-          {group.members.map((member) => (
-            <PendingLink
-              href={`/users/${encodeURIComponent(member.username)}`}
-              key={member.id}
-            >
-              {member.displayName}
-            </PendingLink>
-          ))}
-        </div>
-      </section>
-      <section className="ride-group-trips">
-        <h2>{locale === "th" ? "ทริปของกลุ่ม" : "Group trips"}</h2>
-        {trips.length ? (
-          <div>
-            {trips.map((event) => (
-              <PendingLink
-                href={`/activities/${encodeURIComponent(event.id)}`}
-                key={event.id}
-              >
-                {event.title}
+      <div className="ride-group-overview">
+        <Card title={locale === "th" ? "สมาชิก" : "Members"} className="ride-group-panel">
+          <div className="ride-group-member-list">
+            {group.members.map((member) => (
+              <PendingLink href={`/users/${encodeURIComponent(member.username)}`} key={member.id}>
+                <Avatar size="small">{member.displayName.slice(0, 1)}</Avatar>
+                <span>{member.displayName}</span>
               </PendingLink>
             ))}
           </div>
-        ) : (
-          <p>
-            {locale === "th" ? "ยังไม่มีทริปของกลุ่ม" : "No group trips yet."}
-          </p>
-        )}
-      </section>
-      <section>
+        </Card>
+        <Card title={locale === "th" ? "ทริปของกลุ่ม" : "Group trips"} className="ride-group-panel">
+          {trips.length ? (
+            <div className="ride-group-trip-list">
+              {trips.map((event) => (
+                <PendingLink href={`/activities/${encodeURIComponent(event.id)}`} key={event.id}>
+                  {event.title}
+                </PendingLink>
+              ))}
+            </div>
+          ) : (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={locale === "th" ? "ยังไม่มีทริปของกลุ่ม" : "No group trips yet"} />
+          )}
+        </Card>
+      </div>
+      <section className="ride-group-feed">
         <h2>{locale === "th" ? "โพสต์ในกลุ่ม" : "Group posts"}</h2>
         {feedResult.status === "success" ? (
           <CommunityScreen

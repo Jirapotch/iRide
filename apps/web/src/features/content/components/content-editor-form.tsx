@@ -9,6 +9,7 @@ import {
   Motorcycle,
   X,
 } from "@phosphor-icons/react";
+import { Alert, Button, Input, Modal, Space, Typography } from "antd";
 import type {
   EventDto,
   CommunityCategory,
@@ -19,7 +20,6 @@ import type {
 } from "@iride/types";
 import * as maplibregl from "maplibre-gl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
 import { TripFields } from "./trip-fields";
 import { useTheme } from "@/app/_components/theme-provider";
@@ -437,15 +437,17 @@ export function CoordinatePicker({
     [mapsUrl, setMapsUrl] = useState(""),
     [importError, setImportError] = useState<string | null>(null),
     [preview, setPreview] = useState<Coordinates | null>(null),
+    [previewCenter, setPreviewCenter] = useState<Coordinates | null>(null),
+    [needsPin, setNeedsPin] = useState(false),
     [message, setMessage] = useState<string | null>(null),
     [pending, setPending] = useState(false);
-  const importButtonRef = useRef<HTMLButtonElement>(null);
   const closeImport = useCallback(() => {
     setImportOpen(false);
     setMapsUrl("");
     setImportError(null);
     setPreview(null);
-    window.requestAnimationFrame(() => importButtonRef.current?.focus());
+    setPreviewCenter(null);
+    setNeedsPin(false);
   }, []);
   function locate() {
     if (!navigator.geolocation) {
@@ -481,7 +483,9 @@ export function CoordinatePicker({
         setImportError(googleMapsImportErrorMessage(result.code, locale));
         return;
       }
-      setPreview(result.location);
+      setNeedsPin(Boolean(result.needsPin));
+      setPreviewCenter(result.location);
+      setPreview(result.needsPin ? null : result.location);
     } catch {
       setImportError(
         locale === "th"
@@ -513,26 +517,22 @@ export function CoordinatePicker({
         points={points}
       />
       <div className="location-action-row">
-        <button className="secondary-action" onClick={locate} type="button">
-          <Crosshair size={17} />
+        <Button icon={<Crosshair size={17} />} onClick={locate}>
           {locale === "th" ? "ใช้ตำแหน่งฉัน" : "Locate me"}
-        </button>
-        <button
+        </Button>
+        <Button
           aria-haspopup="dialog"
           aria-expanded={importOpen}
-          className="secondary-action"
+          icon={<LinkSimple size={17} />}
           onClick={() => {
             setImportError(null);
             setImportOpen(true);
           }}
-          ref={importButtonRef}
-          type="button"
         >
-          <LinkSimple size={17} />
           {locale === "th"
             ? "นำเข้าจาก Google Maps"
             : "Import from Google Maps"}
-        </button>
+        </Button>
       </div>
       {importOpen ? (
         <GoogleMapsImportModal
@@ -542,6 +542,8 @@ export function CoordinatePicker({
           onChange={(value) => {
             setMapsUrl(value);
             setPreview(null);
+            setPreviewCenter(null);
+            setNeedsPin(false);
             setImportError(null);
           }}
           onClose={() => {
@@ -549,7 +551,11 @@ export function CoordinatePicker({
           }}
           onApply={applyLocation}
           onCheck={() => void checkLocation()}
-          onPreviewChange={setPreview}
+          onPreviewChange={(point) =>
+            setPreview(previewCenter?.name ? { ...point, name: previewCenter.name } : point)
+          }
+          previewCenter={previewCenter}
+          needsPin={needsPin}
           pending={pending}
           preview={preview}
         />
@@ -574,6 +580,8 @@ function GoogleMapsImportModal({
   onPreviewChange,
   pending,
   preview,
+  previewCenter,
+  needsPin,
 }: {
   readonly error: string | null;
   readonly locale: Locale;
@@ -585,164 +593,100 @@ function GoogleMapsImportModal({
   readonly onPreviewChange: (value: Coordinates) => void;
   readonly pending: boolean;
   readonly preview: Coordinates | null;
+  readonly previewCenter: Coordinates | null;
+  readonly needsPin: boolean;
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onCloseRef.current();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const focusable = Array.from(
-        dialogRef.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      ).filter((element) => element.getClientRects().length > 0);
-      const first = focusable[0];
-      const last = focusable.at(-1);
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleKeyDown);
-    const frame = window.requestAnimationFrame(() => inputRef.current?.focus());
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-      window.cancelAnimationFrame(frame);
-    };
-  }, []);
-  if (typeof document === "undefined") return null;
   const title =
     locale === "th" ? "นำเข้าจาก Google Maps" : "Import from Google Maps";
-  return createPortal(
-    <div
-      className="maps-import-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div
-        aria-labelledby="google-maps-import-title"
-        aria-modal="true"
-        className="maps-import-modal"
-        ref={dialogRef}
-        role="dialog"
-      >
-        <header>
-          <h2 id="google-maps-import-title">{title}</h2>
-          <button
-            aria-label={locale === "th" ? "ปิด" : "Close"}
-            disabled={pending}
-            onClick={onClose}
-            type="button"
-          >
-            <X size={20} />
-          </button>
-        </header>
-        <div className="maps-import-modal-body">
-          <label className="form-field">
-            <span>
-              {locale === "th"
-                ? "วางลิงก์ Google Maps"
-                : "Paste a Google Maps link"}
-            </span>
-            <input
-              aria-describedby={error ? "google-maps-import-error" : undefined}
-              aria-invalid={error ? true : undefined}
-              disabled={pending}
-              inputMode="url"
-              onChange={(event) => onChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && mapsUrl.trim() && !pending) {
-                  event.preventDefault();
-                  if (preview) onApply();
-                  else onCheck();
-                }
-              }}
-              placeholder="https://maps.app.goo.gl/…"
-              ref={inputRef}
-              type="url"
-              value={mapsUrl}
-            />
-          </label>
-          {error ? (
-            <p
-              className="field-error"
-              id="google-maps-import-error"
-              role="alert"
-            >
-              {error}
-            </p>
-          ) : null}
-          {pending ? (
-            <p aria-live="polite" className="form-hint" role="status">
-              {locale === "th" ? "กำลังตรวจสอบลิงก์…" : "Resolving link…"}
-            </p>
-          ) : null}
-          {preview ? (
-            <div className="maps-import-preview">
-              <MiniMap
-                coordinates={preview}
-                locale={locale}
-                onChange={onPreviewChange}
-              />
-              <div>
-                <strong>
-                  {preview.name ??
-                    (locale === "th" ? "ตำแหน่งที่พบ" : "Resolved location")}
-                </strong>
-                <span>
-                  {preview.latitude.toFixed(6)}, {preview.longitude.toFixed(6)}
-                </span>
-              </div>
-            </div>
-          ) : null}
-        </div>
-        <footer>
-          <button
-            className="secondary-action"
-            disabled={pending}
-            onClick={onClose}
-            type="button"
-          >
+  return (
+    <Modal
+      className="maps-import-dialog"
+      title={title}
+      open
+      onCancel={onClose}
+      keyboard={!pending}
+      maskClosable={!pending}
+      destroyOnHidden
+      footer={
+        <Space wrap>
+          <Button disabled={pending} onClick={onClose}>
             {locale === "th" ? "ยกเลิก" : "Cancel"}
-          </button>
-          <button
-            className="primary-action"
-            disabled={pending || !mapsUrl.trim()}
+          </Button>
+          <Button
+            type="primary"
+            loading={pending}
+            disabled={!mapsUrl.trim() || (needsPin && !preview)}
             onClick={preview ? onApply : onCheck}
-            type="button"
           >
-            {pending
-              ? locale === "th"
-                ? "กำลังตรวจสอบ…"
-                : "Checking…"
-              : preview
-                ? locale === "th"
-                  ? "ใช้ตำแหน่งนี้"
-                  : "Use this location"
-                : locale === "th"
-                  ? "ตรวจสอบลิงก์"
-                  : "Check link"}
-          </button>
-        </footer>
-      </div>
-    </div>,
-    document.body,
+            {preview
+              ? locale === "th" ? "ใช้ตำแหน่งนี้" : "Use this location"
+              : locale === "th" ? "ตรวจสอบลิงก์" : "Check link"}
+          </Button>
+        </Space>
+      }
+    >
+      <Space direction="vertical" size="middle" className="maps-import-content">
+        <label htmlFor="google-maps-import-url">
+          {locale === "th" ? "วางลิงก์ Google Maps" : "Paste a Google Maps link"}
+        </label>
+        <Input
+          id="google-maps-import-url"
+          autoFocus
+          disabled={pending}
+          inputMode="url"
+          type="url"
+          placeholder="https://maps.app.goo.gl/…"
+          status={error ? "error" : ""}
+          value={mapsUrl}
+          onChange={(event) => onChange(event.target.value)}
+          onPressEnter={() => {
+            if (mapsUrl.trim() && !pending && !needsPin) {
+              if (preview) onApply();
+              else onCheck();
+            }
+          }}
+        />
+        {error ? <Alert type="error" showIcon message={error} role="alert" /> : null}
+        {pending ? (
+          <Typography.Text role="status">
+            {locale === "th" ? "กำลังตรวจสอบลิงก์…" : "Resolving link…"}
+          </Typography.Text>
+        ) : null}
+        {needsPin ? (
+          <>
+            <Alert
+              type="warning"
+              showIcon
+              message={locale === "th" ? "ต้องยืนยันหมุดบนแผนที่" : "Confirm the pin on the map"}
+              description={locale === "th"
+                ? "ลิงก์นี้มีชื่อสถานที่ แต่ไม่มีพิกัดจุดจริง แผนที่แสดงพื้นที่ใกล้เคียง กรุณาแตะตำแหน่งที่ถูกต้องก่อนนำเข้า"
+                : "This link has a place name but no exact coordinates. The map shows the nearby area. Tap the correct position before importing."}
+            />
+            <Button type="link" href={mapsUrl} target="_blank" rel="noopener noreferrer">
+              {locale === "th" ? "เปิดสถานที่ใน Google Maps เพื่อเทียบตำแหน่ง" : "Open the place in Google Maps for reference"}
+            </Button>
+          </>
+        ) : null}
+        {previewCenter ? (
+          <div className="maps-import-preview">
+            <MiniMap
+              coordinates={preview ?? previewCenter}
+              selected={Boolean(preview)}
+              locale={locale}
+              onChange={onPreviewChange}
+            />
+            <div>
+              <strong>{preview?.name ?? previewCenter.name ?? (locale === "th" ? "ตำแหน่งที่พบ" : "Resolved location")}</strong>
+              {preview ? (
+                <span>{preview.latitude.toFixed(6)}, {preview.longitude.toFixed(6)}</span>
+              ) : (
+                <span>{locale === "th" ? "แตะแผนที่เพื่อวางหมุด" : "Tap the map to place a pin"}</span>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </Space>
+    </Modal>
   );
 }
 

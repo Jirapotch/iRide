@@ -1,4 +1,5 @@
 import { UsersThreeIcon } from "@phosphor-icons/react/dist/ssr";
+import { Button, Card, Empty, Input, Tag } from "antd";
 import { redirect } from "next/navigation";
 import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
 import { PendingLink } from "@/features/navigation/components/pending-link";
@@ -57,39 +58,37 @@ export default async function GroupsPage({
           title={locale === "th" ? "กลุ่มไม่พร้อมใช้งาน" : "Groups unavailable"}
         />
       ) : (
-        <div className="ride-group-grid">
-          {result.data.map((group) => (
-            <PendingLink
-              className="premium-card ride-group-card"
-              href={`/community/groups/${encodeURIComponent(group.slug)}`}
-              key={group.id}
-            >
-              <strong>{group.name}</strong>
-              <p>{group.description}</p>
-              <small>
-                {group.memberCount} {locale === "th" ? "สมาชิก" : "members"}
-              </small>
-            </PendingLink>
-          ))}
-        </div>
+        result.data.length ? (
+          <div className="ride-group-grid">
+            {result.data.map((group) => (
+              <PendingLink href={`/community/groups/${encodeURIComponent(group.slug)}`} key={group.id}>
+                <Card hoverable className="ride-group-card" title={group.name}>
+                  <p>{group.description}</p>
+                  <Tag color="green">{group.memberCount} {locale === "th" ? "สมาชิก" : "members"}</Tag>
+                </Card>
+              </PendingLink>
+            ))}
+          </div>
+        ) : (
+          <Empty description={locale === "th" ? "ยังไม่มีกลุ่ม" : "No groups yet"} />
+        )
       )}
       {profile?.canWrite ? (
-        <section className="premium-card ride-group-create">
-          <h2>{locale === "th" ? "สร้างกลุ่มใหม่" : "Create a group"}</h2>
+        <Card className="ride-group-create" title={locale === "th" ? "สร้างกลุ่มใหม่" : "Create a group"}>
           <form action={createGroupAction} className="form-stack">
             <label className="form-field">
               <span>{locale === "th" ? "ชื่อกลุ่ม" : "Group name"}</span>
-              <input name="name" minLength={2} maxLength={80} required />
+              <Input name="name" minLength={2} maxLength={80} required />
             </label>
             <label className="form-field">
               <span>{locale === "th" ? "คำอธิบาย" : "Description"}</span>
-              <textarea name="description" maxLength={500} />
+              <Input.TextArea name="description" maxLength={500} />
             </label>
-            <button type="submit">
+            <Button htmlType="submit" type="primary">
               {locale === "th" ? "สร้างกลุ่ม" : "Create group"}
-            </button>
+            </Button>
           </form>
-        </section>
+        </Card>
       ) : !session ? (
         <PendingLink
           className="community-create-link"

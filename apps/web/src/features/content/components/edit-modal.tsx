@@ -50,7 +50,7 @@ export function EditModal({
         ?.focus(),
     );
     const key = (event: KeyboardEvent) => {
-      if (document.querySelector(".maps-import-modal")) return;
+      if (document.querySelector(".maps-import-dialog")) return;
       const dialog = dialogRef.current;
       if (event.key === "Escape") closeRef.current();
       if (event.key === "Tab" && dialog) {
