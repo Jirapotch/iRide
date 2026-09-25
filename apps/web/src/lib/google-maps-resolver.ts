@@ -18,8 +18,9 @@ export type GoogleMapsResolveResult =
   | {
       readonly ok: true;
       readonly location: Coordinates;
-      readonly needsPin?: true;
+      readonly needsPin?: false;
     }
+  | { readonly ok: true; readonly needsPin: true; readonly name: string }
   | { readonly ok: false; readonly code: GoogleMapsResolveErrorCode };
 
 const ALLOWED_HOSTS = new Set([
@@ -126,51 +127,11 @@ export async function resolveGoogleMapsCoordinates(
       const sharedPlace = current.searchParams.get("ftid")
         ? current.searchParams.get("q")?.trim()
         : null;
-      const area = sharedPlace && googleMapsPreviewAreaInHtml(html);
-      if (area) {
-        return {
-          ok: true,
-          needsPin: true,
-          location: { ...area, name: sharedPlace },
-        };
-      }
+      if (sharedPlace) return { ok: true, needsPin: true, name: sharedPlace };
     }
 
     return failure("no-coordinates");
   }
-}
-
-function googleMapsPreviewAreaInHtml(html: string): Coordinates | null {
-  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
-    const attributes = new Map<string, string>();
-    for (const attribute of match[0].matchAll(
-      /([:\w-]+)\s*=\s*(["'])(.*?)\2/g,
-    )) {
-      attributes.set(attribute[1]!.toLowerCase(), attribute[3]!);
-    }
-    if (
-      attributes.get("property")?.toLowerCase() !== "og:image" &&
-      attributes.get("itemprop")?.toLowerCase() !== "image"
-    )
-      continue;
-    const value = attributes.get("content")?.replaceAll("&amp;", "&");
-    if (!value) continue;
-    let previewUrl: URL;
-    try {
-      previewUrl = new URL(value);
-    } catch {
-      continue;
-    }
-    if (
-      previewUrl.protocol !== "https:" ||
-      previewUrl.hostname !== "maps.google.com" ||
-      previewUrl.pathname !== "/maps/api/staticmap"
-    )
-      continue;
-    const area = parseGoogleMapsCoordinates(previewUrl.toString());
-    if (area) return area;
-  }
-  return null;
 }
 
 function validateGoogleMapsUrl(

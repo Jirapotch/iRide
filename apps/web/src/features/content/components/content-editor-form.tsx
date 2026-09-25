@@ -484,8 +484,13 @@ export function CoordinatePicker({
         return;
       }
       setNeedsPin(Boolean(result.needsPin));
-      setPreviewCenter(result.location);
-      setPreview(result.needsPin ? null : result.location);
+      if (result.needsPin) {
+        setPreviewCenter({ ...coordinates, name: result.name });
+        setPreview(null);
+      } else {
+        setPreviewCenter(result.location);
+        setPreview(result.location);
+      }
     } catch {
       setImportError(
         locale === "th"
@@ -659,8 +664,8 @@ function GoogleMapsImportModal({
               showIcon
               message={locale === "th" ? "ต้องยืนยันหมุดบนแผนที่" : "Confirm the pin on the map"}
               description={locale === "th"
-                ? "ลิงก์นี้มีชื่อสถานที่ แต่ไม่มีพิกัดจุดจริง แผนที่แสดงพื้นที่ใกล้เคียง กรุณาแตะตำแหน่งที่ถูกต้องก่อนนำเข้า"
-                : "This link has a place name but no exact coordinates. The map shows the nearby area. Tap the correct position before importing."}
+                ? "ลิงก์นี้มีชื่อสถานที่ แต่ไม่มีพิกัดจุดจริง แผนที่เริ่มจากตำแหน่งเดิม กรุณาเปิด Google Maps เทียบ แล้วเลื่อนและแตะหมุดที่ถูกต้องก่อนนำเข้า"
+                : "This link has a place name but no exact coordinates. The map starts at your current pin. Compare with Google Maps, then pan and tap the correct position before importing."}
             />
             <Button type="link" href={mapsUrl} target="_blank" rel="noopener noreferrer">
               {locale === "th" ? "เปิดสถานที่ใน Google Maps เพื่อเทียบตำแหน่ง" : "Open the place in Google Maps for reference"}
@@ -672,6 +677,7 @@ function GoogleMapsImportModal({
             <MiniMap
               coordinates={preview ?? previewCenter}
               selected={Boolean(preview)}
+              initialZoom={needsPin ? 9 : 12}
               locale={locale}
               onChange={onPreviewChange}
             />
@@ -703,10 +709,12 @@ function MiniMap({
   coordinates,
   locale,
   onChange,
+  initialZoom = 12,
   selected = true,
   points = [],
 }: {
   readonly selected?: boolean;
+  readonly initialZoom?: number;
   readonly points?: readonly MapPoint[];
   readonly coordinates: { latitude: number; longitude: number };
   readonly locale: Locale;
@@ -748,7 +756,7 @@ function MiniMap({
         container: containerRef.current,
         style: mapStyle(process.env.NEXT_PUBLIC_MAPTILER_KEY),
         center: [initialCoordinates.longitude, initialCoordinates.latitude],
-        zoom: 12,
+        zoom: initialZoom,
         attributionControl: false,
       });
       map.addControl(
@@ -796,7 +804,7 @@ function MiniMap({
     } catch {
       return;
     }
-  }, [locale, synchronizeLocation]);
+  }, [locale, initialZoom, synchronizeLocation]);
   useEffect(() => {
     coordinatesRef.current = {
       latitude: coordinates.latitude,

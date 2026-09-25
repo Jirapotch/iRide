@@ -24,7 +24,7 @@ it("resolves a mobile share link with its place name", async () => {
   });
 });
 
-it("keeps a mobile app place share as an area to pin when its redirect has no coordinates", async () => {
+it("keeps a mobile app place name without trusting an unrelated preview map center", async () => {
   const place = "เซนส์ บางนา-สุวรรณภูมิ";
   const result = await resolveGoogleMapsCoordinates(
     "https://maps.app.goo.gl/fYDpXY8gkipkgDw4A?g_st=ic",
@@ -47,11 +47,7 @@ it("keeps a mobile app place share as an area to pin when its redirect has no co
   expect(result).toEqual({
     ok: true,
     needsPin: true,
-    location: {
-      name: place,
-      latitude: 13.6052736,
-      longitude: 100.8238592,
-    },
+    name: place,
   });
 });
 
