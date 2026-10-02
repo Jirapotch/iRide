@@ -1,4 +1,4 @@
-import type { WorkerEnv } from "@iride/config/worker";
+import type { ServerEnv } from "@iride/config/server";
 import { QUEUE_NAMES, QUEUE_POLICIES, type Json } from "@iride/database";
 import { createMediaStorage, type StorageProvider } from "@iride/storage";
 import { createAdminDatabaseClient } from "@iride/database/admin";
@@ -87,7 +87,7 @@ export async function runMediaCleanupBatch(
 }
 
 export function createMediaCleanupJobDependencies(
-  env: WorkerEnv,
+  env: ServerEnv,
 ): MediaCleanupJobDependencies {
   const storage = createMediaStorage({
     r2: {
