@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { getWorkerEnv } from "@iride/config/worker";
+import { getApiEnv } from "@iride/config/api";
 
 import {
   createMediaCleanupJobDependencies,
@@ -17,7 +17,7 @@ export class JobDrainService {
     readonly deadlineMs: number;
     readonly batchSizePerQueue: number;
   }): Promise<JobBatchResult> {
-    const env = getWorkerEnv();
+    const env = getApiEnv();
     const deadline = Date.now() + options.deadlineMs;
     const shouldContinue = () => Date.now() < deadline;
     let result = EMPTY_JOB_RESULT;

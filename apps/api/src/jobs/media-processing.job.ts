@@ -1,4 +1,4 @@
-import type { WorkerEnv } from "@iride/config/worker";
+import type { ServerEnv } from "@iride/config/server";
 import { QUEUE_NAMES, QUEUE_POLICIES, type Json } from "@iride/database";
 import { createAdminDatabaseClient } from "@iride/database/admin";
 import { createMediaStorage } from "@iride/storage";
@@ -66,7 +66,7 @@ export async function runMediaProcessingBatch(
 }
 
 export function createMediaProcessingJobDependencies(
-  env: WorkerEnv,
+  env: ServerEnv,
 ): MediaProcessingJobDependencies {
   const queue = createPgmqRepository({
     supabaseUrl: env.SUPABASE_URL,
