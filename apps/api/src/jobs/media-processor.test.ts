@@ -19,6 +19,106 @@ const job: MediaProcessingJob = {
 };
 
 describe("migrated media processor", () => {
+  it.each([
+    {
+      width: 2400,
+      height: 3600,
+      sizes: [
+        [213, 320],
+        [1707, 2560],
+      ],
+    },
+    {
+      width: 3600,
+      height: 2400,
+      sizes: [
+        [480, 320],
+        [2560, 1707],
+      ],
+    },
+    {
+      width: 180,
+      height: 270,
+      sizes: [
+        [180, 270],
+        [180, 270],
+      ],
+    },
+  ])(
+    "preserves the full $width by $height document page without enlarging it",
+    async ({ width, height, sizes }) => {
+      const input = await sharp({
+        create: { width, height, channels: 3, background: "white" },
+      })
+        .png()
+        .toBuffer();
+      const outputs = new Map<string, Uint8Array>();
+      await processMediaJob(
+        {
+          ...job,
+          purpose: "vehicle_document",
+          objectKey: "users/u1/vehicle_document/m1/original",
+          storageProvider: "supabase",
+        },
+        {
+          storage: {
+            get: async (_key, provider) => {
+              expect(provider).toBe("supabase");
+              return input;
+            },
+            put: async (key, data, mime, provider) => {
+              expect(provider).toBe("supabase");
+              expect(mime).toBe("image/webp");
+              outputs.set(key, data);
+            },
+          },
+          repository: { markReady: vi.fn(), markFailed: vi.fn() },
+        },
+      );
+      expect([...outputs.keys()]).toEqual([
+        "users/u1/vehicle_document/m1/thumbnail.webp",
+        "users/u1/vehicle_document/m1/preview.webp",
+      ]);
+      for (const [index, bytes] of [...outputs.values()].entries()) {
+        expect(await sharp(bytes).metadata()).toMatchObject({
+          format: "webp",
+          width: sizes[index]![0],
+          height: sizes[index]![1],
+        });
+      }
+    },
+  );
+
+  it("rotates document variants from camera orientation before fitting the complete page", async () => {
+    const input = await sharp({
+      create: { width: 1200, height: 800, channels: 3, background: "white" },
+    })
+      .withMetadata({ orientation: 6 })
+      .jpeg()
+      .toBuffer();
+    const outputs: Uint8Array[] = [];
+    await processMediaJob(
+      { ...job, purpose: "vehicle_document" },
+      {
+        storage: {
+          get: async () => input,
+          put: async (_key, data) => {
+            outputs.push(data);
+          },
+        },
+        repository: { markReady: vi.fn(), markFailed: vi.fn() },
+      },
+    );
+    expect(await sharp(outputs[0]).metadata()).toMatchObject({
+      width: 213,
+      height: 320,
+    });
+    expect(await sharp(outputs[1]).metadata()).toMatchObject({
+      width: 800,
+      height: 1200,
+    });
+  });
+
   it.each(["gif", "pixels"])(
     "rejects %s outside the source policy before persisting variants",
     async (kind) => {

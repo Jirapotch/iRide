@@ -21,12 +21,14 @@ export function ActivityList({
   events,
   locale,
   nowIso,
+  initialKind = "all",
 }: {
   readonly events: readonly EventDto[];
   readonly locale: Locale;
   readonly nowIso: string;
+  readonly initialKind?: ActivityKindFilter;
 }) {
-  const [kind, setKind] = useState<ActivityKindFilter>("all");
+  const [kind, setKind] = useState<ActivityKindFilter>(initialKind);
   const [period, setPeriod] = useState<ActivityPeriod>("upcoming");
   const now = useMemo(() => new Date(nowIso), [nowIso]);
   const visible = useMemo(

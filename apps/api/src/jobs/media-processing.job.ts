@@ -160,7 +160,13 @@ export function parseMediaProcessingMessage(
   if (typeof value !== "object" || value === null || Array.isArray(value))
     return null;
   const item = value as Record<string, Json | undefined>;
-  const purposes = ["avatar", "cover", "vehicle", "trip_recap"] as const;
+  const purposes = [
+    "avatar",
+    "cover",
+    "vehicle",
+    "vehicle_document",
+    "trip_recap",
+  ] as const;
   if (
     item.version !== 1 ||
     typeof item.jobId !== "string" ||

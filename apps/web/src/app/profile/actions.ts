@@ -3,6 +3,7 @@
 import type { UpdateProfileInput } from "@iride/types";
 import { updateProfileSchema } from "@iride/validation";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 import { getVerifiedWebSession } from "@/lib/auth-session";
 import { ProfileApiError, updateOwnProfile } from "@/lib/profile-api";
@@ -32,9 +33,7 @@ async function saveProfile(
 ): Promise<ProfileFormState> {
   const session = await getVerifiedWebSession();
   if (!session)
-    redirect(
-      `/login?next=${onboarding ? "%2Fonboarding" : "%2Fprofile%2Fedit"}`,
-    );
+    redirect(`/login?next=${onboarding ? "%2Fonboarding" : "%2Fprofile"}`);
 
   const input: UpdateProfileInput = {
     username: field(formData, "username"),
@@ -62,13 +61,11 @@ async function saveProfile(
     Object.entries(validation.data).filter(([, value]) => value !== undefined),
   ) as UpdateProfileInput;
 
-  let username: string;
   try {
     const profile = await updateOwnProfile(session.accessToken, validatedInput);
     if (!profile.isComplete || !profile.username) {
       return { errorCode: "PROFILE_INCOMPLETE", fieldErrors: {}, values };
     }
-    username = profile.username;
   } catch (error) {
     return {
       errorCode:
@@ -78,7 +75,10 @@ async function saveProfile(
     };
   }
 
-  redirect(`/users/${username}`);
+  revalidatePath("/profile");
+  if (!onboarding)
+    return { errorCode: null, fieldErrors: {}, values, saved: true };
+  redirect("/profile");
 }
 
 function fieldErrors(

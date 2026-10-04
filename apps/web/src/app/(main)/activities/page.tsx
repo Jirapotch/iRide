@@ -1,6 +1,7 @@
 import { CalendarBlank } from "@phosphor-icons/react/dist/ssr";
 
 import { ActivityList } from "@/features/activities/components/activity-list";
+import { activityKindFromQuery } from "@/features/activities/activity-presentation-domain";
 import { ActivitiesRetryPanel } from "@/features/activities/components/retry-panel";
 import styles from "@/features/activities/components/activities.module.css";
 import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
@@ -10,7 +11,12 @@ import { getEvents } from "@/lib/content-api";
 import { captureData } from "@/lib/data-result";
 import { getRequestLocale } from "@/lib/request-locale";
 
-export default async function ActivitiesPage() {
+export default async function ActivitiesPage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const initialKind = activityKindFromQuery((await searchParams).kinds);
   const [locale, session] = await Promise.all([
     getRequestLocale(),
     getVerifiedWebSession().catch(() => null),
@@ -38,6 +44,8 @@ export default async function ActivitiesPage() {
       </header>
       {result.status === "success" ? (
         <ActivityList
+          key={initialKind}
+          initialKind={initialKind}
           events={result.data}
           locale={locale}
           nowIso={new Date().toISOString()}

@@ -3,12 +3,23 @@ import { describe, expect, it } from "vitest";
 
 import {
   activityStatus,
+  activityKindFromQuery,
   coordinateRoutePointsForEvent,
   filterAndSortActivities,
   formatActivityDate,
   projectRoutePoints,
   routePointsForEvent,
 } from "./activity-presentation-domain";
+
+describe("activityKindFromQuery", () => {
+  it("opens the requested activity kind and rejects unknown filters", () => {
+    expect(activityKindFromQuery("trip")).toBe("trip");
+    expect(activityKindFromQuery("meeting")).toBe("meeting");
+    expect(activityKindFromQuery(["event", "trip"])).toBe("event");
+    expect(activityKindFromQuery("unknown")).toBe("all");
+    expect(activityKindFromQuery(undefined)).toBe("all");
+  });
+});
 
 const organizer = {
   id: "user-1",

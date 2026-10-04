@@ -32,10 +32,14 @@ const slice = createSlice({
       fetchedAt: action.payload.fetchedAt,
     }),
     invalidateOwnProfile: () => initialState,
+    expireOwnProfile: (state, action: PayloadAction<string>) => {
+      if (state.userId === action.payload) state.fetchedAt = null;
+    },
   },
 });
 
-export const { storeOwnProfile, invalidateOwnProfile } = slice.actions;
+export const { storeOwnProfile, invalidateOwnProfile, expireOwnProfile } =
+  slice.actions;
 export const ownProfileCacheReducer = slice.reducer;
 
 export function selectFreshOwnProfile(

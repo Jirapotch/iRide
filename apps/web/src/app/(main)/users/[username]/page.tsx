@@ -1,5 +1,9 @@
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import {
+  ownProfileRedirect,
+  type ProfileQuery,
+} from "@/features/profile/profile-routing";
 
 import { resolveBreadcrumbs } from "@/lib/app-navigation-domain";
 import { getVerifiedWebSession } from "@/lib/auth-session";
@@ -15,11 +19,7 @@ export default async function UserProfilePage({
   searchParams,
 }: {
   readonly params: Promise<{ username: string }>;
-  readonly searchParams: Promise<{
-    tab?: string;
-    vehicle?: string;
-    modal?: string;
-  }>;
+  readonly searchParams: Promise<ProfileQuery>;
 }) {
   const [{ username }, query, locale, session] = await Promise.all([
     params,
@@ -27,15 +27,19 @@ export default async function UserProfilePage({
     getRequestLocale(),
     getVerifiedWebSession(),
   ]);
-  const [profile, ownProfile] = await Promise.all([
-    getPublicProfile(username, session?.accessToken),
-    session
-      ? getOwnProfile(session.accessToken).catch(() => null)
-      : Promise.resolve(null),
-  ]);
+  const ownProfile = session
+    ? getOwnProfile(session.accessToken).catch(() => null)
+    : Promise.resolve(null);
+  const owner = await ownProfile;
+  const ownRedirect = ownProfileRedirect(
+    username,
+    owner?.username ?? null,
+    query,
+  );
+  if (ownRedirect) redirect(ownRedirect);
+  const profile = await getPublicProfile(username, session?.accessToken);
   if (!profile) notFound();
-  const ownerProfile =
-    ownProfile?.username === profile.username ? ownProfile : null;
+  const ownerProfile = owner?.username === profile.username ? owner : null;
   const tab =
     query.tab === "garage" || query.tab === "activities"
       ? query.tab
@@ -62,11 +66,15 @@ export default async function UserProfilePage({
             >
               <ProfileTabContent
                 accessToken={session?.accessToken}
-                canManage={ownProfile?.canManage ?? false}
+                canManage={owner?.canManage ?? false}
                 locale={locale}
-                modal={query.modal}
+                modal={
+                  typeof query.modal === "string" ? query.modal : undefined
+                }
                 ownerProfile={ownerProfile}
-                selectedVehicleId={query.vehicle}
+                selectedVehicleId={
+                  typeof query.vehicle === "string" ? query.vehicle : undefined
+                }
                 tab={tab}
                 username={profile.username}
               />

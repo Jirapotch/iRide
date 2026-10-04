@@ -7,21 +7,21 @@ for (const width of [375, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
 
-    const hero = page.locator('[aria-labelledby="home-title"]');
-    const community = hero.locator('a[href="/community"]');
-    const activities = hero.locator('a[href="/activities"]');
+    const community = page.locator('[data-ride-feature="community"]');
+    const activities = page.locator('[data-ride-feature="activities"]');
     await expect(community).toBeVisible();
     await expect(activities).toBeVisible();
 
-    const card = page.locator('[data-feature-card="community"]');
+    const card = community;
     await expect(card).toBeVisible();
     expect(
-      await card.evaluate((element) => getComputedStyle(element).minHeight),
-    ).toBe(width < 640 ? "280px" : "320px");
+      await card.evaluate((element) => element.getBoundingClientRect().height),
+    ).toBeGreaterThanOrEqual(44);
 
     await community.focus();
     await expect(community).toBeFocused();
     await page.keyboard.press("Enter");
+    await page.locator('[data-ui="ride-hub"] a[href="/community"]').click();
     await expect(page).toHaveURL(/\/community$/);
   });
 }

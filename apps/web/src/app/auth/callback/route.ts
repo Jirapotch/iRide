@@ -71,7 +71,9 @@ export async function GET(request: Request) {
         }
       }
       const profilePath = profile?.username
-        ? `/users/${profile.username}`
+        ? next === "/profile" || next.startsWith("/profile?")
+          ? next
+          : "/profile"
         : "/onboarding";
       logOAuthEvent(
         "profile_redirect",

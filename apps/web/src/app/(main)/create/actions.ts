@@ -107,7 +107,6 @@ export async function saveVehicleAction(formData: FormData) {
   const session = await getVerifiedWebSession();
   if (!session) redirect("/login");
   const id = optional(formData, "editId");
-  const username = String(formData.get("username") ?? "");
   const input = createVehicleSchema.parse({
     kind: String(formData.get("kind")),
     brand: String(formData.get("brand") ?? ""),
@@ -121,18 +120,16 @@ export async function saveVehicleAction(formData: FormData) {
   const result = id
     ? await updateVehicle(session.accessToken, id, input)
     : await createVehicle(session.accessToken, input);
-  redirect(
-    `/users/${encodeURIComponent(username)}?tab=garage&vehicle=${result.id}`,
-  );
+  redirect(`/profile?tab=garage&vehicle=${result.id}`);
 }
 
 export async function removeVehicleAction(formData: FormData) {
   const session = await getVerifiedWebSession();
   if (!session) redirect("/login");
   const id = String(formData.get("id") ?? "");
-  const username = String(formData.get("username") ?? "");
   await deleteVehicle(session.accessToken, id);
-  redirect(`/users/${encodeURIComponent(username)}?tab=garage`);
+  revalidatePath("/profile");
+  redirect("/profile?tab=garage");
 }
 export async function removeContent(formData: FormData) {
   const session = await getVerifiedWebSession();

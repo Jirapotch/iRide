@@ -2,6 +2,15 @@ import type { EventDto, EventKind } from "@iride/types";
 import type { Locale } from "@/lib/locale";
 
 export type ActivityKindFilter = "all" | EventKind;
+
+export function activityKindFromQuery(
+  value: string | string[] | undefined,
+): ActivityKindFilter {
+  const kind = Array.isArray(value) ? value[0] : value;
+  return kind === "trip" || kind === "meeting" || kind === "event"
+    ? kind
+    : "all";
+}
 export type ActivityPeriod = "upcoming" | "past";
 export type ActivityStatus = "today" | "upcoming" | "past" | "unscheduled";
 

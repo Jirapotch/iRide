@@ -111,6 +111,7 @@ jobs:
           supabase/tests/database/access_control.test.sql
           supabase/tests/database/content.test.sql
           supabase/tests/database/social_garage_market.test.sql
+          supabase/tests/database/digital_garage.test.sql
 
       - name: Run production database advisors
         run: >-

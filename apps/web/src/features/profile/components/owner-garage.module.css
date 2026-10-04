@@ -1,0 +1,198 @@
+.panel {
+  display: grid;
+  gap: 16px;
+  padding-top: 16px;
+  min-width: 0;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+.vehicle {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.thumbnail {
+  width: 80px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--muted);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.thumbnail img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+.vehicle h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.metadata {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  margin: 3px 0;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.menuLink {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+.panel :global(.ant-btn),
+.panel a {
+  min-height: 44px;
+}
+.record {
+  display: grid;
+  gap: 4px;
+}
+.record h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.record p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.document {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+}
+.document a {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--primary);
+  text-underline-offset: 3px;
+}
+.document a:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+.detailColumns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 20px;
+  align-items: start;
+}
+.photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.photos img {
+  border-radius: 8px;
+  object-fit: cover;
+}
+.detailColumns > :global(.ant-card) {
+  min-width: 0;
+}
+@media (max-width: 800px) {
+  .detailColumns {
+    grid-template-columns: 1fr;
+  }
+}
+.report {
+  color: var(--foreground);
+  background: var(--surface);
+}
+.report table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.report td,
+.report th {
+  padding: 8px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.report img {
+  max-width: 100%;
+  height: auto;
+}
+.report h2 {
+  font-size: 22px;
+}
+@media print {
+  :global(body):has(.report) {
+    overflow: visible !important;
+  }
+  :global(body):has(.report) > :not(:has(.report)) {
+    display: none !important;
+  }
+  :global(body):has(.report) :global(*) {
+    visibility: hidden !important;
+  }
+  :global(body):has(.report) .report,
+  :global(body):has(.report) .report * {
+    visibility: visible !important;
+  }
+  .report {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    padding: 16px;
+    color: #111;
+    background: white;
+  }
+  :global(body):has(.report) :global(.ant-modal-wrap),
+  :global(body):has(.report) :global(.ant-modal),
+  :global(body):has(.report) :global(.ant-modal-content) {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    transform: none !important;
+  }
+}
+@media (max-width: 600px) {
+  .fields {
+    grid-template-columns: 1fr;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .thumbnail {
+    width: 64px;
+    height: 56px;
+  }
+}

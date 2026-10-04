@@ -309,11 +309,82 @@ export interface CreateVehicleInput {
 
 export type UpdateVehicleInput = Partial<CreateVehicleInput>;
 
+export type VehicleRecordKind = "service" | "modification";
+export interface VehicleRecordInput {
+  readonly kind: VehicleRecordKind;
+  readonly title: string;
+  readonly occurredOn: string;
+  readonly mileageKm: number | null;
+  readonly description: string | null;
+  readonly workshopName: string | null;
+}
+export interface VehicleRecordDto extends VehicleRecordInput {
+  readonly id: string;
+  readonly vehicleId: string;
+  readonly vehicleLabel: string;
+  readonly documentIds: readonly string[];
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+export interface VehicleDocumentDto {
+  readonly id: string;
+  readonly vehicleId: string;
+  readonly filename: string;
+  readonly mimeType: string;
+  readonly bytes: number;
+  readonly recordId: string | null;
+  readonly createdAt: string;
+}
+export type OwnershipTransferStatus =
+  "pending" | "accepted" | "rejected" | "cancelled" | "expired";
+export interface OwnershipTransferDto {
+  readonly id: string;
+  readonly vehicleId: string;
+  readonly vehicleLabel: string;
+  readonly fromUsername: string;
+  readonly toUsername: string;
+  readonly status: OwnershipTransferStatus;
+  readonly expiresAt: string;
+  readonly documentIds: readonly string[];
+  readonly createdAt: string;
+}
+export interface OwnerVehicleDto extends VehicleDto {
+  readonly mileageKm: number | null;
+  readonly nextServiceKm: number | null;
+  readonly nextServiceDate: string | null;
+  readonly archivedAt: string | null;
+  readonly recordCount: number;
+  readonly pendingTransfer: OwnershipTransferDto | null;
+}
+export interface GarageSummaryDto {
+  readonly vehicles: readonly OwnerVehicleDto[];
+  readonly recentRecords: readonly VehicleRecordDto[];
+  readonly transfers: readonly OwnershipTransferDto[];
+  readonly retainedDocuments?: readonly VehicleDocumentDto[];
+}
+export interface UpdateGarageVehicleInput {
+  readonly mileageKm?: number | null;
+  readonly nextServiceKm?: number | null;
+  readonly nextServiceDate?: string | null;
+}
+export interface CreateOwnershipTransferInput {
+  readonly vehicleId: string;
+  readonly toUsername: string;
+  readonly documentIds: readonly string[];
+}
+
+export interface AttachVehicleDocumentInput {
+  readonly mediaId: string;
+  readonly recordId: string | null;
+  readonly filename: string;
+}
+
 export const mediaPurposes = [
   "avatar",
   "cover",
   "vehicle",
   "trip_recap",
+  "vehicle_document",
 ] as const;
 export type MediaPurpose = (typeof mediaPurposes)[number];
 export const mediaStatuses = [
@@ -343,6 +414,7 @@ export interface MediaUploadRequest {
   readonly mimeType: "image/jpeg" | "image/png" | "image/webp";
   readonly bytes: number;
   readonly purpose: MediaPurpose;
+  readonly vehicleId?: string | undefined;
 }
 
 export interface MediaUploadAuthorizationDto {

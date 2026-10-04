@@ -1,12 +1,16 @@
 "use client";
 
 import type { OwnProfileDto, PublicProfileDto } from "@iride/types";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Alert, Button, Skeleton } from "antd";
+import { OwnerGarage } from "@/features/profile/components/owner-garage";
+import type { ProfileQuery } from "@/features/profile/profile-routing";
 import { useRouter } from "next/navigation";
 import { Breadcrumbs } from "@/features/navigation/components/breadcrumbs";
 import { UserProfileScreen } from "@/features/profile/components/user-profile-screen";
 import {
   invalidateOwnProfile,
+  expireOwnProfile,
   OWN_PROFILE_TTL_MS,
   selectFreshOwnProfile,
   storeOwnProfile,
@@ -18,9 +22,13 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 export function CachedOwnProfile({
   locale,
   userId,
+  query,
+  activities,
 }: {
   readonly locale: Locale;
   readonly userId: string;
+  readonly query: ProfileQuery;
+  readonly activities: ReactNode;
 }) {
   const dispatch = useAppDispatch();
   const cache = useAppSelector((state) => state.ownProfileCache);
@@ -35,11 +43,11 @@ export function CachedOwnProfile({
     if (cache.userId !== userId || cache.fetchedAt === null) return;
     const remaining = cache.fetchedAt + OWN_PROFILE_TTL_MS - Date.now();
     if (remaining <= 0) {
-      dispatch(invalidateOwnProfile());
+      dispatch(expireOwnProfile(userId));
       return;
     }
     const timer = window.setTimeout(
-      () => dispatch(invalidateOwnProfile()),
+      () => dispatch(expireOwnProfile(userId)),
       remaining,
     );
     return () => window.clearTimeout(timer);
@@ -49,7 +57,7 @@ export function CachedOwnProfile({
       dispatch(invalidateOwnProfile());
     if (selectFreshOwnProfile(cache, userId, Date.now())) return;
     if (cache.fetchedAt !== null && cache.userId === userId) {
-      dispatch(invalidateOwnProfile());
+      dispatch(expireOwnProfile(userId));
       return;
     }
     let active = true;
@@ -87,20 +95,18 @@ export function CachedOwnProfile({
                 ? "โหลดโปรไฟล์ไม่ได้"
                 : "Could not load your profile."}
             </p>
-            <button
-              type="button"
+            <Button
+              htmlType="button"
               onClick={() => {
                 setError(false);
                 setRetry((value) => value + 1);
               }}
             >
               {locale === "th" ? "ลองอีกครั้ง" : "Retry"}
-            </button>
+            </Button>
           </div>
         ) : (
-          <p role="status">
-            {locale === "th" ? "กำลังโหลดโปรไฟล์…" : "Loading profile…"}
-          </p>
+          <Skeleton active />
         )}
       </main>
     );
@@ -119,6 +125,27 @@ export function CachedOwnProfile({
   };
   return (
     <div className="profile-route">
+      {error ? (
+        <Alert
+          role="alert"
+          type="error"
+          title={
+            locale === "th"
+              ? "อัปเดตโปรไฟล์ไม่ได้"
+              : "Could not refresh your profile."
+          }
+          action={
+            <Button
+              onClick={() => {
+                setError(false);
+                setRetry((value) => value + 1);
+              }}
+            >
+              {locale === "th" ? "ลองอีกครั้ง" : "Retry"}
+            </Button>
+          }
+        />
+      ) : null}
       <Breadcrumbs
         items={[
           {
@@ -134,11 +161,31 @@ export function CachedOwnProfile({
         locale={locale}
       />
       <UserProfileScreen
-        initialTab="overview"
+        initialTab={typeof query.tab === "string" ? query.tab : "overview"}
         locale={locale}
         ownerProfile={profile}
         profile={publicProfile}
-        tabContent={null}
+        overviewContent={
+          <OwnerGarage
+            key={userId}
+            locale={locale}
+            profile={profile}
+            query={query}
+            overview
+          />
+        }
+        tabContent={
+          query.tab === "activities" ? (
+            activities
+          ) : (
+            <OwnerGarage
+              key={userId}
+              locale={locale}
+              profile={profile}
+              query={query}
+            />
+          )
+        }
       />
     </div>
   );

@@ -133,7 +133,7 @@ export function HeaderActions({
               <>
                 <PendingLink
                   className="drawer-row"
-                  href={username ? `/users/${username}` : "/onboarding"}
+                  href={username ? "/profile" : "/onboarding"}
                 >
                   <span>
                     <UserCircle size={20} />

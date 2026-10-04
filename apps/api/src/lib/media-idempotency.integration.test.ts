@@ -137,13 +137,17 @@ describe("upload retry across the real repository and Supabase client", () => {
     });
   });
 
-  it("does not treat other database failures as duplicates or expose private details", async () => {
-    const test = setup("42501");
-    await handleMediaUpload(test.request(), test.dependencies);
-    const retry = await handleMediaUpload(test.request(), test.dependencies);
-    expect(retry.status).toBe(503);
-    expect(await retry.json()).toEqual({
-      error: { code: "MEDIA_UNAVAILABLE", message: "MEDIA_UNAVAILABLE" },
-    });
-  });
+  it.each([
+    ["42501", 403, "MEDIA_FORBIDDEN"],
+    ["XX000", 503, "MEDIA_UNAVAILABLE"],
+  ] as const)(
+    "does not treat %s database failures as duplicates or expose private details",
+    async (failureCode, status, code) => {
+      const test = setup(failureCode);
+      await handleMediaUpload(test.request(), test.dependencies);
+      const retry = await handleMediaUpload(test.request(), test.dependencies);
+      expect(retry.status).toBe(status);
+      expect(await retry.json()).toEqual({ error: { code, message: code } });
+    },
+  );
 });

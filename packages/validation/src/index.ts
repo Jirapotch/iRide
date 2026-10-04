@@ -189,6 +189,52 @@ const vehicleFields = {
 } as const;
 
 export const createVehicleSchema = z.object(vehicleFields).strict();
+
+const garageMileage = z.number().int().min(0).max(10_000_000).nullable();
+export const garageIdSchema = z.uuid();
+export const attachVehicleDocumentSchema = z
+  .object({
+    mediaId: z.uuid(),
+    recordId: z.uuid().nullable().default(null),
+    filename: requiredText(255),
+  })
+  .strict();
+const garageDate = z.iso.date();
+export const vehicleRecordSchema = z
+  .object({
+    kind: z.enum(["service", "modification"]),
+    title: requiredText(120),
+    occurredOn: garageDate,
+    mileageKm: garageMileage,
+    description: nullableText(4_000),
+    workshopName: nullableText(120),
+  })
+  .strict();
+export const updateVehicleRecordSchema = vehicleRecordSchema
+  .partial()
+  .refine((input) => Object.keys(input).length > 0, "empty_patch");
+export const updateGarageVehicleSchema = z
+  .object({
+    mileageKm: garageMileage.optional(),
+    nextServiceKm: garageMileage.optional(),
+    nextServiceDate: garageDate.nullable().optional(),
+  })
+  .strict()
+  .refine((input) => Object.keys(input).length > 0, "empty_patch");
+export const archiveVehicleSchema = z
+  .object({ archived: z.boolean() })
+  .strict();
+export const createOwnershipTransferSchema = z
+  .object({
+    vehicleId: z.uuid(),
+    toUsername: usernameSchema,
+    documentIds: z
+      .array(z.uuid())
+      .max(100)
+      .default([])
+      .refine((ids) => new Set(ids).size === ids.length, "duplicate_documents"),
+  })
+  .strict();
 export const updateVehicleSchema = z
   .object(
     Object.fromEntries(
@@ -216,8 +262,23 @@ export const mediaUploadRequestSchema = z
       .positive()
       .max(10 * 1024 * 1024),
     purpose: z.enum(mediaPurposes),
+    vehicleId: z.uuid().optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((input, context) => {
+    if (input.purpose === "vehicle_document" && !input.vehicleId)
+      context.addIssue({
+        code: "custom",
+        path: ["vehicleId"],
+        message: "document_vehicle_required",
+      });
+    if (input.purpose !== "vehicle_document" && input.vehicleId)
+      context.addIssue({
+        code: "custom",
+        path: ["vehicleId"],
+        message: "unexpected_document_vehicle",
+      });
+  });
 
 export const tripStopSchema = z
   .object({ name: requiredText(160), latitude, longitude })

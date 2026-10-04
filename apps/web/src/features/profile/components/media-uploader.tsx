@@ -22,11 +22,13 @@ export function MediaUploader({
   locale,
   onReady,
   purpose,
+  vehicleId,
 }: {
   readonly cropRatio?: number;
   readonly locale: Locale;
-  readonly onReady: (id: string) => Promise<void> | void;
+  readonly onReady: (id: string, file: File) => Promise<void> | void;
   readonly purpose: MediaPurpose;
+  readonly vehicleId?: string;
 }) {
   const [file, setFile] = useState<File | null>(null),
     [preview, setPreview] = useState<string | null>(null),
@@ -111,30 +113,35 @@ export function MediaUploader({
         });
         signal.throwIfAborted();
         const client = createBrowserSupabaseClient();
-        attempt.current = createMediaUploadAttempt(blob, purpose, {
-          authorize: authorizeMediaAction,
-          reauthorize: reauthorizeMediaAction,
-          complete: completeMediaAction,
-          upload: (auth, image) => uploadAuthorizedMedia(auth, image, client),
-          wait: () =>
-            new Promise<void>((resolve, reject) => {
-              const activeSignal = operation.current?.signal;
-              if (!activeSignal) {
-                reject(new Error("MEDIA_UPLOAD_CANCELLED"));
-                return;
-              }
-              activeSignal.throwIfAborted();
-              const abort = () => {
-                clearTimeout(timer);
-                reject(activeSignal.reason);
-              };
-              const timer = setTimeout(() => {
-                activeSignal.removeEventListener("abort", abort);
-                resolve();
-              }, 2000);
-              activeSignal.addEventListener("abort", abort, { once: true });
-            }),
-        });
+        attempt.current = createMediaUploadAttempt(
+          blob,
+          purpose,
+          {
+            authorize: authorizeMediaAction,
+            reauthorize: reauthorizeMediaAction,
+            complete: completeMediaAction,
+            upload: (auth, image) => uploadAuthorizedMedia(auth, image, client),
+            wait: () =>
+              new Promise<void>((resolve, reject) => {
+                const activeSignal = operation.current?.signal;
+                if (!activeSignal) {
+                  reject(new Error("MEDIA_UPLOAD_CANCELLED"));
+                  return;
+                }
+                activeSignal.throwIfAborted();
+                const abort = () => {
+                  clearTimeout(timer);
+                  reject(activeSignal.reason);
+                };
+                const timer = setTimeout(() => {
+                  activeSignal.removeEventListener("abort", abort);
+                  resolve();
+                }, 2000);
+                activeSignal.addEventListener("abort", abort, { once: true });
+              }),
+          },
+          vehicleId ? { vehicleId } : {},
+        );
         setCropLocked(true);
       }
       const mediaId = await attempt.current.run((nextPhase) => {
@@ -142,7 +149,7 @@ export function MediaUploader({
         setPhase(nextPhase);
       });
       signal.throwIfAborted();
-      await onReady(mediaId);
+      await onReady(mediaId, file);
       signal.throwIfAborted();
       attempt.current = null;
       setCropLocked(false);
@@ -162,7 +169,11 @@ export function MediaUploader({
     }
   }
   return (
-    <div aria-busy={pending} className="media-uploader">
+    <div
+      aria-busy={pending}
+      className="media-uploader"
+      data-media-purpose={purpose}
+    >
       {preview ? (
         <div className="crop-preview" style={{ aspectRatio: ratio ?? 16 / 9 }}>
           <Image

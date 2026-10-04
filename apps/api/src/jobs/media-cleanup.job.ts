@@ -24,6 +24,10 @@ export interface MediaCleanupJob {
 export interface MediaCleanupJobDependencies {
   readonly queue: PgmqRepository;
   readonly remove: (key: string, provider: StorageProvider) => Promise<void>;
+  readonly canRemove?: (
+    key: string,
+    provider: StorageProvider,
+  ) => Promise<boolean>;
   readonly clearSource?: (
     mediaId: string,
     key: string,
@@ -62,6 +66,14 @@ export async function runMediaCleanupBatch(
     }
     try {
       for (const object of message.objects) {
+        if (
+          dependencies.canRemove &&
+          !(await dependencies.canRemove(
+            object.objectKey,
+            object.storageProvider,
+          ))
+        )
+          continue;
         await dependencies.remove(object.objectKey, object.storageProvider);
         if (object.sourceMediaId) {
           if (!dependencies.clearSource)
@@ -111,6 +123,19 @@ export function createMediaCleanupJobDependencies(
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     }),
     remove: (key, provider) => storage.remove(key, provider),
+    async canRemove(key, provider) {
+      // Deletion jobs remove metadata before enqueueing cleanup. A currently
+      // registered variant can belong to a transferred vehicle and must survive
+      // a delayed or duplicated cleanup payload from its previous owner.
+      const { data, error } = await admin
+        .from("media_variants")
+        .select("media_id,media!inner(storage_provider)")
+        .eq("object_key", key)
+        .eq("media.storage_provider", provider)
+        .limit(1);
+      if (error) throw error;
+      return !data?.length;
+    },
     async clearSource(mediaId, key, provider) {
       const { data, error } = await admin
         .from("media")
@@ -125,7 +150,23 @@ export function createMediaCleanupJobDependencies(
         .select("id")
         .maybeSingle();
       if (error) throw error;
-      if (!data) throw new Error("MEDIA_SOURCE_CLEANUP_CONFLICT");
+      if (!data) {
+        // An attached document can be deleted while its delayed source cleanup
+        // is queued. The document deletion already queues every object key.
+        const current = await admin
+          .from("media")
+          .select("id,original_object_key,original_cleaned_at,status")
+          .eq("id", mediaId)
+          .maybeSingle();
+        if (current.error) throw current.error;
+        if (
+          !current.data ||
+          (current.data.original_object_key === null &&
+            current.data.original_cleaned_at)
+        )
+          return;
+        throw new Error("MEDIA_SOURCE_CLEANUP_CONFLICT");
+      }
     },
   };
 }

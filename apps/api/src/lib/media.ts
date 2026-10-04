@@ -28,6 +28,7 @@ import {
 } from "./media-repository";
 
 interface OwnedUpload {
+  readonly vehicleId?: string;
   readonly id: string;
   readonly ownerId: string;
   readonly purpose: MediaPurpose;
@@ -50,6 +51,11 @@ interface ProcessingMessage {
   readonly storageProvider: StorageProvider;
 }
 export interface MediaRepository {
+  readonly assertDocumentUpload?: (
+    userId: string,
+    vehicleId: string,
+    token: string,
+  ) => Promise<void>;
   readonly getAccountAccess: (userId: string) => Promise<{
     readonly status: "locked" | "active" | "suspended";
     readonly transitionId: string | null;
@@ -64,6 +70,7 @@ export interface MediaRepository {
       mimeType: string;
       bytes: number;
       storageProvider: StorageProvider;
+      vehicleId?: string;
     },
     token: string,
   ) => Promise<void>;
@@ -80,7 +87,11 @@ export interface MediaRepository {
     id: string,
     kind: MediaVariantKind,
     viewerId: string | null,
-  ) => Promise<{ objectKey: string; storageProvider?: StorageProvider } | null>;
+  ) => Promise<{
+    objectKey: string;
+    storageProvider?: StorageProvider;
+    serverOnly?: boolean;
+  } | null>;
 }
 export interface MediaDependencies {
   readonly authenticate: (
@@ -89,6 +100,7 @@ export interface MediaDependencies {
   readonly newId: () => string;
   readonly repository: MediaRepository;
   readonly storage: {
+    get?: (key: string, provider?: StorageProvider) => Promise<Uint8Array>;
     signUpload: (
       key: string,
       mime: string,
@@ -128,6 +140,13 @@ export function handleMediaUpload(
       mediaUploadRequestSchema,
     );
     const id = input.uploadId ?? dependencies.newId();
+    if (input.purpose === "vehicle_document")
+      await assertDocumentUpload(
+        dependencies,
+        auth.userId,
+        input.vehicleId,
+        bearer(request),
+      );
     const objectKey = mediaObjectKey(
       auth.userId,
       input.purpose,
@@ -150,6 +169,7 @@ export function handleMediaUpload(
           mimeType: input.mimeType,
           bytes: input.bytes,
           storageProvider: "supabase",
+          ...(input.vehicleId ? { vehicleId: input.vehicleId } : {}),
         },
         bearer(request),
       );
@@ -168,7 +188,8 @@ export function handleMediaUpload(
         existing.purpose !== input.purpose ||
         existing.filename !== input.filename ||
         existing.mimeType !== input.mimeType ||
-        existing.bytes !== input.bytes
+        existing.bytes !== input.bytes ||
+        existing.vehicleId !== input.vehicleId
       )
         throw new MediaError("MEDIA_UPLOAD_CONFLICT", 409);
     }
@@ -200,6 +221,13 @@ export function handleMediaReauthorize(
       media.storageProvider !== "supabase"
     )
       throw new MediaError("MEDIA_UPLOAD_NOT_RETRYABLE", 409);
+    if (media.purpose === "vehicle_document")
+      await assertDocumentUpload(
+        dependencies,
+        auth.userId,
+        media.vehicleId,
+        bearer(request),
+      );
     const authorization = await dependencies.storage.signUpload(
       media.objectKey,
       media.mimeType,
@@ -217,6 +245,13 @@ export function handleMediaReauthorize(
       latest.storageProvider !== "supabase"
     )
       throw new MediaError("MEDIA_UPLOAD_NOT_RETRYABLE", 409);
+    if (media.purpose === "vehicle_document")
+      await assertDocumentUpload(
+        dependencies,
+        auth.userId,
+        media.vehicleId,
+        bearer(request),
+      );
     return Response.json({ data: { mediaId: id, ...authorization } });
   });
 }
@@ -240,6 +275,13 @@ export function handleMediaComplete(
       return Response.json(
         { data: { mediaId: id, status: media.status } },
         { status: 202 },
+      );
+    if (media.purpose === "vehicle_document")
+      await assertDocumentUpload(
+        dependencies,
+        auth.userId,
+        media.vehicleId,
+        bearer(request),
       );
     if (media.status !== "uploading" || !media.objectKey)
       throw new MediaError("MEDIA_UPLOAD_INVALID", 400);
@@ -291,6 +333,25 @@ export function handleMediaVariant(
       viewer,
     );
     if (!variant) throw new MediaError("MEDIA_NOT_FOUND", 404);
+    if (variant.serverOnly) {
+      if (!dependencies.storage.get)
+        throw new MediaError("MEDIA_UNAVAILABLE", 503);
+      return new Response(
+        new Uint8Array(
+          await dependencies.storage.get(
+            variant.objectKey,
+            variant.storageProvider ?? "r2",
+          ),
+        ),
+        {
+          headers: {
+            "Content-Type": "image/webp",
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+          },
+        },
+      );
+    }
     return new Response(null, {
       status: 307,
       headers: {
@@ -376,6 +437,16 @@ async function requireActiveAccount(
 }
 function bearer(request: Request) {
   return parseBearerToken(request.headers.get("authorization"));
+}
+async function assertDocumentUpload(
+  dependencies: MediaDependencies,
+  userId: string,
+  vehicleId: string | undefined,
+  token: string,
+) {
+  if (!vehicleId || !dependencies.repository.assertDocumentUpload)
+    throw new MediaError("MEDIA_FORBIDDEN", 403);
+  await dependencies.repository.assertDocumentUpload(userId, vehicleId, token);
 }
 function requireUuid(value: string) {
   if (

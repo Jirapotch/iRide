@@ -6,6 +6,7 @@ export type ProfileFieldErrorCode =
   | "DISPLAY_NAME_INVALID";
 
 export interface ProfileFormState {
+  readonly saved?: boolean;
   readonly errorCode: string | null;
   readonly fieldErrors: Readonly<{
     username?: ProfileFieldErrorCode;

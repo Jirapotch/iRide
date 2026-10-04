@@ -28,9 +28,9 @@ for (const width of widths) {
 
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await expect(page.locator("main")).toHaveCount(1);
-      await expect(page.locator('[data-ui="feature-selection"] a')).toHaveCount(
-        3,
-      );
+      await expect(
+        page.locator('[data-ui="ride-hub"] [data-ride-feature]'),
+      ).toHaveCount(6);
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= window.innerWidth,

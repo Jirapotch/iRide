@@ -1,0 +1,179 @@
+.root {
+  position: relative;
+  width: min(1480px, calc(100% - 48px));
+  margin: 24px auto 0;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--foreground);
+  overflow: hidden;
+}
+.stage {
+  position: relative;
+  height: var(--ride-scene-height, clamp(400px, calc(100svh - 190px), 800px));
+}
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+.canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.plaque {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  max-width: 160px;
+  padding: 5px 14px;
+  border: 1px solid #747e78;
+  border-radius: 12px;
+  background: #333d3b;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  transform: translate(-50%, -15%);
+  cursor: pointer;
+  box-shadow: 0 3px 8px #1a292a24;
+  visibility: hidden;
+}
+.plaque[aria-pressed="true"] {
+  background: #4f6f52;
+  border-color: #bfd8c2;
+}
+.plaque:focus-visible,
+.open:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 4px;
+}
+.bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px 24px;
+}
+.features {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.features :global(.ant-btn) {
+  min-height: 48px;
+  padding-inline: clamp(10px, 1.5vw, 22px);
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.actions :global(.ant-btn) {
+  min-width: 44px;
+  min-height: 44px;
+}
+.open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding-inline: 16px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+.poster {
+  object-fit: contain;
+  opacity: 0.3;
+  z-index: -1;
+}
+.fallback {
+  isolation: isolate;
+}
+.fallback button {
+  pointer-events: auto;
+}
+@media (max-width: 1100px) {
+  .bottom {
+    flex-wrap: wrap;
+  }
+  .features {
+    flex: 1;
+  }
+  .actions {
+    margin-left: auto;
+  }
+}
+@media (max-width: 767px) {
+  .root {
+    width: calc(100% - 24px);
+    margin-top: 12px;
+    border-radius: 16px;
+  }
+  .stage {
+    height: var(--ride-scene-height, clamp(330px, 52svh, 440px));
+  }
+  .plaque {
+    display: none;
+  }
+  .plaque[aria-pressed="true"] {
+    display: inline-flex;
+    font-size: 12px;
+    min-height: 44px;
+  }
+  .bottom {
+    padding: 8px 12px 16px;
+    gap: 12px;
+  }
+  .features {
+    width: 100%;
+    flex: auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+  .features :global(.ant-btn) {
+    display: flex;
+    flex-direction: column;
+    height: 62px;
+    padding: 6px 0;
+    gap: 3px;
+    font-size: 11px;
+  }
+  .features :global(.ant-btn-icon) {
+    margin: 0;
+  }
+  .actions {
+    width: 100%;
+    margin: 0;
+  }
+  .open {
+    margin-left: auto;
+    min-width: 104px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .root *,
+  .root *::before,
+  .root *::after {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+}

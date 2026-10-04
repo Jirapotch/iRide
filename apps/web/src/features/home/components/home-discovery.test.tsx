@@ -18,19 +18,25 @@ test("home content uses the app shell main landmark without nesting another", ()
   );
   expect(html.match(/<main\b/g)).toHaveLength(1);
   expect(html).toContain('id="home-title"');
-  expect(html).toContain("Every road has a story");
+  expect(html).toContain('data-ui="ride-hub"');
+  expect(html).not.toContain("Every road has a story");
+  expect(html).not.toContain("hero-journey.png");
 });
 
-test("home feature cards lead to all four destinations in the requested order", () => {
+test("home keeps all six features inside the hub without duplicate sections or scene controls", () => {
   const html = renderToStaticMarkup(<HomeDiscovery locale="th" />);
-  const cards = [
-    ...html.matchAll(/data-feature-card="([^"]+)"[^>]*href="([^"]+)"/g),
-  ];
-  expect(cards.map((card) => [card[1], card[2]])).toEqual([
-    ["community", "/community"],
-    ["activities", "/activities"],
-    ["knowledge", "/knowledge"],
-    ["games", "/games"],
+  expect(
+    [...html.matchAll(/data-ride-feature="([^"]+)"/g)].map((match) => match[1]),
+  ).toEqual([
+    "community",
+    "activities",
+    "trips",
+    "routes",
+    "knowledge",
+    "games",
   ]);
+  expect(html).not.toContain("data-feature-card");
+  expect(html).not.toContain("เลือกมุมมอง");
+  expect(html).not.toContain("โหมดฉาก");
   expect(html).toContain("สื่อความรู้");
 });

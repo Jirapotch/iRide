@@ -5,6 +5,7 @@ import { CompatibilityModule } from "./modules/compatibility/compatibility.modul
 import { HealthModule } from "./modules/health/health.module";
 import { JobsModule } from "./modules/jobs/jobs.module";
 import { ProfilesModule } from "./modules/profiles/profiles.module";
+import { GarageModule } from "./modules/garage/garage.module";
 
 export function shouldUseTypeOrmProfiles(
   input: Record<string, string | undefined> = process.env,
@@ -21,6 +22,7 @@ const profileModules = shouldUseTypeOrmProfiles() ? [ProfilesModule] : [];
   imports: [
     DatabaseModule,
     HealthModule,
+    GarageModule,
     ...profileModules,
     CompatibilityModule,
     JobsModule,

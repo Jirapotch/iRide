@@ -42,6 +42,10 @@ export const variantSpecs: Readonly<
     { kind: "thumbnail", width: 480, height: 320, fit: "cover" },
     { kind: "preview", width: 1280, height: 960, fit: "inside" },
   ],
+  vehicle_document: [
+    { kind: "thumbnail", width: 480, height: 320, fit: "inside" },
+    { kind: "preview", width: 2560, height: 2560, fit: "inside" },
+  ],
   trip_recap: [
     { kind: "thumbnail", width: 480, height: 320, fit: "cover" },
     { kind: "preview", width: 1280, height: 960, fit: "inside" },

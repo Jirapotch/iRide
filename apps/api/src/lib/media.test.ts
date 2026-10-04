@@ -18,6 +18,7 @@ function setup(): MediaDependencies {
     authenticate: vi.fn().mockResolvedValue({ userId, accessTokenClaims: {} }),
     newId: () => mediaId,
     repository: {
+      assertDocumentUpload: vi.fn().mockResolvedValue(undefined),
       getAccountAccess: vi
         .fn()
         .mockResolvedValue({ status: "active", transitionId: null }),
@@ -52,6 +53,135 @@ function setup(): MediaDependencies {
 }
 
 describe("media API handlers", () => {
+  it("authorizes a vehicle document before issuing upload capability and stores its vehicle context", async () => {
+    const deps = setup();
+    const vehicleId = "30000000-0000-4000-8000-000000000001";
+    vi.mocked(deps.repository.assertDocumentUpload!).mockResolvedValue(
+      undefined,
+    );
+    const response = await handleMediaUpload(
+      new Request("https://api.test/media/uploads", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer jwt",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          purpose: "vehicle_document",
+          vehicleId,
+          filename: "receipt.webp",
+          mimeType: "image/webp",
+          bytes: 1024,
+        }),
+      }),
+      deps,
+    );
+    expect(response.status).toBe(201);
+    expect(deps.repository.assertDocumentUpload).toHaveBeenCalledWith(
+      userId,
+      vehicleId,
+      "jwt",
+    );
+    expect(deps.repository.createUpload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        purpose: "vehicle_document",
+        vehicleId,
+        storageProvider: "supabase",
+      }),
+      "jwt",
+    );
+    expect(
+      vi.mocked(deps.repository.assertDocumentUpload!).mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(
+      vi.mocked(deps.storage.signUpload).mock.invocationCallOrder[0]!,
+    );
+  });
+  it("does not issue document upload capability during pending transfer", async () => {
+    const deps = setup();
+    vi.mocked(deps.repository.assertDocumentUpload!).mockRejectedValue(
+      Object.assign(new Error("GARAGE_TRANSFER_PENDING"), {
+        code: "GARAGE_TRANSFER_PENDING",
+        status: 409,
+      }),
+    );
+    const response = await handleMediaUpload(
+      new Request("https://api.test/media/uploads", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer jwt",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          purpose: "vehicle_document",
+          vehicleId: "30000000-0000-4000-8000-000000000001",
+          filename: "receipt.webp",
+          mimeType: "image/webp",
+          bytes: 1024,
+        }),
+      }),
+      deps,
+    );
+    expect(response.status).toBe(409);
+    expect(deps.storage.signUpload).not.toHaveBeenCalled();
+    expect(deps.repository.createUpload).not.toHaveBeenCalled();
+  });
+  it("rechecks document authorization after upload token signing on retry", async () => {
+    const deps = setup();
+    const vehicleId = "30000000-0000-4000-8000-000000000001";
+    vi.mocked(deps.repository.assertDocumentUpload!)
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(
+        Object.assign(new Error("GARAGE_TRANSFER_PENDING"), {
+          code: "GARAGE_TRANSFER_PENDING",
+          status: 409,
+        }),
+      );
+    vi.mocked(deps.repository.findOwnedUpload).mockResolvedValue({
+      id: mediaId,
+      ownerId: userId,
+      purpose: "vehicle_document",
+      vehicleId,
+      status: "uploading",
+      objectKey: key,
+      mimeType: "image/webp",
+      bytes: 1024,
+      storageProvider: "supabase",
+    });
+    const response = await handleMediaReauthorize(
+      new Request("https://api.test/media/reauthorize", {
+        method: "POST",
+        headers: { authorization: "Bearer jwt" },
+      }),
+      mediaId,
+      deps,
+    );
+    expect(response.status).toBe(409);
+    expect(deps.repository.assertDocumentUpload).toHaveBeenCalledTimes(2);
+    expect(await response.text()).not.toContain("signed-token");
+  });
+  it("serves vehicle photos through authorization without issuing a reusable storage URL", async () => {
+    const deps = setup();
+    vi.mocked(deps.repository.findDeliverableVariant).mockResolvedValue({
+      objectKey: "vehicle-preview",
+      storageProvider: "supabase",
+      serverOnly: true,
+    });
+    deps.storage.get = vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]));
+    const response = await handleMediaVariant(
+      new Request("https://api.test/media/variant"),
+      mediaId,
+      "preview",
+      deps,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("location")).toBeNull();
+    expect([...new Uint8Array(await response.arrayBuffer())]).toEqual([
+      1, 2, 3,
+    ]);
+    expect(deps.storage.signDownload).not.toHaveBeenCalled();
+  });
   it("returns the same row after an ambiguous initial response without duplicating media", async () => {
     const deps = setup();
     const requestedId = "20000000-0000-4000-8000-000000000099";

@@ -1,4 +1,7 @@
-import type { Request as ExpressRequest, Response as ExpressResponse } from "express";
+import type {
+  Request as ExpressRequest,
+  Response as ExpressResponse,
+} from "express";
 
 export function toWebRequest(request: ExpressRequest): Request {
   const host = request.get("host") ?? "localhost";
@@ -14,19 +17,20 @@ export function toWebRequest(request: ExpressRequest): Request {
   }
 
   const method = request.method.toUpperCase();
-  const rawBody = method === "GET" || method === "HEAD" ? undefined : request.body;
+  const rawBody =
+    method === "GET" || method === "HEAD" ? undefined : request.body;
   const body =
     rawBody === undefined
       ? undefined
-      : typeof rawBody === "string"
-        ? rawBody
-        : JSON.stringify(rawBody);
+      : Buffer.isBuffer(rawBody)
+        ? new Uint8Array(rawBody)
+        : typeof rawBody === "string"
+          ? rawBody
+          : JSON.stringify(rawBody);
   return new Request(url, {
     method,
     headers,
-    ...(body === undefined
-      ? {}
-      : { body }),
+    ...(body === undefined ? {} : { body }),
   });
 }
 

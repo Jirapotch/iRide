@@ -24,6 +24,103 @@ const processingMessage = {
 };
 
 describe("migrated pgmq jobs", () => {
+  it("accepts queued document processing and retains the private provider", () => {
+    expect(
+      parseMediaProcessingMessage({
+        ...processingMessage,
+        purpose: "vehicle_document",
+        objectKey: "users/u1/vehicle_document/m1/original",
+        storageProvider: "supabase",
+      }),
+    ).toMatchObject({
+      purpose: "vehicle_document",
+      objectKey: "users/u1/vehicle_document/m1/original",
+      storageProvider: "supabase",
+    });
+  });
+
+  it("cleans a document source while keeping its registered variants", async () => {
+    const source = "users/u1/vehicle_document/m1/original";
+    const preview = "users/u1/vehicle_document/m1/preview.webp";
+    const thumbnail = "users/u1/vehicle_document/m1/thumbnail.webp";
+    const objects = new Set([source, preview, thumbnail]);
+    const events: string[] = [];
+    const result = await runMediaCleanupBatch(
+      {
+        queue: {
+          read: async () => [
+            {
+              messageId: 1,
+              readCount: 1,
+              message: {
+                version: 1,
+                jobId: "document-source",
+                idempotencyKey: "media:m1:source",
+                attempt: 0,
+                objects: [
+                  {
+                    objectKey: source,
+                    storageProvider: "supabase",
+                    sourceMediaId: "20000000-0000-4000-8000-000000000001",
+                  },
+                  { objectKey: preview, storageProvider: "supabase" },
+                ],
+              },
+            },
+          ],
+          archive: async () => {
+            events.push("archive");
+          },
+        },
+        canRemove: async (key) => key !== preview && key !== thumbnail,
+        remove: async (key, provider) => {
+          expect(provider).toBe("supabase");
+          objects.delete(key);
+          events.push("remove");
+        },
+        clearSource: async (_id, key, provider) => {
+          expect(key).toBe(source);
+          expect(provider).toBe("supabase");
+          events.push("clear");
+        },
+      },
+      { batchSize: 1, shouldContinue: () => true },
+    );
+    expect(result).toEqual({ processed: 1, failed: 0, archived: 1 });
+    expect([...objects]).toEqual([preview, thumbnail]);
+    expect(events).toEqual(["remove", "clear", "archive"]);
+  });
+
+  it("preserves registered variants from delayed previous-owner cleanup jobs", async () => {
+    const queue = {
+      read: vi.fn().mockResolvedValue([
+        {
+          messageId: 1,
+          readCount: 1,
+          message: {
+            version: 1,
+            jobId: "old",
+            idempotencyKey: "old-owner",
+            attempt: 1,
+            objects: [
+              {
+                objectKey: "retained-photo.webp",
+                storageProvider: "supabase",
+              },
+            ],
+          },
+        },
+      ]),
+      archive: vi.fn(),
+    };
+    const remove = vi.fn();
+    const result = await runMediaCleanupBatch(
+      { queue, remove, canRemove: async () => false },
+      { batchSize: 1, shouldContinue: () => true },
+    );
+    expect(remove).not.toHaveBeenCalled();
+    expect(result).toEqual({ processed: 1, failed: 0, archived: 1 });
+  });
   it("keeps source metadata on delete failure and clears it only after a successful retry", async () => {
     const events: string[] = [];
     let failDelete = true;

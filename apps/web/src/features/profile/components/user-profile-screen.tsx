@@ -1,6 +1,9 @@
 "use client";
 
-import { Button } from "antd";
+import { Button, ConfigProvider, Modal, Typography } from "antd";
+import enUS from "antd/locale/en_US";
+import thTH from "antd/locale/th_TH";
+import { MapPin, NotePencil } from "@phosphor-icons/react";
 import type { OwnProfileDto, PublicProfileDto } from "@iride/types";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -15,8 +18,9 @@ import type { Locale } from "@/lib/locale";
 
 import { MediaUploader } from "./media-uploader";
 import { ProfileTabController } from "./profile-tab-controller";
-import { invalidateOwnProfile } from "../profile-cache.slice";
+import { invalidateOwnProfile, storeOwnProfile } from "../profile-cache.slice";
 import { useAppDispatch } from "@/store/hooks";
+import styles from "./profile-shell.module.css";
 
 interface Props {
   readonly initialTab?: string;
@@ -24,6 +28,7 @@ interface Props {
   readonly ownerProfile: OwnProfileDto | null;
   readonly profile: PublicProfileDto;
   readonly tabContent: ReactNode;
+  readonly overviewContent?: ReactNode;
 }
 
 export function UserProfileScreen({
@@ -32,6 +37,7 @@ export function UserProfileScreen({
   ownerProfile,
   profile,
   tabContent,
+  overviewContent,
 }: Props) {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -63,120 +69,135 @@ export function UserProfileScreen({
         };
 
   async function attach(kind: "avatar" | "cover", id: string) {
-    await attachProfileMediaAction(kind, id);
-    dispatch(invalidateOwnProfile());
+    const updated = await attachProfileMediaAction(kind, id);
+    dispatch(
+      storeOwnProfile({
+        userId: updated.id,
+        profile: updated,
+        fetchedAt: Date.now(),
+      }),
+    );
     router.refresh();
   }
 
   return (
-    <article className="user-profile-shell">
-      <div className="profile-cover-media">
-        {profile.coverMediaId ? (
-          <Image
-            alt="Profile cover"
-            fill
-            priority
-            sizes="960px"
-            src={mediaVariantUrl(profile.coverMediaId)}
-            unoptimized
-          />
-        ) : (
-          <div
-            aria-label="Profile cover placeholder"
-            className="profile-cover-placeholder"
-            role="img"
-          />
-        )}
-        <div aria-hidden="true" />
-      </div>
-      <div className="user-profile-body">
-        <div className="user-profile-avatar">
-          {profile.avatarMediaId ? (
+    <ConfigProvider
+      locale={locale === "th" ? thTH : enUS}
+      form={{
+        validateMessages: {
+          required:
+            locale === "th" ? "กรุณากรอก${label}" : "${label} is required.",
+        },
+      }}
+    >
+      <article className={styles.shell}>
+        <div
+          className={`${styles.cover} ${!profile.coverMediaId ? styles.emptyCover : ""}`}
+        >
+          {profile.coverMediaId ? (
             <Image
-              alt={profile.displayName}
+              alt="Profile cover"
               fill
-              sizes="112px"
-              src={mediaVariantUrl(profile.avatarMediaId)}
+              priority
+              sizes="960px"
+              src={mediaVariantUrl(profile.coverMediaId)}
               unoptimized
             />
           ) : (
-            initials
+            <div
+              aria-label="Profile cover placeholder"
+              className="profile-cover-placeholder"
+              role="img"
+            />
           )}
         </div>
-        {editing && ownerProfile ? (
-          <section
-            className="profile-inline-editor"
-            onSubmitCapture={() => dispatch(invalidateOwnProfile())}
-          >
-            <div className="section-heading">
-              <div>
-                <p className="premium-kicker">{text.profile}</p>
-                <h1>{text.editHeading}</h1>
-              </div>
-              <button onClick={() => setEditing(false)} type="button">
-                {text.cancel}
-              </button>
+        <div className={styles.body}>
+          <div className={styles.identity}>
+            <div className={styles.avatar}>
+              {profile.avatarMediaId ? (
+                <Image
+                  alt={profile.displayName}
+                  fill
+                  sizes="112px"
+                  src={mediaVariantUrl(profile.avatarMediaId)}
+                  unoptimized
+                />
+              ) : (
+                initials
+              )}
             </div>
-            {ownerProfile.canWrite ? (
-              <div className="profile-media-editors">
-                <section>
-                  <h2>{locale === "th" ? "รูปโปรไฟล์" : "Profile photo"}</h2>
-                  <MediaUploader
-                    cropRatio={1}
-                    locale={locale}
-                    onReady={(id) => attach("avatar", id)}
-                    purpose="avatar"
-                  />
-                </section>
-                <section>
-                  <h2>{locale === "th" ? "ภาพ Cover" : "Cover image"}</h2>
-                  <MediaUploader
-                    cropRatio={3}
-                    locale={locale}
-                    onReady={(id) => attach("cover", id)}
-                    purpose="cover"
-                  />
-                </section>
-              </div>
-            ) : null}
-            <ProfileForm
-              action={editProfile}
-              initialProfile={ownerProfile}
-              locale={locale}
-            />
-          </section>
-        ) : (
-          <>
-            <div className="profile-title-row">
-              <div className="space-y-2">
-                <p className="premium-kicker">{text.profile}</p>
-                <h1 data-route-heading tabIndex={-1}>
-                  {profile.displayName}
-                </h1>
-                <p className="font-mono text-sm text-muted-foreground">
-                  @{profile.username}
+            <div className={styles.name}>
+              <h1 data-route-heading tabIndex={-1}>
+                {profile.displayName}
+              </h1>
+              <Typography.Text type="secondary">
+                @{profile.username}
+              </Typography.Text>
+              {profile.locationName ? (
+                <p className={styles.location}>
+                  <MapPin size={15} />
+                  {profile.locationName}
                 </p>
-              </div>
-              {ownerProfile ? (
-                <Button onClick={() => setEditing(true)} type="primary">
-                  {text.edit}
-                </Button>
               ) : null}
             </div>
-            <p className="leading-7 text-muted-foreground">
-              {profile.bio ?? text.emptyBio}
-            </p>
-            {profile.locationName ? (
-              <dl className="rounded-2xl border border-border bg-background/25 p-4 text-sm">
-                <dt className="text-muted-foreground">{text.location}</dt>
-                <dd className="mt-1 font-medium">{profile.locationName}</dd>
-              </dl>
+            {ownerProfile ? (
+              <Button
+                icon={<NotePencil size={18} />}
+                onClick={() => setEditing(true)}
+              >
+                {text.edit}
+              </Button>
             ) : null}
-            <ProfileTabController
-              initialTab={initialTab}
-              locale={locale}
-              username={profile.username}
-              overviewContent={
+          </div>
+          {profile.bio ? <p className={styles.bio}>{profile.bio}</p> : null}
+          {ownerProfile ? (
+            <Modal
+              open={editing}
+              onCancel={() => setEditing(false)}
+              footer={null}
+              title={text.editHeading}
+              destroyOnHidden
+            >
+              {ownerProfile.canWrite ? (
+                <div className="profile-media-editors">
+                  <section>
+                    <h2>{locale === "th" ? "รูปโปรไฟล์" : "Profile photo"}</h2>
+                    <MediaUploader
+                      cropRatio={1}
+                      locale={locale}
+                      onReady={(id) => attach("avatar", id)}
+                      purpose="avatar"
+                    />
+                  </section>
+                  <section>
+                    <h2>{locale === "th" ? "ภาพ Cover" : "Cover image"}</h2>
+                    <MediaUploader
+                      cropRatio={3}
+                      locale={locale}
+                      onReady={(id) => attach("cover", id)}
+                      purpose="cover"
+                    />
+                  </section>
+                </div>
+              ) : null}
+              <ProfileForm
+                action={editProfile}
+                initialProfile={ownerProfile}
+                locale={locale}
+                onSaved={() => {
+                  dispatch(invalidateOwnProfile());
+                  setEditing(false);
+                }}
+              />
+            </Modal>
+          ) : null}
+          <ProfileTabController
+            initialTab={initialTab}
+            locale={locale}
+            username={profile.username}
+            owner={Boolean(ownerProfile)}
+            overviewContent={
+              overviewContent ?? (
                 <section className="profile-overview-grid">
                   <article className="premium-card p-5">
                     <p className="premium-kicker">
@@ -191,17 +212,23 @@ export function UserProfileScreen({
                   </article>
                   <article className="premium-card p-5">
                     <p className="premium-kicker">Garage</p>
-                    <PendingLink href={`/users/${profile.username}?tab=garage`}>
+                    <PendingLink
+                      href={
+                        ownerProfile
+                          ? "/profile?tab=garage"
+                          : `/users/${profile.username}?tab=garage`
+                      }
+                    >
                       {locale === "th" ? "เปิด Garage" : "View garage"}
                     </PendingLink>
                   </article>
                 </section>
-              }
-              tabContent={tabContent}
-            />
-          </>
-        )}
-      </div>
-    </article>
+              )
+            }
+            tabContent={tabContent}
+          />
+        </div>
+      </article>
+    </ConfigProvider>
   );
 }

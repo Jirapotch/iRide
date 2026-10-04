@@ -102,9 +102,11 @@ const features = [
 export function FeatureSelection({
   locale,
   onNavigate,
+  compact = false,
 }: {
   readonly locale: Locale;
   readonly onNavigate: (kind: RecentJourneyKind, href: string) => void;
+  readonly compact?: boolean;
 }) {
   const text = copy[locale];
   const rootRef = useRef<HTMLDivElement>(null);
@@ -188,6 +190,28 @@ export function FeatureSelection({
     card.style.setProperty("--shift-y", "0px");
   }
 
+  if (compact)
+    return (
+      <nav
+        data-ui="feature-selection"
+        className={styles.quickLinks}
+        aria-label={
+          locale === "th" ? "ฟีเจอร์อื่นของ iRide" : "More from iRide"
+        }
+      >
+        {features.map(({ kind, href }) => (
+          <PendingLink
+            data-feature-card={kind}
+            href={href}
+            key={kind}
+            onClick={() => onNavigate(kind, href)}
+          >
+            {text[kind].title}
+            <ArrowRight aria-hidden size={18} />
+          </PendingLink>
+        ))}
+      </nav>
+    );
   return (
     <section className={styles.exploreSection} aria-labelledby="explore-title">
       <div className={styles.sectionHeading}>

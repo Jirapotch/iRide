@@ -1,6 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { afterEach, expect, it, vi } from "vitest";
-import { uploadAuthorizedMedia } from "./media-upload";
+import {
+  createMediaUploadAttempt,
+  prepareMediaImage,
+  uploadAuthorizedMedia,
+} from "./media-upload";
 
 const authorization = {
   mediaId: "m1",
@@ -75,4 +79,68 @@ it("surfaces a rejected signed upload so completion cannot proceed", async () =>
   await expect(
     uploadAuthorizedMedia(authorization, new Blob(["bytes"]), client),
   ).rejects.toThrow("MEDIA_UPLOAD_FAILED");
+});
+
+it("binds private document image uploads to the vehicle and reuses processed media on attachment retry", async () => {
+  const authorize = vi.fn().mockResolvedValue(authorization);
+  const upload = vi.fn().mockResolvedValue(undefined);
+  const complete = vi
+    .fn()
+    .mockResolvedValue({ mediaId: "m1", status: "ready" });
+  const attempt = createMediaUploadAttempt(
+    new Blob(["processed"], { type: "image/webp" }),
+    "vehicle_document",
+    { authorize, upload, complete, reauthorize: vi.fn(), wait: vi.fn() },
+    { vehicleId: "vehicle-1" },
+  );
+  expect(await attempt.run(() => undefined)).toBe("m1");
+  expect(authorize).toHaveBeenCalledWith(
+    expect.objectContaining({
+      purpose: "vehicle_document",
+      vehicleId: "vehicle-1",
+      mimeType: "image/webp",
+    }),
+  );
+  expect(await attempt.run(() => undefined)).toBe("m1");
+  expect(authorize).toHaveBeenCalledTimes(1);
+  expect(upload).toHaveBeenCalledTimes(1);
+});
+
+it("prepares portrait document images as aspect-preserving WebP with bounded longest side", async () => {
+  const drawImage = vi.fn();
+  const close = vi.fn();
+  const canvas = {
+    width: 0,
+    height: 0,
+    getContext: () => ({ drawImage }),
+    toBlob: (callback: (blob: Blob) => void) =>
+      callback(new Blob(["webp"], { type: "image/webp" })),
+  };
+  vi.stubGlobal("document", { createElement: () => canvas });
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn().mockResolvedValue({ width: 1200, height: 3600, close }),
+  );
+  expect(
+    (
+      await prepareMediaImage(
+        new File(["image"], "receipt.jpg", { type: "image/jpeg" }),
+        { purpose: "vehicle_document" },
+      )
+    ).type,
+  ).toBe("image/webp");
+  expect(canvas.width).toBe(683);
+  expect(canvas.height).toBe(2048);
+  expect(drawImage).toHaveBeenCalledWith(
+    expect.anything(),
+    0,
+    0,
+    1200,
+    3600,
+    0,
+    0,
+    683,
+    2048,
+  );
+  expect(close).toHaveBeenCalledOnce();
 });

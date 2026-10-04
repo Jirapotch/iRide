@@ -58,7 +58,11 @@ export default async function LoginPage({
         () => null,
       );
       redirect(
-        profile?.username ? `/users/${profile.username}` : "/onboarding",
+        profile?.username
+          ? next === "/profile" || next.startsWith("/profile?")
+            ? next
+            : "/profile"
+          : "/onboarding",
       );
     }
     redirect(next);

@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import type { Locale } from "@/lib/locale";
+import { profileTabHref } from "../profile-routing";
 
 import styles from "./profile-tab-controller.module.css";
 
@@ -40,6 +41,7 @@ interface ProfileTabClickDescriptor {
 }
 
 interface ProfileTabViewProps {
+  readonly owner?: boolean;
   readonly locale: Locale;
   readonly onSelect: (
     event: MouseEvent<HTMLAnchorElement>,
@@ -126,11 +128,6 @@ export function shouldHandleProfileTabClick({
   );
 }
 
-function profileTabHref(username: string, tab: ProfileTab) {
-  const profileHref = `/users/${encodeURIComponent(username)}`;
-  return tab === "overview" ? profileHref : `${profileHref}?tab=${tab}`;
-}
-
 export function ProfileTabSkeleton({
   locale,
   tab,
@@ -180,6 +177,7 @@ export function ProfileTabView({
   state,
   tabContent,
   username,
+  owner,
 }: ProfileTabViewProps) {
   const labels =
     locale === "th"
@@ -194,7 +192,7 @@ export function ProfileTabView({
         className={styles.tabs}
       >
         {PROFILE_TABS.map((tab) => {
-          const href = profileTabHref(username, tab);
+          const href = profileTabHref(username, tab, owner);
           return (
             <Link
               aria-current={state.selectedTab === tab ? "page" : undefined}
@@ -233,6 +231,7 @@ export function ProfileTabController({
   overviewContent,
   tabContent,
   username,
+  owner,
 }: ProfileTabControllerProps) {
   const router = useRouter();
   const serverTab = normalizeProfileTab(initialTab);
@@ -285,6 +284,7 @@ export function ProfileTabController({
       renderedState.selectedTab === tab &&
       renderedState.pendingTab === null
     ) {
+      startTransition(() => router.push(href, { scroll: false }));
       return;
     }
 
@@ -300,6 +300,7 @@ export function ProfileTabController({
       state={renderedState}
       tabContent={tabContent}
       username={username}
+      {...(owner === undefined ? {} : { owner })}
     />
   );
 }

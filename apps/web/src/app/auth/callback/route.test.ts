@@ -141,9 +141,7 @@ describe("Google OAuth callback", () => {
       ),
     );
 
-    expect(response.headers.get("location")).toBe(
-      "https://iride.test/users/rider",
-    );
+    expect(response.headers.get("location")).toBe("https://iride.test/profile");
     expect(mocks.consoleInfo.mock.calls).toEqual([
       [
         {

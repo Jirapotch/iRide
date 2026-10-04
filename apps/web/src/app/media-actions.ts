@@ -16,6 +16,7 @@ export async function authorizeMediaAction(input: {
   mimeType: string;
   bytes: number;
   purpose: MediaPurpose;
+  vehicleId?: string | undefined;
 }) {
   const session = await getVerifiedWebSession();
   if (!session) throw new Error("AUTH_REQUIRED");
@@ -43,6 +44,7 @@ export async function attachProfileMediaAction(
   const input: UpdateProfileInput =
     kind === "avatar" ? { avatarMediaId: mediaId } : { coverMediaId: mediaId };
   const profile = await updateOwnProfile(session.accessToken, input);
+  revalidatePath("/profile");
   if (profile.username) revalidatePath(`/users/${profile.username}`);
   return profile;
 }

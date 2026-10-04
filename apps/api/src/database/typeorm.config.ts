@@ -5,6 +5,7 @@ import { TripReturnRoutes20260926100000 } from "./migrations/20260926100000-trip
 import { RideGroups20260926101000 } from "./migrations/20260926101000-ride-groups";
 import { RecapMediaPurpose20260926102000 } from "./migrations/20260926102000-recap-media-purpose";
 import { TripEngagement20260926103000 } from "./migrations/20260926103000-trip-engagement";
+import { DigitalGarage20261004120000 } from "./migrations/20261004120000-digital-garage";
 import type { DataSourceOptions } from "typeorm";
 
 import { BaselineCurrentSchema20260906000000 } from "./migrations/20260906000000-baseline-current-schema";
@@ -49,6 +50,7 @@ export function createMigrationDataSourceOptions(input: {
       RideGroups20260926101000,
       RecapMediaPurpose20260926102000,
       TripEngagement20260926103000,
+      DigitalGarage20261004120000,
     ],
     migrationsTransactionMode: "each",
     extra: { max: 1 },

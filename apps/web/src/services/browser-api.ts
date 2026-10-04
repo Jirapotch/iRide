@@ -25,9 +25,19 @@ export async function browserApiMutation<T>(
     method,
     ...(input === undefined
       ? {}
-      : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }),
+      : {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        }),
     ...(signal ? { signal } : {}),
   });
+}
+
+export async function browserApiUpload<T>(
+  pathname: string,
+  data: FormData,
+): Promise<T> {
+  return request<T>(pathname, { method: "POST", body: data });
 }
 
 async function request<T>(pathname: string, init: RequestInit): Promise<T> {
@@ -50,7 +60,10 @@ async function request<T>(pathname: string, init: RequestInit): Promise<T> {
 function readErrorCode(body: unknown): string | null {
   if (!body || typeof body !== "object" || !("error" in body)) return null;
   const error = body.error;
-  return error && typeof error === "object" && "code" in error && typeof error.code === "string"
+  return error &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string"
     ? error.code
     : null;
 }

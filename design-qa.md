@@ -1,53 +1,44 @@
-# Interactive Discovery Home — Design QA
+# Design QA — selected main platform and mobile profile
 
-- Source design truth: `C:\Users\gentk\Downloads\Prompt — Redesign Home Page + Interactive Feature Cards.md`, supported by the generated visual assets `apps/web/public/home/hero-journey.png` (1536 × 1024) and `apps/web/public/home/game-road.png` (1890 × 832).
-- Rendered implementation: `.artifacts/home-discovery/home-discovery-desktop.png`, `.artifacts/home-discovery/home-discovery-mobile.png`, `.artifacts/home-discovery/home-feature-cards-desktop.png`, and `.artifacts/home-discovery/games-desktop-dark.png`.
-- Viewports: 1280 × 900 desktop and 390 × 844 mobile; device scale factor 1.
-- Captures: desktop Home 1280 × 3693, mobile Home 390 × 4363, focused feature cards 1178 × 440, Games 1280 × 900.
-- Density normalization: none required; all captures use 1× CSS pixels. The source brief is written rather than a fixed-pixel page mock, so comparison is against its composition, hierarchy, interaction, and brand requirements rather than pixel-for-pixel geometry.
-- State: signed-out English, light Home; signed-out English, dark Games; independent BFF error states visible on the full-page Home captures.
+## Homepage revision from browser comments — 2026-10-05
 
-## Full-view comparison evidence
+The user's four browser comments supersede the original five-station reference: remove the camera picker and scene-mode controls, remove the duplicate feature section outside the frame, and include Knowledge as a selectable 3D element. The frame now contains six stations in two rows; Knowledge is an open book with layered pages, a bookmark and desk lamp. All six destinations remain available inside the frame. Mobile uses a three-column/two-row button layout with 44px targets and horizontal orbit/native vertical scroll.
 
-- The rendered hierarchy follows the approved flow: full-bleed hero, signature feature selection, conditional Continue area, editorial Trending, Activities, full-bleed Game Spotlight, horizontal Group Discovery, Explore CTA, and footer.
-- Desktop preserves the intended 33/33/33 default composition and the implementation exposes 50/25/25 hover/focus expansion. Mobile converts the same features to tall vertical story cards with no horizontal page overflow.
-- Mint–Matcha surfaces, dark forest imagery, large editorial type, whitespace, and alternating full-bleed/content-width sections avoid the dashboard/card-grid appearance called out in the brief.
-- Light and dark states retain readable foreground/background contrast. Navigation remains fixed and legible over both themes.
+Current revision captures are `main-desktop-1440.png`, `main-1024.png`, `main-390.png`, and `main-360.png` under `.artifacts/profile-garage-design`. The earlier paired comparison below is historical evidence of the first approved direction, not the current six-station specification. The current screenshot was checked against the four annotated user screenshots; removed controls/section are absent and Knowledge is represented in the scene and controls. The Activities plaque was repositioned to avoid the motorcycle after the new two-row layout.
 
-## Focused region comparison evidence
+## Approved direction and comparison conditions
 
-`.artifacts/home-discovery/home-feature-cards-desktop.png` was captured separately because card details are too small in the full-page image. It confirms distinct visual treatments, stable equal tracks at rest, readable small copy, real iconography, constrained light/parallax layers, and visible destination affordances. The Games capture confirms the `/games` breadcrumb and Preview/Coming soon treatment without invented score data.
+The user selected direction 1: `D:/Code/iRide/.artifacts/profile-garage-design/main-connected-platform.png`. Their subsequent correction removes mountains, forests and long hero text. The existing iRide navigation, logo, typography and theme remain authoritative. The implementation is interactive procedural Three.js geometry, as explicitly required, rather than the reference raster used as the scene.
 
-## Required fidelity surfaces
+Reference: 1487 × 1060. Render for comparison: 1440 × 1060, device pixel ratio 1, Thai light theme, Trips selected, Overview camera, reduced motion. Responsive renders also cover 1440 × 900, 1024 × 768, 390 × 844 and 360 × 800. A source and render were inspected together in the same comparison image, followed by a paired station crop.
 
-- Fonts and typography: the existing Geist family is retained; oversized condensed-feeling weight, tight display tracking, readable body line heights, and restrained all-caps kickers produce the requested editorial hierarchy in both languages.
-- Spacing and layout rhythm: full-bleed image bands alternate with a 1180px content frame; section gaps, card padding, radii, and elevation are consistent without horizontal divider dependence.
-- Colors and tokens: all UI surfaces use the existing Matcha/Mint theme tokens. Dark areas use the generated road imagery with controlled veils rather than neon or excessive glass effects.
-- Image quality and asset fidelity: both source assets are generated raster images sized for their actual slots, rendered through `next/image`, and cropped responsively. No placeholder or handcrafted SVG imagery replaces visible assets.
-- Copy and content: primary UX is localized Thai/English. Real posts/events drive their sections; browser-only demo groups are labeled, and the Games page clearly says Preview/Coming soon without fabricated gameplay or scores.
+- Full comparison: `.artifacts/profile-garage-design/main-comparison.png`
+- Station comparison: `.artifacts/profile-garage-design/main-focus-comparison.png`
+- Responsive renders: `main-desktop-1440.png`, `main-1024.png`, `main-390.png`, `main-360.png` in the same directory.
+- Final production-build captures: `final-main-1440.png`, `final-main-390.png`, `final-main-360.png`; no development indicator, no runtime page errors and no horizontal overflow.
+- Reproduction: `node .artifacts/profile-garage-design/capture-main.mjs http://127.0.0.1:3100/`
 
-## Findings
+## Findings and repair history
 
-- No actionable P0, P1, or P2 visual differences remain against the approved brief.
-- P3: the Next.js development badge appears in local development captures; it is framework-only chrome and is absent from production builds.
+| Priority | Finding                                                                                                     | Repair and result                                                                                                                                                                                                           |
+| -------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P2       | Platform initially too small relative to the selected target.                                               | Enlarged desktop stage and adjusted orthographic framing. Platform prominence now matches the target's hierarchy, with all five stations visible. Passed.                                                                   |
+| P2       | Mobile framing left excessive whitespace and pushed the main controls down.                                 | Added a portrait camera composition, bounded mobile stage height and five compact feature buttons. Selection, zoom/reset and Open fit within the 360 × 800 initial view. Passed.                                            |
+| P2       | Activities label intersected the bike.                                                                      | Adjusted the projected label anchor. Passed at desktop comparison sizes.                                                                                                                                                    |
+| P2       | Manual orbit left the camera menu's selection stale.                                                        | Scene notifies React when orbit changes the camera to Overview. Browser regression passed.                                                                                                                                  |
+| P2       | Document links lacked sufficient visual distinction in dark mode.                                           | Theme-aware foreground, underline, visible focus and 44px targets. Profile dark-mode browser checks passed.                                                                                                                 |
+| P3       | Procedural meshes are simpler and less photographic than the generated target, particularly the motorcycle. | Retained native interactive geometry and recognizable tires, spokes, engine, luggage, mirrors, map pins and feature stations. This remains a visible fidelity difference; the result is not a pixel-identical reproduction. |
 
-## Comparison history
+## Rendered and interaction review
 
-- Initial responsive capture showed the expected fixed bottom navigation duplicated mid-image by Playwright full-page screenshot stitching. Live in-app browser inspection confirmed the control stays pinned to the viewport; no product fix was required.
-- Focused feature-card and Games captures found no P0/P1/P2 issue requiring another implementation iteration.
+The hierarchy is a single dark rounded platform with five raised white/mint stations, mint connections, short labels and compact controls. There is no scenic background or editorial hero copy. Existing iRide Geist/Noto Sans Thai fonts, header and navigation are preserved intentionally instead of copying the generated mock's invented header.
 
-## Primary interactions checked
+Mobile uses horizontal orbit with native vertical page scrolling, `touch-action: pan-y`, 44px or larger control targets, one selected scene label and five persistent feature buttons. Modes, keyboard focus, camera synchronization, dark theme, reduced motion, fallback navigation after WebGL failure and all five real destinations have browser coverage. Journey motion is explicitly marked as a demonstration.
 
-- Feature-card hover/focus state, Enter navigation, immediate pending-link feedback, local category filtering, browser-only Join state, responsive overflow, reduced motion, lazy map request, theme switching, breadcrumb navigation, and independent loading/error states.
-- Browser console/runtime behavior was exercised by the E2E suite; no implementation error remained after the final lint/typecheck pass.
+Profile is assessed against the compact Ant Design brief rather than the rejected earlier scenic mockups: compact identity header, actual overview data, query-controlled tabs, garage cards, a detail drawer with history/documents alongside each other on desktop and a single mobile column. Forms retain values after failed saves. Browser checks cover light/dark, Back/Forward, record drafts, upload retry and primary/More actions.
 
-## Implementation checklist
+## Result
 
-- [x] Responsive Home and Games composition
-- [x] Light/dark and Thai/English states
-- [x] Keyboard/focus/reduced-motion behavior
-- [x] Independent data states and lazy MapLibre request
-- [x] Real data versus clearly labeled demo separation
-- [x] Generated imagery integrated through `next/image`
+Visual layout and responsive interaction: **passed**, with the disclosed P3 mesh-detail difference. No unresolved P0/P1/P2 visual findings. The reference comparison and mobile screenshots are retained locally. Optional export of implementation screenshots to Superdesign was rejected by automatic approval review; no export workaround was used.
 
-final result: passed
+This visual result does not certify production database deployment. Functional, database and build evidence is recorded separately in `docs/superpowers/plans/2026-10-04-profile-garage-ride-hub-ledger.md`.

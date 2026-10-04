@@ -65,7 +65,7 @@ export async function prepareMediaImage(
     }
     const scale = Math.min(
       1,
-      options.purpose === "vehicle"
+      options.purpose === "vehicle" || options.purpose === "vehicle_document"
         ? 2048 / Math.max(width, height)
         : (options.purpose === "avatar" ? 1024 : 1800) / width,
     );
@@ -126,6 +126,7 @@ export function createMediaUploadAttempt(
   blob: Blob,
   purpose: MediaPurpose,
   dependencies: UploadAttemptDependencies,
+  context: { readonly vehicleId?: string } = {},
 ) {
   const uploadId = crypto.randomUUID();
   let authorization: MediaUploadAuthorizationDto | undefined;
@@ -156,6 +157,7 @@ export function createMediaUploadAttempt(
             mimeType: "image/webp",
             bytes: blob.size,
             purpose,
+            ...context,
           });
         }
         if (!state || state.status === "uploading") {

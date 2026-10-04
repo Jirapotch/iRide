@@ -230,6 +230,7 @@ export function createSocialRepository(config: Config): SocialRepository {
       const current = await findVehicle(admin, id);
       const viewer = await viewerCapabilities(admin, userId);
       await assertOwner(current, "owner_id", viewer, "archived_at");
+      if (current?.owner_id !== userId) throw failure("CONTENT_FORBIDDEN", 403);
       if (input.mediaIds)
         await assertReadyMedia(admin, userId, input.mediaIds, "vehicle");
       let data;
@@ -270,6 +271,12 @@ export function createSocialRepository(config: Config): SocialRepository {
       return (await vehicleDtos(admin, [data!], viewer))[0]!;
     },
     async deleteVehicle(userId, token, id) {
+      const vehicle = await findVehicle(admin, id);
+      if (vehicle?.owner_id !== userId)
+        throw failure(
+          vehicle ? "CONTENT_FORBIDDEN" : "CONTENT_NOT_FOUND",
+          vehicle ? 403 : 404,
+        );
       await assertOwner(
         await findVehicle(admin, id),
         "owner_id",
@@ -393,7 +400,17 @@ async function vehicleDtos(
   );
   const ids = rows.map((row) => row.id);
   const media = new Map<string, string[]>();
+  const pendingIds = new Set<string>();
   if (ids.length) {
+    const pending = await admin
+      .from("vehicle_transfers")
+      .select("vehicle_id,expires_at")
+      .in("vehicle_id", ids)
+      .eq("status", "pending");
+    ensure(pending.error);
+    for (const transfer of pending.data ?? [])
+      if (Date.parse(transfer.expires_at) > Date.now())
+        pendingIds.add(transfer.vehicle_id);
     const { data, error } = await admin
       .from("vehicle_media")
       .select("vehicle_id,media_id,position")
@@ -422,8 +439,10 @@ async function vehicleDtos(
         visibility: row.visibility,
         mediaIds: media.get(row.id) ?? [],
         canEdit:
-          viewer.canManage ||
-          (viewer.canWrite && row.owner_id === viewer.userId),
+          viewer.canWrite &&
+          row.owner_id === viewer.userId &&
+          !row.archived_at &&
+          !pendingIds.has(row.id),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       },

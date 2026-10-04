@@ -30,6 +30,32 @@ export function createMediaRepository(config: Config): MediaRepository {
       accessToken: token,
     });
   return {
+    async assertDocumentUpload(_userId, vehicleId, token) {
+      const { error } = await owner(token).rpc(
+        "assert_garage_document_upload",
+        { target_vehicle_id: vehicleId },
+      );
+      if (error)
+        throw Object.assign(
+          new Error(
+            error.code === "42501"
+              ? "MEDIA_FORBIDDEN"
+              : error.code === "55000"
+                ? error.message
+                : "MEDIA_UNAVAILABLE",
+          ),
+          {
+            code:
+              error.code === "42501"
+                ? "MEDIA_FORBIDDEN"
+                : error.code === "55000"
+                  ? error.message
+                  : "MEDIA_UNAVAILABLE",
+            status:
+              error.code === "42501" ? 403 : error.code === "55000" ? 409 : 503,
+          },
+        );
+    },
     async getAccountAccess(userId) {
       const { data, error } = await admin
         .from("account_access")
@@ -42,17 +68,20 @@ export function createMediaRepository(config: Config): MediaRepository {
         : null;
     },
     async createUpload(input, token) {
-      const { error } = await owner(token).from("media").insert({
-        id: input.id,
-        owner_id: input.ownerId,
-        purpose: input.purpose,
-        status: "uploading",
-        original_object_key: input.objectKey,
-        filename: input.filename,
-        mime_type: input.mimeType,
-        bytes: input.bytes,
-        storage_provider: input.storageProvider,
-      });
+      const { error } = await owner(token)
+        .from("media")
+        .insert({
+          id: input.id,
+          owner_id: input.ownerId,
+          purpose: input.purpose,
+          status: "uploading",
+          original_object_key: input.objectKey,
+          filename: input.filename,
+          mime_type: input.mimeType,
+          bytes: input.bytes,
+          storage_provider: input.storageProvider,
+          ...(input.vehicleId ? { garage_vehicle_id: input.vehicleId } : {}),
+        });
       if (error?.code === "23505") throw new MediaUploadAlreadyExistsError();
       ensure(error);
     },
@@ -76,6 +105,9 @@ export function createMediaRepository(config: Config): MediaRepository {
             filename: data.filename,
             bytes: data.bytes,
             storageProvider: provider(data.storage_provider),
+            ...(data.garage_vehicle_id
+              ? { vehicleId: data.garage_vehicle_id }
+              : {}),
           }
         : null;
     },
@@ -90,11 +122,13 @@ export function createMediaRepository(config: Config): MediaRepository {
     async findDeliverableVariant(id, kind, viewerId) {
       const { data: media, error } = await admin
         .from("media")
-        .select("id,owner_id,status,deleted_at,storage_provider")
+        .select("id,owner_id,status,deleted_at,storage_provider,purpose")
         .eq("id", id)
         .maybeSingle();
       ensure(error);
       if (!media || media.status !== "ready" || media.deleted_at) return null;
+      // Document bytes require garage transaction locks through transfer acceptance.
+      if (media.purpose === "vehicle_document") return null;
       if (await isHiddenOwner(admin, media.owner_id)) return null;
       if (media.owner_id !== viewerId && !(await publiclyReferenced(admin, id)))
         return null;
@@ -109,6 +143,7 @@ export function createMediaRepository(config: Config): MediaRepository {
         ? {
             objectKey: data.object_key,
             storageProvider: provider(media.storage_provider),
+            ...(media.purpose === "vehicle" ? { serverOnly: true } : {}),
           }
         : null;
     },
@@ -207,7 +242,17 @@ async function hasVisibleOwner(
     (row) => row.status !== "suspended" && row.transition_id === null,
   );
 }
-function ensure(error: { message?: string } | null) {
+function ensure(error: { message?: string; code?: string } | null) {
+  if (
+    error?.code === "42501" ||
+    (error?.code === "55000" && /^GARAGE_[A-Z_]+$/.test(error.message ?? ""))
+  ) {
+    const code = error.code === "42501" ? "MEDIA_FORBIDDEN" : error.message!;
+    throw Object.assign(new Error(code), {
+      code,
+      status: error.code === "42501" ? 403 : 409,
+    });
+  }
   if (error)
     throw Object.assign(new Error("MEDIA_UNAVAILABLE", { cause: error }), {
       code: "MEDIA_UNAVAILABLE",

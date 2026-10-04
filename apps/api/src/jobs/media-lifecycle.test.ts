@@ -68,9 +68,31 @@ it("persists confirmed cleanup only against the matching provider and source key
   });
 });
 
-it("rejects cleanup persistence when the guarded update matches no media row", async () => {
+it("allows delayed source cleanup after document deletion removed the media row", async () => {
   vi.stubGlobal("fetch", async () => Response.json([]));
 
+  await expect(
+    createMediaCleanupJobDependencies(env).clearSource!(
+      "m",
+      "source",
+      "supabase",
+    ),
+  ).resolves.toBeUndefined();
+});
+
+it("rejects source cleanup persistence when a live media row has a different source", async () => {
+  vi.stubGlobal("fetch", async (_url: string, init: RequestInit) =>
+    Response.json(
+      init.method === "PATCH"
+        ? []
+        : {
+            id: "m",
+            original_object_key: "new-source",
+            original_cleaned_at: null,
+            status: "ready",
+          },
+    ),
+  );
   await expect(
     createMediaCleanupJobDependencies(env).clearSource!(
       "m",

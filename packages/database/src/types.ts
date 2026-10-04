@@ -252,6 +252,7 @@ export type Database = {
       };
       media: {
         Row: {
+          garage_vehicle_id: string | null;
           bytes: number;
           created_at: string;
           deleted_at: string | null;
@@ -270,6 +271,7 @@ export type Database = {
           width: number | null;
         };
         Insert: {
+          garage_vehicle_id?: string | null;
           bytes: number;
           created_at?: string;
           deleted_at?: string | null;
@@ -288,6 +290,7 @@ export type Database = {
           width?: number | null;
         };
         Update: {
+          garage_vehicle_id?: string | null;
           bytes?: number;
           created_at?: string;
           deleted_at?: string | null;
@@ -306,6 +309,13 @@ export type Database = {
           width?: number | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "media_garage_vehicle_id_fkey";
+            columns: ["garage_vehicle_id"];
+            isOneToOne: false;
+            referencedRelation: "vehicles";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "media_owner_id_fkey";
             columns: ["owner_id"];
@@ -729,6 +739,77 @@ export type Database = {
           },
         ];
       };
+      vehicle_documents: {
+        Row: {
+          media_id: string | null;
+          bytes: number;
+          created_at: string;
+          deleted_at: string | null;
+          filename: string;
+          id: string;
+          mime_type: string;
+          object_key: string | null;
+          owner_id: string;
+          record_id: string | null;
+          vehicle_id: string;
+        };
+        Insert: {
+          media_id?: string | null;
+          bytes: number;
+          created_at?: string;
+          deleted_at?: string | null;
+          filename: string;
+          id?: string;
+          mime_type: string;
+          object_key?: string | null;
+          owner_id: string;
+          record_id?: string | null;
+          vehicle_id: string;
+        };
+        Update: {
+          media_id?: string | null;
+          bytes?: number;
+          created_at?: string;
+          deleted_at?: string | null;
+          filename?: string;
+          id?: string;
+          mime_type?: string;
+          object_key?: string | null;
+          owner_id?: string;
+          record_id?: string | null;
+          vehicle_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_documents_media_id_fkey";
+            columns: ["media_id"];
+            isOneToOne: true;
+            referencedRelation: "media";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vehicle_documents_vehicle_id_fkey";
+            columns: ["vehicle_id"];
+            isOneToOne: false;
+            referencedRelation: "vehicles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vehicle_documents_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vehicle_documents_record_id_vehicle_id_fkey";
+            columns: ["record_id", "vehicle_id"];
+            isOneToOne: false;
+            referencedRelation: "vehicle_records";
+            referencedColumns: ["id", "vehicle_id"];
+          },
+        ];
+      };
       vehicle_media: {
         Row: {
           is_cover: boolean;
@@ -765,6 +846,120 @@ export type Database = {
           },
         ];
       };
+      vehicle_records: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          kind: string;
+          mileage_km: number | null;
+          occurred_on: string;
+          title: string;
+          updated_at: string;
+          vehicle_id: string;
+          workshop_name: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          kind: string;
+          mileage_km?: number | null;
+          occurred_on: string;
+          title: string;
+          updated_at?: string;
+          vehicle_id: string;
+          workshop_name?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          kind?: string;
+          mileage_km?: number | null;
+          occurred_on?: string;
+          title?: string;
+          updated_at?: string;
+          vehicle_id?: string;
+          workshop_name?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_records_vehicle_id_fkey";
+            columns: ["vehicle_id"];
+            isOneToOne: false;
+            referencedRelation: "vehicles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      vehicle_transfers: {
+        Row: {
+          created_at: string;
+          decided_at: string | null;
+          document_ids: string[];
+          expires_at: string;
+          from_id: string;
+          from_username: string;
+          id: string;
+          status: string;
+          to_id: string;
+          to_username: string;
+          vehicle_id: string;
+          vehicle_label: string;
+        };
+        Insert: {
+          created_at?: string;
+          decided_at?: string | null;
+          document_ids?: string[];
+          expires_at?: string;
+          from_id: string;
+          from_username: string;
+          id?: string;
+          status?: string;
+          to_id: string;
+          to_username: string;
+          vehicle_id: string;
+          vehicle_label: string;
+        };
+        Update: {
+          created_at?: string;
+          decided_at?: string | null;
+          document_ids?: string[];
+          expires_at?: string;
+          from_id?: string;
+          from_username?: string;
+          id?: string;
+          status?: string;
+          to_id?: string;
+          to_username?: string;
+          vehicle_id?: string;
+          vehicle_label?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_transfers_vehicle_id_fkey";
+            columns: ["vehicle_id"];
+            isOneToOne: false;
+            referencedRelation: "vehicles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vehicle_transfers_from_id_fkey";
+            columns: ["from_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vehicle_transfers_to_id_fkey";
+            columns: ["to_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       vehicles: {
         Row: {
           archived_at: string | null;
@@ -773,7 +968,10 @@ export type Database = {
           description: string | null;
           id: string;
           kind: Database["public"]["Enums"]["vehicle_kind"];
+          mileage_km: number | null;
           model: string;
+          next_service_date: string | null;
+          next_service_km: number | null;
           nickname: string | null;
           owner_id: string;
           updated_at: string;
@@ -787,7 +985,10 @@ export type Database = {
           description?: string | null;
           id?: string;
           kind: Database["public"]["Enums"]["vehicle_kind"];
+          mileage_km?: number | null;
           model: string;
+          next_service_date?: string | null;
+          next_service_km?: number | null;
           nickname?: string | null;
           owner_id: string;
           updated_at?: string;
@@ -801,7 +1002,10 @@ export type Database = {
           description?: string | null;
           id?: string;
           kind?: Database["public"]["Enums"]["vehicle_kind"];
+          mileage_km?: number | null;
           model?: string;
+          next_service_date?: string | null;
+          next_service_km?: number | null;
           nickname?: string | null;
           owner_id?: string;
           updated_at?: string;
@@ -823,6 +1027,19 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      assert_garage_document_upload: {
+        Args: { target_vehicle_id: string };
+        Returns: undefined;
+      };
+      attach_garage_image_document: {
+        Args: {
+          target_vehicle_id: string;
+          processed_media_id: string;
+          target_record_id: string;
+          document_filename: string;
+        };
+        Returns: string;
+      };
       archive_job: {
         Args: { message_id: number; queue_name: string };
         Returns: boolean;
@@ -858,6 +1075,28 @@ export type Database = {
           target_media_id: string;
         };
         Returns: number;
+      };
+      create_vehicle_transfer: {
+        Args: {
+          recipient_username: string;
+          selected_document_ids?: string[];
+          target_vehicle_id: string;
+        };
+        Returns: string;
+      };
+      decide_vehicle_transfer: {
+        Args: {
+          decision: string;
+          target_transfer_id: string;
+        };
+        Returns: string;
+      };
+      delete_garage_record: {
+        Args: {
+          target_record_id: string;
+          target_vehicle_id: string;
+        };
+        Returns: undefined;
       };
       delete_admin_moderated_resource: {
         Args: {
@@ -982,7 +1221,8 @@ export type Database = {
       account_status: "locked" | "active" | "suspended";
       community_category: "car" | "motorcycle" | "bicycle" | "groups";
       event_kind: "meeting" | "event" | "trip";
-      media_purpose: "avatar" | "cover" | "vehicle" | "trip_recap";
+      media_purpose:
+        "avatar" | "cover" | "vehicle" | "trip_recap" | "vehicle_document";
       media_status: "uploading" | "processing" | "ready" | "failed" | "deleted";
       media_variant_kind: "thumbnail" | "preview";
       profile_visibility: "public" | "followers" | "private";
@@ -1119,7 +1359,13 @@ export const Constants = {
       account_status: ["locked", "active", "suspended"],
       community_category: ["car", "motorcycle", "bicycle", "groups"],
       event_kind: ["meeting", "event", "trip"],
-      media_purpose: ["avatar", "cover", "vehicle", "trip_recap"],
+      media_purpose: [
+        "avatar",
+        "cover",
+        "vehicle",
+        "trip_recap",
+        "vehicle_document",
+      ],
       media_status: ["uploading", "processing", "ready", "failed", "deleted"],
       media_variant_kind: ["thumbnail", "preview"],
       profile_visibility: ["public", "followers", "private"],

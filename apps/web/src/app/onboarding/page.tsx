@@ -33,8 +33,7 @@ export default async function OnboardingPage() {
   ]);
   if (!session) redirect("/login?next=%2Fonboarding");
   const profile = await getOwnProfile(session.accessToken);
-  if (profile.isComplete && profile.username)
-    redirect(`/users/${profile.username}`);
+  if (profile.isComplete && profile.username) redirect("/profile");
   const text = copy[locale];
 
   return (
