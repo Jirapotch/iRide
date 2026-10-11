@@ -1,115 +1,56 @@
-# iRide
+# iRide — personal garage
 
-## Bootstrap the first administrator
+One Next.js app with a public Garage, Google Drive car photos, an interactive engine simulator and Traffic Endless Ride. There are no accounts, sessions or login screens. Anyone who opens the app can read and change Garage data.
 
-After applying the account-access migration, promote the intended profile with a server-only service-role environment. The command defaults to `jirapotch`; pass a username to target a different existing profile. It never creates a profile or accepts an invented UUID.
+## Run locally
 
-```bash
-SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... pnpm admin:promote [username]
+Use Node 24 and pnpm 11.25.0.
+
+1. Run `pnpm install --frozen-lockfile`.
+2. Copy `.env.example` to `.env.local`.
+3. With Docker running, run `pnpm db:start`, then `pnpm db:reset`. Copy the local API URL and service-role key from `pnpm exec supabase status` into `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+4. Run `pnpm dev` and open http://127.0.0.1:3000.
+
+The new Garage starts empty. The two photos supplied from the separate example Drive folder are bundled as read-only display assets on the Garage page, not inserted as vehicle data.
+
+## Connect Google Drive (owner setup only)
+
+The live upload destination is the existing folder `1mFCIBIJHkQjYn4y_gg0GRkiELEatHMf0`. Website visitors never connect Google or log in.
+
+1. In your Google Cloud project, enable Google Drive API and Google Picker API.
+2. Configure an OAuth web client with redirect URI `http://127.0.0.1:8787/callback` and authorized JavaScript origin `http://127.0.0.1:8787`.
+3. Create a Picker API key restricted to Google Picker API and the setup origin. Put the client ID, client secret, Picker key and Google Cloud **project number** in the corresponding `.env.local` variables.
+4. Run `pnpm drive:setup`. Open http://127.0.0.1:8787, connect the owning Google account and select the exact existing **iRide image** folder in Picker.
+5. The tool verifies write access and saves the four runtime values to ignored `.env.drive.local`. Stop the setup process and restart the web server.
+6. For production, add those four values to the existing Vercel `iride` project's encrypted environment variables, together with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+
+The setup requests only `drive.file` and offline access. Configure the OAuth consent app for lasting access before production; external apps left in Testing can have refresh tokens expire after seven days. Reconnect if access is revoked. See [Google offline OAuth](https://developers.google.com/identity/protocols/oauth2/web-server) and [Drive scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth).
+
+Images remain private in Drive. The website serves only linked photo IDs through its backend. Uploads accept JPEG/PNG/WebP up to 4 MB per image, one request per image. Each vehicle gets an app-owned UUID subfolder. Deletions move app-created photos to Drive trash. Pre-existing Drive files are never changed.
+
+## Verification
+
+- `pnpm check`: lint, TypeScript, unit tests, PostgreSQL baseline integration tests and production build.
+- `pnpm test:e2e`: Playwright browser tests (UI flow uses an explicitly mocked Garage API; live cloud credentials are not required).
+- `pnpm db:test`: pgTAP against the local Supabase stack when Docker is available.
+
+Portable PostgreSQL tests execute the complete migration and verify RLS/grants, cover ownership, service totals, upload/delete interlocks and cascades. These do not replace a live Supabase/Drive smoke test before production cutover.
+
+## Recover interrupted photo uploads
+
+Reservations older than 30 minutes remain visible to the maintenance tool and block vehicle deletion until reconciled. Pause uploads first. Run:
+
+```powershell
+node --env-file=.env.local --env-file=.env.drive.local scripts/reconcile-photos.mjs
+node --env-file=.env.local --env-file=.env.drive.local scripts/reconcile-photos.mjs --apply
 ```
 
-Administrative state changes are tokenized. If a transition remains pending for at least 15 minutes, an active administrator can safely reconcile it with `PATCH /api/v1/admin/users/:id` and `{ "action": "recover" }`. Recovery first restores the target's Auth ban state to the recorded prior access state, then atomically rolls the database transition back only when its exact token is still current; a newer transition is never overwritten.
+The first command exports a dry-run report to `.tmp/photo-reconciliation.json`. The second verifies each file belongs to the configured vehicle folder, moves stale uploads to trash, and removes their reservations. If Drive cleanup fails, metadata remains for retry.
 
-iRide is a mobile-first, bilingual community for people who love cars and the stories behind every drive. This repository currently contains the platform foundation only; business features begin in Step 02 of the implementation plans.
+## Production cutover
 
-## Repository layout
+The existing Supabase target is `bgflnssilreepfzxoqpc`, Vercel web project `iride`, and retired API project `iride-api`. Do not apply the fresh baseline over the old schema.
 
-- `apps/web` — Next.js 16 App Router UI on port 3000
-- `apps/api` — NestJS API on port 3001, Vercel adapter, and optional worker process on port 3002
-- `packages/*` — shared auth, config, database, domain, storage, types, and validation boundaries
-- `.plans` — version-controlled implementation roadmap
-- `docs/adr` — accepted architecture decisions
+Use the separate `scripts/production-cutover.mjs` procedure after successful local checks, a verified staged production deployment with database/Drive credentials, a successful backup, and disabling old API writers. The script defaults to a non-mutating preflight; its destructive mode is explicitly project-bound and exports the database and storage manifest before deleting anything.
 
-## Prerequisites
-
-- Node.js 24 (the repository includes `.nvmrc` and `.node-version`)
-- Corepack with pnpm 11.19.0
-- Docker-compatible runtime with at least 7 GB available for the local Supabase stack
-
-The production images and Vercel projects use Node 24. Use Node 24 before treating a local verification as release-equivalent.
-
-## Local setup
-
-```bash
-corepack enable
-corepack prepare pnpm@11.19.0 --activate
-pnpm install --frozen-lockfile
-```
-
-Copy `.env.example` to the repository-root `.env.local` and replace placeholders. The root `pnpm dev` command loads this file before Turbo starts the applications. Values beginning with `NEXT_PUBLIC_` may be included in browser bundles. Supabase service-role, Cloudflare R2, and Opn values are server-only and must never use a `NEXT_PUBLIC_` prefix.
-
-Start all applications:
-
-```bash
-pnpm dev
-```
-
-Open `http://localhost:3000`. The web app detects `th/en` from the browser and stores an explicit language choice in the HttpOnly `iride-locale` cookie without adding a locale prefix to the URL. Health probes are available at:
-
-- `http://localhost:3000/api/health` — web
-- `http://localhost:3001/api/health` — API
-- `http://localhost:3002/health` — worker
-
-Run the optional continuous worker with `pnpm --filter @iride/api dev:worker`. It validates all server credentials at startup. Production uses Supabase Cron to call the protected bounded drain endpoint instead of requiring a paid always-on worker host.
-
-## Quality commands
-
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm test:e2e
-pnpm check
-```
-
-`pnpm check` runs lint, typecheck, unit tests, and production builds. Playwright is separate because it starts local web/API servers and requires a browser installed with `pnpm exec playwright install chromium`. Run both suites locally before merging changes.
-
-## Supabase development
-
-SQL under `supabase/migrations` is the frozen historical baseline. New schema changes are TypeORM migrations under `apps/api/src/database/migrations`. The local stack uses PostgreSQL 17 with Auth, Realtime, PostGIS, pgmq queues, and deny-by-default database privileges. Start and verify it with:
-
-```bash
-pnpm db:start
-pnpm db:reset
-pnpm db:test
-pnpm db:types
-pnpm db:types:check
-pnpm db:advisors
-pnpm db:stop
-```
-
-`pnpm db:reset` is destructive only to the local Docker database. It resets without seed, validates/applies TypeORM migrations, loads `supabase/seed.sql`, then runs pgTAP. Runtime connections use pooled `DATABASE_URL`; migration commands use `MIGRATION_DATABASE_URL` (the production workflow builds it from the existing database-password secret and Supabase session-pooler endpoint, with the pinned Supabase CA bundle and `verify-full`); `synchronize` is always disabled.
-
-Legacy compatibility modules still import Supabase through `@iride/database/server` or `@iride/database/admin` while they are migrated. The Nest profiles module is the first actor-aware TypeORM slice and runs owner writes with transaction-local JWT claims. Admin clients are restricted to trusted API and worker runtimes. Browser and authenticated roles have no direct queue privileges; trusted services use the service-role-only queue RPC functions.
-
-### Google authentication
-
-Step 03 uses Google OAuth only. Add the Google Web Client ID and secret to `.env.local` using the server-only `SUPABASE_AUTH_EXTERNAL_GOOGLE_*` variables, then restart the local Supabase stack. The local callback route is `http://localhost:3000/auth/callback`.
-
-The web app stores the PKCE session in HttpOnly, SameSite=Lax cookies. Protected pages verify claims server-side and forward the verified access token to `GET /api/v1/auth/me`; browser code never receives the token. Email/password signup, verification, and password reset remain deferred until production SMTP is available.
-
-Production uses `https://iride-ecru.vercel.app` and the exact callback URL `https://iride-ecru.vercel.app/auth/callback`. Do not run `supabase config push` from the local configuration because local `site_url`, API schemas, and unrelated Auth settings differ from hosted production. Apply production Auth configuration as a reviewed, field-scoped change.
-
-### Profiles
-
-Authenticated users complete onboarding at `/onboarding`, manage their profile at `/profile/edit`, and view public identities at `/users/<username>`. Usernames are lowercase, unique, and limited to letters, numbers, and underscores; after the initial choice they can be changed every 30 days.
-
-The API exposes `GET/PATCH /api/v1/profile/me` and `GET /api/v1/users/<username>`. Owner endpoints require a verified Supabase Bearer token. Public DTOs omit coordinates and all Auth metadata. The `followers` visibility currently behaves like `public`; Step 09 will attach it to the follow graph and Step 10 will consume follows in the feed.
-
-There is currently no staging Supabase project. Production project `bgflnssilreepfzxoqpc` is protected by the manual `Supabase Production` GitHub workflow and its `production` environment approval. Its one-time `bootstrap-reset` operation requires typing the project ref, uploads a backup artifact before mutation, and is intentionally separate from the normal forward-only `deploy` operation. Never run a linked reset from a developer shell.
-
-## Jobs and Supabase Cron
-
-The API exposes `POST /api/internal/jobs/drain` for trusted scheduling only. It requires `Authorization: Bearer $WORKER_CRON_SECRET`, accepts no application payload, starts at most two jobs per queue, and stops starting work before 45 seconds. Configure these Supabase Vault secrets before applying the cron migration:
-
-```sql
-select vault.create_secret('https://<api-host>/api/internal/jobs/drain', 'iride_job_drain_url');
-select vault.create_secret('<same value as WORKER_CRON_SECRET>', 'iride_worker_cron_secret');
-```
-
-For non-serverless environments, `pnpm --filter @iride/api start:worker` runs the same services continuously with a two-second poll interval and graceful shutdown.
-
-## Deployment targets
-
-The deployment targets are Vercel for `web` and the Nest API, Supabase for PostgreSQL/Auth/Realtime/pgmq/Cron, and private Cloudflare R2 buckets for media. Production application deployment and database migration execution remain separately approved release actions.
+Keep the current production app intact until the new runtime and backup prerequisites are satisfied. The repository reset does not itself reset hosted data.

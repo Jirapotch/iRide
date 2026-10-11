@@ -1,6 +1,6 @@
 import "server-only";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 
 import {
   LOCALE_COOKIE_MAX_AGE,
@@ -10,11 +10,8 @@ import {
 } from "./locale";
 
 export async function getRequestLocale(): Promise<Locale> {
-  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()]);
-  return resolveLocale(
-    cookieStore.get(LOCALE_COOKIE_NAME)?.value,
-    headerStore.get("accept-language"),
-  );
+  const cookieStore = await cookies();
+  return resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value, null);
 }
 
 export async function persistLocale(locale: Locale): Promise<void> {

@@ -13,9 +13,13 @@ export default defineConfig([
     "**/playwright-report/**",
     "**/test-results/**",
     "**/next-env.d.ts",
+    "**/.tmp/**",
+    "**/.artifacts/**",
+    "**/.worktrees/**",
   ]),
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
+  {files:["scripts/**/*.mjs"],languageOptions:{globals:{process:"readonly",console:"readonly",Buffer:"readonly",URL:"readonly",URLSearchParams:"readonly",fetch:"readonly",crypto:"readonly",AbortSignal:"readonly",setTimeout:"readonly",clearTimeout:"readonly",TextEncoder:"readonly",TextDecoder:"readonly"}}},
   ...[...nextVitals, ...nextTypescript].map((config) => ({
     ...config,
     files: ["apps/web/**/*.{js,jsx,ts,tsx}"],

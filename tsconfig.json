@@ -1,14 +1,8 @@
 {
   "files": [],
   "references": [
-    { "path": "./apps/web" },
-    { "path": "./apps/api" },
-    { "path": "./packages/auth" },
-    { "path": "./packages/config" },
-    { "path": "./packages/database" },
-    { "path": "./packages/domain" },
-    { "path": "./packages/storage" },
-    { "path": "./packages/types" },
-    { "path": "./packages/validation" }
+    {
+      "path": "./apps/web"
+    }
   ]
 }

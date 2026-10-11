@@ -1,11 +1,14 @@
 packages:
-  - apps/*
-  - packages/*
-
-allowBuilds:
-  esbuild: true
-  unrs-resolver: true
+  - apps/web
 
 onlyBuiltDependencies:
-  - esbuild
   - sharp
+  - esbuild
+  - supabase
+  - unrs-resolver
+
+allowBuilds:
+  sharp: true
+  esbuild: true
+  supabase: true
+  unrs-resolver: true

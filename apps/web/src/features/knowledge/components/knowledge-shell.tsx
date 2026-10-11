@@ -1,11 +1,11 @@
 import { ArrowLeftIcon } from "@phosphor-icons/react/dist/ssr";
 import type { ReactNode } from "react";
 
-import { BrandMark } from "@/app/_components/brand-mark";
 import { PendingLink } from "@/features/navigation/components/pending-link";
 import type { Locale } from "@/lib/locale";
 
 import styles from "./knowledge.module.css";
+import { SiteHeader } from "@/components/site-header";
 
 export function KnowledgeShell({
   children,
@@ -30,14 +30,12 @@ export function KnowledgeShell({
       <a className="skip-link" href="#knowledge-content">
         {locale === "th" ? "ข้ามไปยังเนื้อหา" : "Skip to content"}
       </a>
-      <header className={styles.siteHeader}>
-        <PendingLink aria-label="iRide home" className={styles.brand} href="/">
-          <BrandMark />
-        </PendingLink>
+      <SiteHeader locale={locale} />
+      <div className={styles.siteHeader}>
         <PendingLink className={styles.headerBack} href={backHref}>
           <ArrowLeftIcon aria-hidden size={18} /> {backLabel}
         </PendingLink>
-      </header>
+      </div>
       <main id="knowledge-content">{children}</main>
     </div>
   );

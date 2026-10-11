@@ -44,7 +44,9 @@ export function localeFromAcceptLanguage(
       };
     })
     .filter(({ quality }) => quality > 0)
-    .sort((left, right) => right.quality - left.quality || left.index - right.index);
+    .sort(
+      (left, right) => right.quality - left.quality || left.index - right.index,
+    );
 
   for (const { language } of preferences) {
     const baseLanguage = language.split("-")[0] ?? "";
