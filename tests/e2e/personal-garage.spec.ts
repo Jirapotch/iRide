@@ -39,6 +39,8 @@ test("fullscreen hub has three accessible destinations and no viewport overflow"
 test("Garage CRUD and Drive photo UI work without login (mocked API)", async ({
   page,
 }, info) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
   let vehicles: Vehicle[] = [],
     records: ServiceRecord[] = [],
     photos: VehiclePhoto[] = [];
@@ -177,6 +179,7 @@ test("Garage CRUD and Drive photo UI work without login (mocked API)", async ({
   await expect(page.getByText("Garage ว่างอยู่")).toBeVisible();
   expect(photos).toHaveLength(0);
   expect(records).toHaveLength(0);
+  expect(errors).toEqual([]);
 });
 test("retained game and engine simulator load independently of accounts", async ({
   page,
@@ -241,6 +244,8 @@ test("selecting each 3D station navigates by mouse or touch", async ({
   page,
   isMobile,
 }) => {
+  // Software WebGL in Linux CI makes the three pointer scans slower.
+  test.setTimeout(120000);
   for (const section of ["garage", "knowledge", "games"]) {
     await page.goto("/");
     const canvas = page.locator("canvas");

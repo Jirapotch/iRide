@@ -125,6 +125,10 @@ export function GarageScreen({ locale }: { locale: Locale }) {
         "Garage ยังไม่ได้เชื่อมฐานข้อมูล กรุณาตั้งค่าเซิร์ฟเวอร์",
         "The Garage database is not configured.",
       ],
+      DATABASE_NOT_READY: [
+        "Garage กำลังเตรียมฐานข้อมูล กรุณาลองอีกครั้งภายหลัง",
+        "The Garage database is being prepared. Please try again later.",
+      ],
       DATABASE_UNAVAILABLE: [
         "เชื่อมฐานข้อมูลไม่ได้ กรุณาลองอีกครั้ง",
         "The database is unavailable. Please retry.",
@@ -792,7 +796,6 @@ export function GarageScreen({ locale }: { locale: Locale }) {
       </section>
       <Modal
         open={vehicleModal !== null}
-        forceRender
         title={th ? "ข้อมูลรถ" : "Vehicle details"}
         onCancel={() => {
           if (!saving) setVehicleModal(null);
@@ -838,7 +841,6 @@ export function GarageScreen({ locale }: { locale: Locale }) {
       </Modal>
       <Modal
         open={serviceModal !== null}
-        forceRender
         title={th ? "บันทึก service" : "Service record"}
         onCancel={() => {
           if (!saving) setServiceModal(null);
