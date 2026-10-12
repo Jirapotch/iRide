@@ -342,7 +342,7 @@ const adapter = {
   async preflight() {
     const marker = (
       await database.query(
-        "select obj_description(to_regclass('public.vehicles'),'pg_class') as marker",
+        "select obj_description(to_regclass('public.garage_vehicles'),'pg_class') as marker",
       )
     ).rows[0].marker;
     if (resume && recognizeReset(journal, marker))
@@ -383,7 +383,7 @@ const adapter = {
       throw new Error("Drive folder is not writable.");
     if (!journal.completed.includes("resetDatabase")) {
       const legacy = await database.query(
-        "select to_regclass('public.posts') is not null as old, to_regclass('public.service_records') is not null as fresh",
+        "select to_regclass('public.posts') is not null as old, to_regclass('public.garage_service_records') is not null as fresh",
       );
       if (!legacy.rows[0].old || legacy.rows[0].fresh)
         throw new Error(
@@ -574,7 +574,7 @@ const adapter = {
       const completionMarker = `iride-reset:${journal.runId}:${journal.deploymentId}`;
       const comment = (
         await database.query(
-          "select format('comment on table public.vehicles is %L',$1::text) as sql",
+          "select format('comment on table public.garage_vehicles is %L',$1::text) as sql",
           [completionMarker],
         )
       ).rows[0].sql;
@@ -589,7 +589,7 @@ const adapter = {
       throw error;
     }
     const rows = await database.query(
-      "select (select count(*) from public.vehicles)+(select count(*) from public.service_records)+(select count(*) from public.vehicle_photos) as n",
+      "select (select count(*) from public.garage_vehicles)+(select count(*) from public.garage_service_records)+(select count(*) from public.garage_vehicle_photos) as n",
     );
     if (Number(rows.rows[0].n) !== 0) throw new Error("Baseline is not empty.");
   },

@@ -23,7 +23,7 @@ if (!tokenResponse.ok)
 const token = (await tokenResponse.json()).access_token,
   headers = { Authorization: "Bearer " + token };
 const { data: pending, error } = await db
-  .from("vehicle_photos")
+  .from("garage_vehicle_photos")
   .select("*")
   .eq("status", "uploading")
   .lt("created_at", new Date(Date.now() - 30 * 60000).toISOString());

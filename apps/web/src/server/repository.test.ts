@@ -12,7 +12,7 @@ it("refuses Garage access while the target still has its legacy schema", async (
 });
 it("allows a verified personal Garage baseline", async () => {
   const db = {
-    rpc: vi.fn().mockResolvedValue({ data: "personal-garage-v1", error: null }),
+    rpc: vi.fn().mockResolvedValue({ data: "personal-garage-v2", error: null }),
   };
   await expect(
     new GarageRepository(db as unknown as SupabaseClient).assertReady(),

@@ -15,6 +15,9 @@ Approved plan: reset into one public Next.js garage, retain engine simulator and
 
 ## Decisions
 
+- Garage availability is being repaired by additive provisioning: `public.garage_vehicles`, `garage_service_records`, and `garage_vehicle_photos` coexist with untouched legacy tables. The v2 schema marker keeps the previously deployed v1 repository blocked until the matching code is released. The full destructive cutover tool refuses an already-provisioned Garage to protect new records; legacy retirement remains a separate pending operation.
+- The additive SQL regression reproduces the original table-name collision and now passes while preserving legacy vehicle data. Updated `pnpm check` passes 37 web tests, 14 operational/PostgreSQL tests, lint, typecheck and production build.
+
 - Existing Drive samples are read-only display assets, separate from uploaded vehicle photos. They will not create fake vehicle records in the empty Garage.
 - Runtime Drive credentials must be established by the owner's one-time OAuth setup; the Codex connector is not a deployed runtime credential.
 - Local setup uses Supabase; destructive production cleanup requires a successful full backup and new runtime readiness first.

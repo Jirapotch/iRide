@@ -3,6 +3,8 @@
 Target: Supabase `bgflnssilreepfzxoqpc`, Vercel `iride` and retired `iride-api`.
 The application branch does not reset production by itself.
 
+The Garage baseline now uses isolated `public.garage_*` tables and can be installed additively while legacy data remains. If that baseline is already installed, the existing full reset procedure intentionally refuses to run: do not bypass this guard or delete newly entered Garage data. Complete legacy retirement with a procedure that preserves these new tables after the owner's backup credentials are available.
+
 ## Prepare
 
 1. Run `pnpm check` and `pnpm test:e2e`. Run `pnpm db:test` on a Docker-enabled machine or CI. Review the reset changes before starting.

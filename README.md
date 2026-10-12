@@ -49,6 +49,8 @@ The first command exports a dry-run report to `.tmp/photo-reconciliation.json`. 
 
 ## Production cutover
 
+Garage tables use the `garage_` prefix so the new app can be provisioned alongside the legacy schema without modifying legacy data. The v2 schema gate prevents earlier deployments from reading legacy vehicles during the rollout. Once the live Garage exists, the destructive cutover tool refuses a fresh reset; legacy cleanup must preserve the new Garage and its records. Live Drive credentials and a verified legacy backup are still required before retiring the old system.
+
 The existing Supabase target is `bgflnssilreepfzxoqpc`, Vercel web project `iride`, and retired API project `iride-api`. Do not apply the fresh baseline over the old schema.
 
 Use the separate `scripts/production-cutover.mjs` procedure after successful local checks, a verified staged production deployment with database/Drive credentials, a successful backup, and disabling old API writers. The script defaults to a non-mutating preflight; its destructive mode is explicitly project-bound and exports the database and storage manifest before deleting anything.

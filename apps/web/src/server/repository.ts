@@ -44,12 +44,12 @@ export class GarageRepository implements PhotoRepository {
   constructor(private db: SupabaseClient) {}
   async assertReady() {
     const { data, error } = await this.db.rpc("garage_schema_version");
-    if (error || data !== "personal-garage-v1")
+    if (error || data !== "personal-garage-v2")
       throw new GarageError("DATABASE_NOT_READY", 503);
   }
   async vehicles(): Promise<Vehicle[]> {
     const { data, error } = await this.db
-      .from("vehicles")
+      .from("garage_vehicles")
       .select("*")
       .order("created_at", { ascending: false })
       .order("id");
@@ -58,7 +58,7 @@ export class GarageRepository implements PhotoRepository {
   }
   async vehicle(id: string): Promise<Vehicle> {
     const { data, error } = await this.db
-      .from("vehicles")
+      .from("garage_vehicles")
       .select("*")
       .eq("id", id)
       .single();
@@ -68,11 +68,11 @@ export class GarageRepository implements PhotoRepository {
   async saveVehicle(input: VehicleInput, id?: string) {
     const query = id
       ? this.db
-          .from("vehicles")
+          .from("garage_vehicles")
           .update(snake(input))
           .eq("id", id)
           .eq("deleting", false)
-      : this.db.from("vehicles").insert(snake(input));
+      : this.db.from("garage_vehicles").insert(snake(input));
     const { data, error } = await query.select("*").single();
     fail(error);
     return mapRow<Vehicle>(data!);
@@ -84,7 +84,7 @@ export class GarageRepository implements PhotoRepository {
         throw new GarageError("PHOTO_NOT_FOUND", 404);
     }
     const { data, error } = await this.db
-      .from("vehicles")
+      .from("garage_vehicles")
       .update({ cover_photo_id: photoId })
       .eq("id", vehicleId)
       .eq("deleting", false)
@@ -99,7 +99,7 @@ export class GarageRepository implements PhotoRepository {
     pageSize: number,
   ): Promise<Page<ServiceRecord>> {
     const { data, error, count } = await this.db
-      .from("service_records")
+      .from("garage_service_records")
       .select("*", { count: "exact" })
       .eq("vehicle_id", vehicleId)
       .order("occurred_on", { ascending: false })
@@ -127,12 +127,12 @@ export class GarageRepository implements PhotoRepository {
     if (vehicle.deleting) throw new GarageError("VEHICLE_DELETING", 409);
     const query = id
       ? this.db
-          .from("service_records")
+          .from("garage_service_records")
           .update(snake(input))
           .eq("id", id)
           .eq("vehicle_id", vehicleId)
       : this.db
-          .from("service_records")
+          .from("garage_service_records")
           .insert({ ...snake(input), vehicle_id: vehicleId });
     const { data, error } = await query.select("*").single();
     fail(error);
@@ -140,7 +140,7 @@ export class GarageRepository implements PhotoRepository {
   }
   async deleteService(vehicleId: string, id: string) {
     const { data, error } = await this.db
-      .from("service_records")
+      .from("garage_service_records")
       .delete()
       .eq("id", id)
       .eq("vehicle_id", vehicleId)
@@ -168,7 +168,7 @@ export class GarageRepository implements PhotoRepository {
   }
   async get(photoId: string) {
     const { data, error } = await this.db
-      .from("vehicle_photos")
+      .from("garage_vehicle_photos")
       .select("*")
       .eq("id", photoId)
       .single();
@@ -177,7 +177,7 @@ export class GarageRepository implements PhotoRepository {
   }
   async list(vehicleId: string) {
     const { data, error } = await this.db
-      .from("vehicle_photos")
+      .from("garage_vehicle_photos")
       .select("*")
       .eq("vehicle_id", vehicleId)
       .order("created_at")
@@ -203,7 +203,7 @@ export class GarageRepository implements PhotoRepository {
   }
   async deleteVehicle(vehicleId: string) {
     const { error } = await this.db
-      .from("vehicles")
+      .from("garage_vehicles")
       .delete()
       .eq("id", vehicleId)
       .eq("deleting", true);

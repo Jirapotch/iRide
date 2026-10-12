@@ -126,8 +126,8 @@ export function GarageScreen({ locale }: { locale: Locale }) {
         "The Garage database is not configured.",
       ],
       DATABASE_NOT_READY: [
-        "Garage กำลังเตรียมฐานข้อมูล กรุณาลองอีกครั้งภายหลัง",
-        "The Garage database is being prepared. Please try again later.",
+        "ฐานข้อมูล Garage ยังไม่ได้ติดตั้ง กรุณาติดต่อเจ้าของเว็บ",
+        "The Garage database has not been installed. Contact the site owner.",
       ],
       DATABASE_UNAVAILABLE: [
         "เชื่อมฐานข้อมูลไม่ได้ กรุณาลองอีกครั้ง",
