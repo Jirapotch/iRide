@@ -158,7 +158,13 @@ export function GarageHub({ locale }: { locale: Locale }) {
         ))}
       </nav>
       <footer className={styles.footer}>
-        <span>iRIDE / PERSONAL EDITION</span>
+        <nav
+          className={styles.policyLinks}
+          aria-label={th ? "ข้อมูลการใช้งาน" : "Data practices"}
+        >
+          <Link href="/privacy">{th ? "ข้อมูลส่วนบุคคล" : "Privacy"}</Link>
+          <Link href="/terms">{th ? "เงื่อนไข" : "Terms"}</Link>
+        </nav>
         <Button type="text" size="small" href="/garage">
           {th ? "เปิด Garage" : "Open garage"} <ArrowUpRight size={14} />
         </Button>

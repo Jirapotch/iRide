@@ -159,6 +159,12 @@
 .footer .ant-btn {
   font-size: 11px;
 }
+.policyLinks {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+  letter-spacing: 0;
+}
 @media (max-width: 760px) {
   .header {
     height: 68px;
